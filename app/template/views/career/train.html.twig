@@ -1,0 +1,104 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Training Center{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Training Center</h1>
+        <p class="text-2xl text-blue-300 mt-4">Hone your craft and learn new moves to dominate the competition.</p>
+        <p class="text-xl text-gray-300 mt-2 max-w-4xl mx-auto">Learning new moves is a great way to improve your gameplay and gain an advantage over your opponents. Keep 
+            in mind that you can only learn moves that are available for your current level. As you progress, more moves will become available to you. Be 
+            strategic about which moves to learn, because the effectiveness of each move is enhanced by your wrestler's attributes. For example, if your 
+            wrestler has a higher technical ability rating, then moves of the type "Grapple" will deal more damage.</p>
+        <a href="{{ base_url }}app/career" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Career</a>
+    </header>
+
+    <!-- Filter and Sort Controls -->
+    <form id="filterSortForm" method="get" action="{{ base_url }}train/" class="bg-gray-800 p-4 rounded-lg shadow-md mb-8 flex flex-wrap items-center justify-center gap-4">
+        <div>
+            <label for="type" class="font-semibold text-gray-300 mr-2">Filter by Type:</label>
+            <select name="type" id="type" class="bg-gray-700 border border-gray-600 text-white rounded-md p-2">
+                <option value="all" {% if currentFilter == 'all' %}selected{% endif %}>All</option>
+                <option value="strike" {% if currentFilter == 'strike' %}selected{% endif %}>Strike</option>
+                <option value="grapple" {% if currentFilter == 'grapple' %}selected{% endif %}>Grapple</option>
+                <option value="highFlying" {% if currentFilter == 'highFlying' %}selected{% endif %}>High Flying</option>
+            </select>
+        </div>
+        <div>
+            <label for="sort_by" class="font-semibold text-gray-300 mr-2">Sort by:</label>
+            <select name="sort_by" id="sort_by" class="bg-gray-700 border border-gray-600 text-white rounded-md p-2">
+                <option value="level_requirement" {% if currentSortBy == 'level_requirement' %}selected{% endif %}>Level</option>
+                <option value="cost" {% if currentSortBy == 'cost' %}selected{% endif %}>Cost</option>
+                <option value="max_damage" {% if currentSortBy == 'max_damage' %}selected{% endif %}>Damage</option>
+            </select>
+        </div>
+        <div>
+            <label for="sort_order" class="font-semibold text-gray-300 mr-2">Order:</label>
+            <select name="sort_order" id="sort_order" class="bg-gray-700 border border-gray-600 text-white rounded-md p-2">
+                <option value="ASC" {% if currentSortOrder == 'ASC' %}selected{% endif %}>Ascending</option>
+                <option value="DESC" {% if currentSortOrder == 'DESC' %}selected{% endif %}>Descending</option>
+            </select>
+        </div>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Apply</button>
+    </form>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for move in availableMoves %}
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 flex flex-col">
+                <h2 class="text-2xl font-bold text-yellow-400 mb-2">{{ move.move_name }}</h2>
+                <p class="text-gray-400 text-sm mb-4 flex-grow">{{ move.move_description }}</p>
+                
+                <div class="bg-gray-700 p-4 rounded-md mb-4">
+                    <h3 class="text-lg font-semibold text-white mb-3">Move Stats</h3>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <p>Type: <span class="font-bold text-gray-300">{{ move.type|capitalize }}</span></p>
+                        <p>Damage: <span class="font-bold text-red-400">{{ move.min_damage }}-{{ move.max_damage }}</span></p>
+                        <p>Stamina Cost: <span class="font-bold text-blue-400">{{ move.stamina_cost }}</span></p>
+                        <p>Level Req: <span class="font-bold text-gray-300">{{ move.level_requirement }}</span></p>
+                    </div>
+                </div>
+
+                <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" onclick="learnMove({{ move.move_id }})">
+                    Learn for {{ move.cost }} Gold
+                </button>
+            </div>
+        {% else %}
+            <p class="text-center text-gray-400 col-span-full">No moves match your criteria. Try adjusting the filters.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    document.getElementById('filterSortForm').addEventListener('change', function() {
+        this.submit();
+    });
+
+    async function learnMove(moveId) {
+        if (!confirm('Are you sure you want to learn this move? The cost will be deducted from your gold.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`{{ base_url }}train/learn_move/${moveId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                alert(result.message);
+                location.reload();
+            } else {
+                alert('Error: ' + (result.error || 'Could not learn move.'));
+            }
+        } catch (error) {
+            console.error('Failed to learn move:', error);
+            alert('An error occurred. Please try again.');
+        }
+    }
+</script>
+{% endblock %}
