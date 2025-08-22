@@ -3,6 +3,8 @@
 
 The IWF is a free to join wrestling web app featuring several different modes - career, bookie and simulator.
 
+<p><br></p>
+
 ## CAREER MODE
 Begin your career as a rookie trying to climb the ranks of professional wrestling. Win matches against historical wrestlers to build up XP and gold, hire managers to get bonuses and boosts and visit the Training Center often to upgrade your skills. Do you have what it takes to become the next IWF Workd Heavyweight Champion?
 
