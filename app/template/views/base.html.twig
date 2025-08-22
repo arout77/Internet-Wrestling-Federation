@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {% block head %}
+            <meta charset="utf-8">
+            <meta content="width=device-width, initial-scale=1.0" name="viewport">
+            <title>{% block title %}{% endblock %} - Internet Wrestling Federation</title>
+            <meta name="description" content="Step into the ring with IWF! Create your dream wrestling matches and simulate epic battles using historical wrestlers from the Golden Age to present in this ultimate online wrestling simulator.">
+            <meta name="keywords" content="">
+
+            <link rel="canonical" href="{{ base_url }}">
+            
+            <!-- Favicons -->
+            <link href="{{ base_url }}assets/img/favicon.png" rel="icon">
+            <link href="{{ base_url }}assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+
+            <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+            <!-- Template Main CSS File -->
+            <link href="{{ template_url }}assets/css/main.css" rel="stylesheet">
+        {% endblock %}
+    </head>
+    <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col overflow-y-auto">
+        {{ include('visitorheader.html.twig') }}
+        <!-- Animated Background Container -->
+        <div class="fixed inset-0 -z-1">
+            <div class="animated-blob" style="width: 40vw;height: 40vw;top: -10vh;left: -10vw;--color-start: #720697;--color-end: #720697;--duration: 25s;--delay: 0s;--x-start: 0vw;--y-start: 0vh;--scale-start: 1;--x-mid: 20vw;--y-mid: 20vh;--scale-mid: 1.2;--x-end: 10vw;--y-end: 10vh;--scale-end: 1;"></div>
+            <div class="animated-blob" style="width: 20vw;height: 30vw;top: 60vh;left: 70vw;--color-start: #1647f9;--color-end: #be03ff;--duration: 30s;--delay: 5s;--x-start: 0vw;--y-start: 0vh;--scale-start: 0.8;--x-mid: -10vw;--y-mid: -20vh;--scale-mid: 1;--x-end: 0vw;--y-end: 0vh;--scale-end: 0.8;"></div>
+            <div class="animated-blob" style="width: 50vw;height: 50vw;top: 30vh;left: -30vw;--color-start: #3aa4ff;--color-end: #6a0497;--duration: 40s;--delay: 10s;--x-start: 0vw;--y-start: 0vh;--scale-start: 1.1;--x-mid: 30vw;--y-mid: -10vh;--scale-mid: 0.9;--x-end: 10vw;--y-end: 20vh;--scale-end: 1.1;"></div>
+            <div class="animated-blob" style="width: 19vw;height: 35vw;top: -5vh;left: 80vw;--color-start: rgb(59 130 246 / 0.5);--color-end: rgb(59 130 246 / 0.5);--duration: 35s;--delay: 15s;--x-start: 0vw;--y-start: 0vh;--scale-start: 0.9;--x-mid: -20vw;--y-mid: 10vh;--x-end: -10vw;--y-end: -5vh;--scale-end: 0.9;"></div>
+        </div>
+        <main class="container mx-auto px-4 py-8 flex-grow z-10" style="position: relative;">
+            {% block content %}{% endblock %}
+        </main>
+        <div id="footer">
+            {% block footer %}
+                {{ include('footer.html.twig') }}
+            {% endblock %}
+        </div>
+    </body>
+</html>

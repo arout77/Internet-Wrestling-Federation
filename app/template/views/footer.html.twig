@@ -1,0 +1,12 @@
+<!-- ======= Footer ======= -->
+<footer class="sticky bottom-0 w-full bg-gray-900 shadow-inner py-4 mt-8">
+    <div class="container mx-auto px-4 text-center text-gray-400">
+        <p>&copy; {{ "now"|date('Y') }} IWF - Internet Wrestling Federation. All rights reserved.</p>
+    </div>
+</footer>
+<script type="module" src="{{ template_url }}assets/js/data.js"></script>
+<script type="module" src="{{ template_url }}assets/js/app.js"></script>
+<script type="module" src="{{ template_url }}assets/js/dom.js"></script>
+{% if route_action == 'booking' %}
+<script type="module" src="{{ template_url }}assets/js/booking.js"></script>
+{% endif %}

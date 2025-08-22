@@ -1,0 +1,71 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Hire a Manager{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Hire a Manager</h1>
+        <p class="text-xl text-gray-300">Invest in a legend to guide your career to new heights.</p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for manager in managers %}
+            <div class="bg-gray-900 rounded-lg shadow-lg overflow-hidden flex flex-col h-[32rem]">
+                <img src="{{ base_url }}public/media/images/managers/{{ manager.image }}.webp" alt="{{ manager.name }}" class="w-full h-64 object-cover object-top">
+                <div class="p-6 flex flex-col flex-grow">
+                    <h2 class="text-2xl font-bold text-yellow-400 mb-2">{{ manager.name }}</h2>
+                    <p class="text-gray-400 text-sm mb-4 flex-grow h-64 overflow-y-auto">{{ manager.description }}</p>
+                    
+                    <div class="bg-gray-700 p-4 rounded-md mb-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">Bonuses</h3>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <p>XP Boost: <span class="font-bold text-green-400">+{{ manager.xp_bonus * 100 }}%</span></p>
+                            <p>Gold Boost: <span class="font-bold text-green-400">+{{ manager.gold_bonus * 100 }}%</span></p>
+                            <p>Strength: <span class="font-bold text-blue-400">+{{ manager.strength_bonus }}</span></p>
+                            <p>Brawling: <span class="font-bold text-blue-400">+{{ manager.brawlingAbility_bonus }}</span></p>
+                            <p>Technical: <span class="font-bold text-blue-400">+{{ manager.technicalAbility_bonus }}</span></p>
+                            <p>Aerial: <span class="font-bold text-blue-400">+{{ manager.aerialAbility_bonus }}</span></p>
+                            <p>Stamina: <span class="font-bold text-blue-400">+{{ manager.stamina_bonus }}</span></p>
+                            <p>Toughness: <span class="font-bold text-blue-400">+{{ manager.toughness_bonus }}</span></p>
+                        </div>
+                    </div>
+
+                    <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" onclick="hireManager({{ manager.id }})">
+                        Hire for ${{ manager.cost }}
+                    </button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    async function hireManager(managerId) {
+        if (!confirm('Are you sure you want to hire this manager? The cost will be deducted from your gold.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`{{ base_url }}manager/purchase/${managerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                alert(result.message);
+                window.location.href = '{{ base_url }}app/career';
+            } else {
+                alert('Error: ' + (result.error || 'Could not hire manager.'));
+            }
+        } catch (error) {
+            console.error('Failed to hire manager:', error);
+            alert('An error occurred. Please try again.');
+        }
+    }
+</script>
+{% endblock %}

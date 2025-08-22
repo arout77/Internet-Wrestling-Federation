@@ -1,0 +1,332 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Career Mode{% endblock %}
+
+{% block content %}
+    <style>
+        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #2a2a2a; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 860px; border-radius: 8px; }
+        .avatar-gallery img { cursor: pointer; border: 2px solid transparent; transition: border-color 0.3s; }
+        .avatar-gallery img.selected { border-color: #f59e0b; }
+        .upgrade-btn:disabled { background-color: #4a5568; cursor: not-allowed; }
+    </style>
+
+    <!-- Create Wrestler Modal -->
+    <div id="createWrestlerModal" class="modal pt-32">
+        <div class="modal-content bg-gray-900 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold mb-6 text-center text-amber-400">Create Your Wrestler</h2>
+            <form id="createWrestlerForm">
+                <div class="mb-4">
+                    <label for="wrestlerName" class="block text-sm font-medium mb-2">Wrestler Name</label>
+                    <input type="text" id="wrestlerName" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="wrestlerHeight" class="block text-sm font-medium mb-2">Height (e.g., 6'2")</label>
+                        <input type="text" id="wrestlerHeight" pattern="\d+'\d{1,2}\"" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500" required>
+                    </div>
+                    <div>
+                        <label for="wrestlerWeight" class="block text-sm font-medium mb-2">Weight (lbs)</label>
+                        <input type="number" id="wrestlerWeight" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500" required>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Choose Avatar</label>
+                    <div class="flex gap-4">
+                        <div id="avatarGallery" class="grid grid-cols-4 gap-2 bg-gray-700 p-2 rounded-md w-2/3">
+                            <!-- Avatars will be injected here by JavaScript -->
+                        </div>
+                        <div class="w-1/3 flex items-center justify-center bg-gray-700 p-2 rounded-md">
+                            <img id="avatarPreview" src="https://placehold.co/128x128/374151/eab308?text=Select" alt="Avatar Preview" class="w-72 h-72 rounded-md border-2 border-gray-600">
+                        </div>
+                    </div>
+                    <input type="hidden" id="wrestlerAvatar" required>
+                </div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-3 px-4 rounded-md transition duration-300">Create Wrestler</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Game Interface -->
+    <div id="gameInterface" class="container mx-auto p-4" style="display: none;">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Wrestler Profile -->
+            <div class="md:col-span-1 bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 text-center text-amber-400">My Wrestler</h2>
+                <div class="text-center mb-4">
+                    <img id="playerAvatar" src="" alt="Player Avatar" class="w-32 h-32 rounded-full mx-auto border-4 border-amber-500">
+                    <h3 id="playerName" class="text-xl font-bold mt-4"></h3>
+                    <p id="playerPhysique" class="text-gray-400"></p>
+                    <p id="playerRecord" class="text-gray-400">Wins: 0 - Losses: 0</p>
+                </div>
+                <div>
+                    <p class="flex justify-between"><strong>Level:</strong> <span id="playerLevel">1</span></p>
+                    <p class="flex justify-between"><strong>XP:</strong> <span id="playerXP">0</span> / <span id="nextLevelXP">100</span></p>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4"><div id="xpBar" class="bg-amber-500 h-2.5 rounded-full" style="width: 0%"></div></div>
+                    <p class="flex justify-between"><strong>Gold:</strong> <span id="playerGold" class="text-yellow-400">5000</span></p>
+                    <p class="flex justify-between"><strong>Attribute Points:</strong> <span id="playerAP" class="text-green-400 font-bold">0</span></p>
+                </div>
+                 <div id="managerInfo" class="mt-4 text-center" style="display: none;">
+                    {# ... manager info ... #}
+                </div>
+            </div>
+
+            <!-- Center Column: Attributes & Actions -->
+            <div class="md:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 text-center text-amber-400">Attributes & Actions</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Attributes -->
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3">Skills</h3>
+                        <div id="attributesContainer"></div>
+                    </div>
+                    <!-- Actions -->
+                    <div>
+                        <h3 class="text-xl font-semibold mb-3">Actions</h3>
+                        <div class="space-y-3">
+                            <a href="{{ base_url }}train" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Train Move</a>
+                            <a href="{{ base_url }}manager/hire" class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Hire Manager</a>
+                            <a href="{{ base_url }}career/find_match" class="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Find Match</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Opponent Selection Modal -->
+    <div id="opponentModal" class="modal">
+        <div class="modal-content bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold mb-6 text-center text-amber-400">Select Opponent</h2>
+            <div class="mb-4">
+                <button onclick="findRandomOpponent()" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-3 px-4 rounded-md transition duration-300 mb-4">Find Random Opponent</button>
+                <input type="text" id="wrestlerSearch" onkeyup="filterWrestlers()" placeholder="Search for a wrestler..." class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+            <div id="opponentList" class="max-h-96 overflow-y-auto">
+                <!-- Opponent list will be populated by JS -->
+            </div>
+            <button onclick="closeOpponentSelection()" class="mt-6 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Close</button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- DATA ---
+        const allWrestlers = [
+            { id: 1, name: 'Hulk Hogan', level: 95, image: '{{ base_url }}public/media/images/hogan.webp' },
+            { id: 2, name: 'Ric Flair', level: 94, image: '{{ base_url }}public/media/images/flair.webp' },
+            { id: 3, name: 'Andre the Giant', level: 92, image: '{{ base_url }}public/media/images/andre.webp' },
+            { id: 4, name: 'Macho Man Randy Savage', level: 93, image: '{{ base_url }}public/media/images/savage.webp' },
+            { id: 21, name: 'Brooklyn Brawler', level: 1, image: '{{ base_url }}public/media/images/brawler.webp' },
+            { id: 22, name: 'Iron Mike Sharpe', level: 2, image: '{{ base_url }}public/media/images/sharpe.webp' },
+            { id: 23, name: 'Gillberg', level: 1, image: '{{ base_url }}public/media/images/gillberg.webp' }
+        ];
+
+        let player = {
+            attributes: {
+                strength: { value: 50, cost: 25 },
+                technical: { value: 50, cost: 25 },
+                brawling: { value: 50, cost: 25 },
+                aerial: { value: 50, cost: 25 },
+                stamina: { value: 50, cost: 25 },
+                toughness: { value: 50, cost: 25 }
+            }
+        };
+
+        // --- GAME LOGIC ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const prospectData = {{ prospect|json_encode|raw }};
+
+            if (prospectData) {
+                // If prospect exists, initialize player object and show game interface
+                initializePlayer(prospectData);
+                document.getElementById('gameInterface').style.display = 'block';
+                updateUI();
+            } else {
+                // If no prospect, show the creation modal
+                document.getElementById('createWrestlerModal').style.display = 'block';
+            }
+            
+            populateAvatarGallery();
+            
+            const createWrestlerForm = document.getElementById('createWrestlerForm');
+            createWrestlerForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const prospectPayload = {
+                    wrestlerName: document.getElementById('wrestlerName').value,
+                    wrestlerHeight: document.getElementById('wrestlerHeight').value,
+                    wrestlerWeight: document.getElementById('wrestlerWeight').value,
+                    wrestlerAvatar: document.getElementById('wrestlerAvatar').value
+                };
+
+                try {
+                    const response = await fetch('{{ base_url }}user/create_prospect', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(prospectPayload)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        initializePlayer(result.prospect);
+                        document.getElementById('createWrestlerModal').style.display = 'none';
+                        document.getElementById('gameInterface').style.display = 'block';
+                        updateUI();
+                    } else {
+                        alert('Error: ' + (result.error || 'Could not create wrestler.'));
+                    }
+                } catch (error) {
+                    console.error('Failed to create prospect:', error);
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        });
+
+        function initializePlayer(prospectData) {
+            player.name = prospectData.name;
+            player.avatar = prospectData.image;
+            player.height = prospectData.height;
+            player.weight = prospectData.weight;
+            player.level = parseInt(prospectData.lvl) || 1;
+            player.xp = parseInt(prospectData.current_xp) || 0;
+            player.gold = parseInt(prospectData.gold) || 5000;
+            player.wins = 0; // This should come from a records table in the future
+            player.losses = 0; // This should come from a records table in the future
+            player.attributes.strength.value = parseInt(prospectData.strength) || 50;
+            player.attributes.technical.value = parseInt(prospectData.technicalAbility) || 50;
+            player.attributes.brawling.value = parseInt(prospectData.brawlingAbility) || 50;
+            player.attributes.aerial.value = parseInt(prospectData.aerialAbility) || 50;
+            player.attributes.stamina.value = parseInt(prospectData.stamina) || 50;
+            player.attributes.toughness.value = parseInt(prospectData.toughness) || 50;
+        }
+
+        function populateAvatarGallery() {
+            const gallery = document.getElementById('avatarGallery');
+            const avatarPath = '{{ base_url }}public/media/images/avatars/';
+            for (let i = 1; i <= 17; i++) {
+                const img = document.createElement('img');
+                const fileName = `gen${i}.png`;
+                img.src = `${avatarPath}${fileName}`;
+                img.alt = `Avatar ${i}`;
+                img.classList.add('w-full', 'rounded-md', 'hover:opacity-75');
+                img.onclick = () => selectAvatar(img, `${avatarPath}${fileName}`);
+                gallery.appendChild(img);
+            }
+        }
+
+        function selectAvatar(imgElement, avatarUrl) {
+            const selected = document.querySelector('.avatar-gallery img.selected');
+            if (selected) {
+                selected.classList.remove('selected');
+            }
+            imgElement.classList.add('selected');
+            document.getElementById('wrestlerAvatar').value = avatarUrl;
+            document.getElementById('avatarPreview').src = avatarUrl;
+        }
+
+        function upgradeAttribute(attribute) {
+            const attr = player.attributes[attribute];
+            if (player.gold >= attr.cost && attr.value < 100) {
+                player.gold -= attr.cost;
+                attr.value++;
+                attr.cost = Math.ceil(attr.cost * 1.10);
+                updateUI();
+            } else if (attr.value >= 100) {
+                alert("This attribute is already at its maximum level.");
+            } else {
+                alert("Not enough gold!");
+            }
+        }
+        
+        function getNextLevelXP() {
+            return Math.floor(100 * Math.pow(1.1, player.level - 1));
+        }
+
+        function updateUI() {
+            document.getElementById('playerName').textContent = player.name;
+            document.getElementById('playerAvatar').src = player.avatar;
+            document.getElementById('playerPhysique').textContent = `${player.height} / ${player.weight} lbs`;
+            document.getElementById('playerRecord').textContent = `Wins: ${player.wins} - Losses: ${player.losses}`;
+            document.getElementById('playerLevel').textContent = player.level;
+            document.getElementById('playerXP').textContent = player.xp;
+            const nextLevelXP = getNextLevelXP();
+            document.getElementById('nextLevelXP').textContent = nextLevelXP;
+            document.getElementById('xpBar').style.width = `${(player.xp / nextLevelXP) * 100}%`;
+            document.getElementById('playerGold').textContent = player.gold;
+
+            const attributesContainer = document.getElementById('attributesContainer');
+            attributesContainer.innerHTML = '';
+            for (const key in player.attributes) {
+                const attr = player.attributes[key];
+                const attributeHTML = `
+                    <div class="mb-3">
+                        <div class="flex justify-between items-center">
+                            <span class="capitalize font-semibold">${key}</span>
+                            <span class="font-bold text-lg">${attr.value}</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2.5">
+                            <div class="bg-amber-500 h-2.5 rounded-full" style="width: ${attr.value}%"></div>
+                        </div>
+                        <button onclick="upgradeAttribute('${key}')" class="w-full mt-1 bg-gray-600 hover:bg-gray-700 text-xs py-1 px-2 rounded-md transition duration-300">
+                            Upgrade (${attr.cost} G)
+                        </button>
+                    </div>
+                `;
+                attributesContainer.innerHTML += attributeHTML;
+            }
+        }
+
+        function showOpponentSelection() {
+            document.getElementById('opponentModal').style.display = 'block';
+            filterWrestlers();
+        }
+        
+        function closeOpponentSelection() {
+            document.getElementById('opponentModal').style.display = 'none';
+        }
+
+        function filterWrestlers() {
+            const searchTerm = document.getElementById('wrestlerSearch').value.toLowerCase();
+            const opponentList = document.getElementById('opponentList');
+            opponentList.innerHTML = '';
+            
+            const availableOpponents = allWrestlers.filter(w => w.level <= player.level);
+
+            availableOpponents
+                .filter(w => w.name.toLowerCase().includes(searchTerm))
+                .forEach(wrestler => {
+                    const wrestlerDiv = document.createElement('div');
+                    wrestlerDiv.className = 'flex items-center justify-between p-3 bg-gray-700 rounded-md mb-2';
+                    wrestlerDiv.innerHTML = `
+                        <div class="flex items-center">
+                            <img src="${wrestler.image}" alt="${wrestler.name}" class="w-12 h-12 rounded-full mr-4">
+                            <div>
+                                <p class="font-bold">${wrestler.name}</p>
+                                <p class="text-sm text-gray-400">Level: ${wrestler.level}</p>
+                            </div>
+                        </div>
+                        <button class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-sm">Challenge</button>
+                    `;
+                    opponentList.appendChild(wrestlerDiv);
+                });
+        }
+        
+        function findRandomOpponent() {
+            const availableOpponents = allWrestlers.filter(w => w.level <= player.level);
+            if (availableOpponents.length > 0) {
+                const randomOpponent = availableOpponents[Math.floor(Math.random() * availableOpponents.length)];
+                alert(`You have been matched with ${randomOpponent.name}!`);
+            } else {
+                alert("No opponents available at your level!");
+            }
+        }
+
+    </script>
+
+{% endblock %}

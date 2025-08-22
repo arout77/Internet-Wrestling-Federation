@@ -1,0 +1,356 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Wrestling Simulator, Career Mode and more{% endblock %}
+
+{% block content %}
+<div class="relative z-10 flex flex-col items-center justify-center flex-grow p-4 md:p-8">
+
+    <!-- Hero Section -->
+    <section class="text-center py-16 md:py-24 max-w-4xl mx-auto">
+        <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6 animate-fade-in-up">
+            Step Into The Ring!
+        </h1>
+        <p class="text-xl md:text-2xl text-gray-300 mb-10 max-w-2xl mx-auto animate-fade-in-up animation-delay-200">
+            Create your dream wrestling matches and simulate epic battles with legendary superstars from wrestling's golden age to the present.
+        </p>
+        <!-- Using the new shiny-cta class for the main button -->
+        <a href="{{ base_url }}app/match" class="shiny-cta inline-block font-bold py-4 px-10 rounded-full text-xl uppercase tracking-wide transition duration-300 transform hover:scale-105">
+            <span>Start Simulating Matches</span>
+        </a>
+    </section>
+
+    <!-- New Section: Why Play IWF? (Features) -->
+    <section id="features" class="py-16 md:py-20 w-full max-w-6xl mx-auto px-4">
+        <h2 class="text-4xl font-bold text-center text-white mb-12 animate-fade-in-up animation-delay-600">Why Play IWF? Unleash Your Inner Booker!</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-blue-700 animate-fade-in-up animation-delay-700">
+                <h3 class="text-2xl font-semibold text-white mb-4">Deep Simulation Engine</h3>
+                <p class="text-gray-300">Experience realistic match outcomes driven by detailed wrestler stats, unique move sets, and dynamic in-match conditions. Every decision, every move, every counter matters in the IWF ring!</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-green-700 animate-fade-in-up animation-delay-800">
+                <h3 class="text-2xl font-semibold text-white mb-4">Vast Roster of Legends</h3>
+                <p class="text-gray-300">Choose from an ever-growing roster of iconic wrestlers from different eras. Pit Golden Age giants against modern-day phenoms and see who truly reigns supreme.</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-purple-700 animate-fade-in-up animation-delay-900">
+                <h3 class="text-2xl font-semibold text-white mb-4">Create Dream Matches</h3>
+                <p class="text-gray-300">Single matches, tag team battles, and more! Handpick your favorite superstars, set up the perfect showdowns, and watch the simulated action unfold.</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-yellow-700 animate-fade-in-up animation-delay-1000">
+                <h3 class="text-2xl font-semibold text-white mb-4">Dynamic Match Outcomes</h3>
+                <p class="text-gray-300">From unexpected comebacks to dominant victories, the IWF simulation ensures every match is unpredictable and exciting. Relive classic rivalries or forge new ones!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Wrestlers Section -->
+    <section id="wrestlers" class="py-16 md:py-20 w-full max-w-6xl mx-auto">
+        <h2 class="text-4xl font-bold text-center text-white mb-12 animate-fade-in-up animation-delay-1100">Meet The Legends</h2>
+        <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-yellow-400 animate-fade-in-up animation-delay-1000">
+        <img src="{{ base_url }}public/media/images/wwf.png" alt="WWF" class="h-64 m-auto mb-4"> 
+        <h3 class="text-2xl font-semibold text-white mb-4">Golden Era (1980s-early 1990s)</h3>
+            <p class="text-gray-300">This era, also known as the Hulkamania era, is characterized by the rise of Hulk Hogan and the expansion of the WWF (now WWE) from a regional promotion to a national phenomenon. It featured larger-than-life characters, storylines, and a focus on family-friendly entertainment. Key events include the first WrestleMania and the Rock 'n' Wrestling Connection with MTV. </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 px-4 mt-8">
+                <!-- Wrestler 1: Hulk Hogan -->
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/hogan.webp" alt="Hulk Hogan - The Immortal" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Hulk Hogan</h3>
+                    <p class="text-gray-400 text-sm">The Immortal</p>
+                </div>
+                <!-- Wrestler 3: Andre The Giant -->
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/andre.webp" alt="Andre The Giant - Eighth Wonder of the World" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Andre The Giant</h3>
+                    <p class="text-gray-400 text-sm">The Eighth Wonder of the World</p>
+                </div>
+                <!-- Wrestler 4: Randy Savage -->
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/savage.webp" alt="Randy 'Macho Man' Savage" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Randy Savage</h3>
+                    <p class="text-gray-400 text-sm">Macho Man</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/duggan.webp" alt="Hacksaw Jim Duggan - USA!" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Jim Duggan</h3>
+                    <p class="text-gray-400 text-sm">Hoooo!</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/dibiase.webp" alt="Ted DiBiase" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Ted DiBiase</h3>
+                    <p class="text-gray-400 text-sm">Million Dollar Man</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/bundy.webp" alt="King Kong Bundy" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">King Kong Bundy</h3>
+                    <p class="text-gray-400 text-sm">The Walking Condominium</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/piper.webp" alt="Rowdy Roddy Piper" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Rowdy Roddy Piper</h3>
+                    <p class="text-gray-400 text-sm">Hot Rod</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/steamboat.webp" alt="Ricky Steamboat" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Ricky Steamboat</h3>
+                    <p class="text-gray-400 text-sm">The Dragon</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/warrior.webp" alt="Ultimate Warrior" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Ultimate Warrior</h3>
+                    <p class="text-gray-400 text-sm">One Warrior Nation</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/bossman.webp" alt="Big Boss Man" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Big Boss Man</h3>
+                    <p class="text-gray-400 text-sm">Hard Time</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/orndorff.webp" alt="Paul Orndorff" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Paul Orndorff</h3>
+                    <p class="text-gray-400 text-sm">Mr. Wonderful</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/snuka.webp" alt="Jimmy Snuka" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Jimmy Snuka</h3>
+                    <p class="text-gray-400 text-sm">Superfly</p>
+                </div>
+            </div>
+        <h3 class="text-2xl font-semibold text-white mb-4 mt-10">New Generation Era (early to mid 1990s)</h3>
+            <p class="text-gray-300">This era saw a shift towards younger, more athletic wrestlers as Hulk Hogan's popularity waned. Bret Hart, Shawn Michaels, and The Undertaker became prominent figures. While still maintaining a degree of larger-than-life characters, the New Generation era featured more technical wrestling and storylines.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 px-4 mt-8">
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/brethart.webp" alt="Bret Hart" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Bret Hart</h3>
+                    <p class="text-gray-400 text-sm">The Hitman</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/michaels.webp" alt="Shawn Michaels" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Shawn Michaels</h3>
+                    <p class="text-gray-400 text-sm">The Heartbreak Kid</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/undertaker.webp" alt="Undertaker" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Undertaker</h3>
+                    <p class="text-gray-400 text-sm">Dead Man</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/diesel.webp" alt="Diesel" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Diesel</h3>
+                    <p class="text-gray-400 text-sm">Big Daddy Cool</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/razor.webp" alt="Razor Ramon" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Razor Ramon</h3>
+                    <p class="text-gray-400 text-sm">The Bad Guy</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/yokozuna.webp" alt="Yokozuna" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Yokozuna</h3>
+                    <p class="text-gray-400 text-sm">Banzai!</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/hennig.webp" alt="Curt Hennig" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Curt Hennig</h3>
+                    <p class="text-gray-400 text-sm">Mr. Perfect</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/owenhart.webp" alt="Owen Hart" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Owen Hart</h3>
+                    <p class="text-gray-400 text-sm">The King of Harts</p>
+                </div>
+            </div>
+        <img src="{{ base_url }}public/media/images/wwe.png" alt="WWE" class="h-64 m-auto mb-4 mt-8">
+        <h3 class="text-2xl font-semibold text-white mb-4 mt-10">Attitude Era (mid 1990s-early 2000s)</h3>
+            <p class="text-gray-300">This era was defined by edgier, more mature content, including storylines involving sex, drugs, and alcohol. Stone Cold Steve Austin, The Rock, and D-Generation X became major attractions, challenging the traditional good vs. evil dynamic. The Attitude Era was a response to the Monday Night Wars with WCW and saw a surge in popularity for WWE.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 px-4 mt-8">
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/austin.webp" alt="Steve Austin" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Steve Austin</h3>
+                    <p class="text-gray-400 text-sm">Stone Cold</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/rock.webp" alt="The Rock" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">The Rock</h3>
+                    <p class="text-gray-400 text-sm">The People's Champion</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/h.webp" alt="Triple H" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Triple H</h3>
+                    <p class="text-gray-400 text-sm">Dx</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/foley.webp" alt="Mick Foley" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Mick Foley</h3>
+                    <p class="text-gray-400 text-sm">Hardcore Legend</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/kane.webp" alt="Kane" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Kane</h3>
+                    <p class="text-gray-400 text-sm">Big Red Machine</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/bigshow.webp" alt="Big Show" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Big Show</h3>
+                    <p class="text-gray-400 text-sm">The World's Largest Athlete</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/chyna.webp" alt="Chyna" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Chyna</h3>
+                    <p class="text-gray-400 text-sm">Eighth Wonder of The World</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/dustinrhodes.webp" alt="Gold Dust" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Goldust</h3>
+                    <p class="text-gray-400 text-sm">The Prince of Perversion</p>
+                </div>
+            </div>
+            <h3 class="text-2xl font-semibold text-white mb-4 mt-10">Post-Attitude Era</h3>
+            <p class="text-gray-300">Some of the other superstars that have emerged over the past 20+ years</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 px-4 mt-8">
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/orton.webp" alt="Randy Orton" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Randy Orton</h3>
+                    <p class="text-gray-400 text-sm">The Viper</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/batista.webp" alt="Batista" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Batista</h3>
+                    <p class="text-gray-400 text-sm">The Animal</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/cena.webp" alt="John Cena" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">John Cena</h3>
+                    <p class="text-gray-400 text-sm">Hustle, Loyalty, Respect</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/edge.webp" alt="Edge" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Edge</h3>
+                    <p class="text-gray-400 text-sm">Rated-R Superstar</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/lesnar.webp" alt="Brock Lesnar" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Brock Lesnar</h3>
+                    <p class="text-gray-400 text-sm">The Beast</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/styles.webp" alt="AJ Styles" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">AJ Styles</h3>
+                    <p class="text-gray-400 text-sm">The Lone Wolf</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/scottsteiner.webp" alt="Scott Steiner" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Scott Steiner</h3>
+                    <p class="text-gray-400 text-sm">Big Poppa Pump</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/nakamura.webp" alt="Shinsuke Nakamura" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Shinsuke Nakamura</h3>
+                    <p class="text-gray-400 text-sm">The King of Strong Style</p>
+                </div>
+            </div>
+        <img src="{{ base_url }}public/media/images/wcw.png" alt="WCW" class="h-64 m-auto mb-4 mt-16"> 
+        <h3 class="text-2xl font-semibold text-white mb-4">NWA / WCW</h3>
+            <p class="text-gray-300">Superstars from the later years of the NWA prior to the WCW rebrand and some of the greats from WCW. </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 px-4 mt-8">
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/sting.webp" alt="Sting" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Sting</h3>
+                    <p class="text-gray-400 text-sm">A Man Called Sting</p>
+                </div>
+                <div class="bg-gray-800 rounded-xl overflow-hidden shadow-lg border border-purple-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/luger.webp" alt="Lex Luger - The Total Package" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Lex Luger</h3>
+                    <p class="text-gray-400 text-sm">The Total Package</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/steamboat.webp" alt="Ricky Steamboat" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Ricky Steamboat</h3>
+                    <p class="text-gray-400 text-sm">The Dragon</p>
+                </div>
+                <div class="bg-gray-800 rounded-xl overflow-hidden shadow-lg border border-purple-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/flair.webp" alt="Ric Flair - The Nature Boy" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Ric Flair</h3>
+                    <p class="text-gray-400 text-sm">The Nature Boy</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/goldberg.webp" alt="Bill Goldberg" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Bill Goldberg</h3>
+                    <p class="text-gray-400 text-sm">Goldberg</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/anderson.webp" alt="Arn Anderson" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Arn Anderson</h3>
+                    <p class="text-gray-400 text-sm">The Enforcer</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/vader.webp" alt="Vader" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Vader</h3>
+                    <p class="text-gray-400 text-sm">The Mastodon</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/sid.webp" alt="Sid Vicious" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Sid Vicious</h3>
+                    <p class="text-gray-400 text-sm">The Master and Ruler of the World</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1300">
+                    <img src="{{ base_url }}public/media/images/nash.webp" alt="Kevin Nash" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Kevin Nash</h3>
+                    <p class="text-gray-400 text-sm">Big Sexy</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
+                    <img src="{{ base_url }}public/media/images/hall.webp" alt="Scott Hall" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Scott Hall</h3>
+                    <p class="text-gray-400 text-sm">The Bad Guy</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1400">
+                    <img src="{{ base_url }}public/media/images/page.webp" alt="Diamond Dallas Page" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Diamond Dallas Page</h3>
+                    <p class="text-gray-400 text-sm">DDP</p>
+                </div>
+                <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                    <img src="{{ base_url }}public/media/images/dustyrhodes.webp" alt="Dusty Rhodes" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">
+                    <h3 class="text-xl font-semibold text-white">Dusty Rhodes</h3>
+                    <p class="text-gray-400 text-sm">The American Dream</p>
+                </div>
+            </div>
+            <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 mt-8 text-center text-xl text-yellow-400 transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1500">
+                ...and many more of your other favorite wrestlers!
+            </div>
+        </div>
+    </section>
+
+    <!-- New Section: What Players Are Saying (Testimonials) -->
+    <section id="testimonials" class="py-16 md:py-20 w-full max-w-4xl mx-auto text-center px-4">
+        <h2 class="text-4xl font-bold text-white mb-12 animate-fade-in-up animation-delay-1200">What Players Are Saying</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-red-700 animate-fade-in-up animation-delay-1300">
+                <p class="text-xl text-gray-300 italic mb-4">"IWF brings back all the nostalgia! Simulating dream matches is incredibly addictive. The detail in the simulation is mind-blowing!"</p>
+                <p class="text-lg font-semibold text-yellow-400">- WrestlingFanatic77</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-orange-700 animate-fade-in-up animation-delay-1400">
+                <p class="text-xl text-gray-300 italic mb-4">"Finally, a wrestling game that lets me book my own shows! The roster is fantastic, and the match outcomes are always surprising."</p>
+                <p class="text-lg font-semibold text-yellow-400">- TheBookerQueen</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-16 md:py-20 w-full max-w-4xl mx-auto text-center px-4 animate-fade-in-up animation-delay-1500">
+        <h2 class="text-4xl font-bold text-white mb-8">About IWF</h2>
+        <p class="text-lg text-gray-300 leading-relaxed mb-6">
+            IWF (Internet Wrestling Federation) is your ultimate destination for wrestling simulation. Dive deep into a world where you can craft dream matches, pit legends against each other, and witness the outcomes of epic battles. Our detailed simulation engine takes into account wrestler stats, unique moves, and dynamic match conditions to deliver an authentic and exciting experience every time.
+        </p>
+        <p class="text-lg text-gray-300 leading-relaxed">
+            Whether you're a casual fan or a hardcore wrestling enthusiast, IWF offers a unique way to relive classic rivalries and imagine new ones. Get ready to create your own wrestling history!
+        </p>
+    </section>
+
+    <!-- Final Call to Action -->
+    <section class="py-16 w-full text-center px-4 animate-fade-in-up animation-delay-1600">
+        <h2 class="text-4xl font-bold text-white mb-8">Ready to Make History?</h2>
+        <a href="match.php" class="shiny-cta inline-block font-bold py-4 px-10 rounded-full text-xl uppercase tracking-wide transition duration-300 transform hover:scale-105">
+            <span>Start Your IWF Journey Now!</span>
+        </a>
+    </section>
+
+</div>
+{% endblock %}

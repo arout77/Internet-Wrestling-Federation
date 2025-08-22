@@ -1,0 +1,40 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Match Result{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 text-center">
+    <header class="my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Match Result</h1>
+    </header>
+
+    <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+        {% if result.winner == result.prospect_name %}
+            <h2 class="text-4xl font-bold text-green-400 mb-4">You Won!</h2>
+            <p class="text-xl text-gray-300">Congratulations on your victory over {{ result.opponent_name }}!</p>
+        {% else %}
+            <h2 class="text-4xl font-bold text-red-400 mb-4">You Lost!</h2>
+            <p class="text-xl text-gray-300">A tough loss against {{ result.opponent_name }}. Time to train harder!</p>
+        {% endif %}
+
+        <div class="mt-8 text-left">
+            <h3 class="text-2xl font-semibold text-white mb-4">Rewards</h3>
+            <div class="bg-gray-700 p-4 rounded-md">
+                <p class="text-lg">XP Earned: <span class="font-bold text-green-400">{{ result.xp_earned }}</span></p>
+                <p class="text-lg">Gold Earned: <span class="font-bold text-yellow-400">{{ result.gold_earned }}</span></p>
+            </div>
+        </div>
+
+        <form method="post" action="{{ base_url }}career/complete_match" class="mt-8">
+            <input type="hidden" name="xp_earned" value="{{ result.xp_earned }}">
+            <input type="hidden" name="gold_earned" value="{{ result.gold_earned }}">
+            <input type="hidden" name="prospect_id" value="{{ result.prospect_id }}">
+            <input type="hidden" name="opponent_id" value="{{ result.opponent_id }}">
+            <input type="hidden" name="winner_name" value="{{ result.winner }}">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition duration-300">
+                Continue Career
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
