@@ -18,12 +18,27 @@ class ManagerModel extends System_Model
     public function getAllManagers()
     {
         try {
-            $stmt = $this->db->prepare("SELECT * FROM managers ORDER BY cost DESC");
+            $stmt = $this->db->prepare("SELECT * FROM managers ORDER BY level_requirement ASC, cost DESC");
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
-            // In a real application, you would log this error
             return [];
+        }
+    }
+    
+    /**
+     * Fetches a single manager by their ID.
+     * @param int $managerId
+     * @return array|false
+     */
+    public function getManagerById($managerId)
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM managers WHERE id = :id");
+            $stmt->execute([':id' => $managerId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            return false;
         }
     }
 
@@ -37,30 +52,16 @@ class ManagerModel extends System_Model
     {
         $this->db->beginTransaction();
         try {
-            // Get manager details
-            $stmtManager = $this->db->prepare("SELECT * FROM managers WHERE id = :id");
-            $stmtManager->execute([':id' => $managerId]);
-            $manager = $stmtManager->fetch(PDO::FETCH_ASSOC);
+            $manager = $this->getManagerById($managerId);
+            if (!$manager) return "Manager not found.";
 
-            if (!$manager) {
-                return "Manager not found.";
-            }
+            $userModel = $this->model('User');
+            $prospect = $userModel->getProspectByPid($prospectId);
 
-            // Get prospect details
-            $stmtProspect = $this->db->prepare("SELECT * FROM prospects WHERE pid = :pid");
-            $stmtProspect->execute([':pid' => $prospectId]);
-            $prospect = $stmtProspect->fetch(PDO::FETCH_ASSOC);
+            if (!$prospect) return "Prospect not found.";
+            if ($prospect['lvl'] < $manager['level_requirement']) return "Your level is too low to hire this manager.";
+            if ($prospect['gold'] < $manager['cost']) return "Not enough gold to hire this manager.";
 
-            if (!$prospect) {
-                return "Prospect not found.";
-            }
-
-            // Check if prospect can afford the manager
-            if ($prospect['gold'] < $manager['cost']) {
-                return "Not enough gold to hire this manager.";
-            }
-
-            // Deduct cost and update manager_id
             $newGold = $prospect['gold'] - $manager['cost'];
             $sql = "UPDATE prospects SET manager_id = :manager_id, gold = :gold WHERE pid = :pid";
             $stmtUpdate = $this->db->prepare($sql);

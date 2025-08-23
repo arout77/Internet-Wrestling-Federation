@@ -20,21 +20,15 @@ class App_Controller extends Base_Controller
 
     public function career()
     {
-        // Check if user is logged in
         if (!isset($_SESSION['user_id'])) {
-            // Redirect to login page if not logged in
-            header('Location: ' . $this->config->setting('site_url') . 'user/login');
+            $this->redirect('user/login');
             exit;
         }
 
-        // Explicitly fetch the prospect data for the current user to ensure it's available
-        $userModel = $this->model('User');
-        $prospect = $userModel->getProspectByUserId($_SESSION['user_id']);
-
-        // Pass the prospect data directly to the template
+        // The 'prospect' and 'record' variables are now globally available from the Base_Controller.
+        // We just need to render the view.
         $this->template->render('app/career.html.twig', [
-            'isLoggedIn' => true,
-            'prospect' => $prospect
+            'isLoggedIn' => true
         ]);
     }
 

@@ -4,9 +4,11 @@
         <p>&copy; {{ "now"|date('Y') }} IWF - Internet Wrestling Federation. All rights reserved.</p>
     </div>
 </footer>
+{% if route_action == 'match' %}
 <script type="module" src="{{ template_url }}assets/js/data.js"></script>
 <script type="module" src="{{ template_url }}assets/js/app.js"></script>
 <script type="module" src="{{ template_url }}assets/js/dom.js"></script>
+{% endif %}
 {% if route_action == 'booking' %}
 <script type="module" src="{{ template_url }}assets/js/booking.js"></script>
 {% endif %}

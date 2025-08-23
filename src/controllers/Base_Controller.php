@@ -29,14 +29,20 @@ class Base_Controller extends Kernel
         }
 
         $prospect = null;
+        $record = ['wins' => 0, 'losses' => 0]; // Default record
+
         if (isset($_SESSION['user_id'])) {
             $userModel = $this->model('User');
             $prospect = $userModel->getProspectByUserId($_SESSION['user_id']);
+            if ($prospect) {
+                $record = $userModel->getWrestlerRecord($prospect['pid']);
+            }
         }
 
-        // Makes 'prospect' variable available in all templates rendered by any controller that extends this one.
-        if (method_exists($this->template, 'getTwig')) {
+        // Only set Twig global if the template engine is initialized
+        if (isset($this->template) && method_exists($this->template, 'getTwig')) {
             $this->template->getTwig()->addGlobal('prospect', $prospect);
+            $this->template->getTwig()->addGlobal('record', $record);
         }
 	}
 
@@ -47,20 +53,15 @@ class Base_Controller extends Kernel
 	 */
 	public function initOverrideController( $_web_class, $_override_class )
 	{
-		# Define child controller extending this class
 		$this->controller = $this->route->controller;
-		# The class name contained inside child controller
 		$this->controller_class = $this->controller . '_Controller';
-		# File name of child controller
 		$this->controller_filename = ucwords( $this->controller_class ) . '.php';
-		# Action being requested from child controller
 		$this->action = $this->route->action;
 		$action       = trim( strtolower( $this->route->action ) );
-		# URL parameters
 		$this->parameter = $this->route->parameter;
+
 		if ( class_exists( $_override_class ) )
 		{
-			# File found and class exists, so instantiate controller class
 			$__instantiate_class = new $_override_class( $this->core );
 
 			if ( !is_subclass_of( $__instantiate_class, $_web_class ) )
@@ -70,17 +71,14 @@ class Base_Controller extends Kernel
 
 			if ( method_exists( $__instantiate_class, $action ) )
 			{
-				# Class method exists
-				$__instantiate_class->$action();
+				call_user_func_array([$__instantiate_class, $action], $this->parameter);
 			}
 			else
 			{
-				# Valid controller, but invalid action
 				if ( $this->debug_mode === Boolean::ON )
 				{
 					return $this->redirect( 'error/controller/' . $this->controller . '-' . $this->action );
 				}
-
 				return $this->redirect( 'error' );
 			}
 		}
@@ -88,13 +86,10 @@ class Base_Controller extends Kernel
 		{
 			if ( !is_readable( $this->config->setting( 'controllers_path' ) . $this->controller_filename ) )
 			{
-				# Controller file does not exist, or
-				# does not have read permissions
 				if ( $this->debug_mode === Boolean::ON )
 				{
 					return $this->redirect( 'error/controller/' . $this->controller . '-' . $this->action );
 				}
-
 				return $this->redirect( 'error' );
 			}
 		}
@@ -106,47 +101,25 @@ class Base_Controller extends Kernel
 	 */
 	public function initPublicController( $_web_class, $_override_class )
 	{
-		// # Define child controller extending this class
 		$this->controller = $this->route->controller;
-		# The class name contained inside child controller
 		$this->controller_class = $this->controller . '_Controller';
-		# File name of child controller
 		$this->controller_filename = ucwords( $this->controller_class ) . '.php';
-		# URL parameters
 		$this->parameter = $this->route->parameter;
+
 		if ( class_exists( $_web_class ) )
 		{
-			# File was found and has proper file permissions
-			if ( class_exists( $_web_class ) )
+			$__instantiate_class = new $_web_class( $this->core );
+
+			if ( method_exists( $__instantiate_class, $this->action ) )
 			{
-				# File found and class exists, so instantiate controller class
-				$__instantiate_class = new $_web_class( $this->core );
-
-				if ( method_exists( $__instantiate_class, $this->action ) )
-				{
-					# Class method exists
-					$__instantiate_class->{$this->action}();
-				}
-				else
-				{
-					# Valid controller, but invalid action
-					if ( $this->debug_mode === Boolean::ON )
-					{
-						return $this->redirect( 'error/controller/' . $this->controller . '-' . $this->action );
-					}
-
-					return $this->redirect( 'error' );
-				}
+				call_user_func_array([$__instantiate_class, $this->action], $this->parameter);
 			}
 			else
 			{
-				# Controller file exists, but class name
-				# is not formatted / spelled properly
 				if ( $this->debug_mode === Boolean::ON )
 				{
 					return $this->redirect( 'error/controller/' . $this->controller . '-' . $this->action );
 				}
-
 				return $this->redirect( 'error' );
 			}
 		}
@@ -154,17 +127,13 @@ class Base_Controller extends Kernel
 		{
 			if ( !is_readable( $this->config->setting( 'controllers_path' ) . $this->controller_filename ) )
 			{
-				# Controller file does not exist, or
-				# does not have read permissions
 				if ( $this->debug_mode === Boolean::ON )
 				{
 					return $this->redirect( 'error/controller/' . $this->controller . '-' . $this->action );
 				}
-
 				return $this->redirect( 'error' );
 			}
 		}
-
 	}
 
 	/**

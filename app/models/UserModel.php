@@ -24,21 +24,16 @@ class UserModel extends System_Model
     public function createNewUser($username, $email, $password)
     {
         try {
-            // Check if username or email already exists
             $stmt = $this->db->prepare("SELECT * FROM users WHERE name = :username OR email = :email");
             $stmt->execute([':username' => $username, ':email' => $email]);
             if ($stmt->fetch()) {
                 return "Username or email already exists.";
             }
 
-            // Hash the password
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            
-            // Generate a unique user_id
             $userId = bin2hex(random_bytes(16));
 
-            // Insert new user into the database
-            $sql = "INSERT INTO users (user_id, name, email, password, prospect_id) VALUES (:user_id, :username, :email, :password, '')";
+            $sql = "INSERT INTO users (user_id, name, email, password, prospect_id) VALUES (:user_id, :username, :email, :password, NULL)";
             $stmt = $this->db->prepare($sql);
             $stmt->bindParam(':user_id', $userId);
             $stmt->bindParam(':username', $username);
@@ -52,7 +47,6 @@ class UserModel extends System_Model
             }
 
         } catch (\PDOException $e) {
-            // In a real application, you would log this error
             return 'Database error: ' . $e->getMessage();
         }
     }
@@ -77,7 +71,6 @@ class UserModel extends System_Model
             return false;
 
         } catch (\PDOException $e) {
-            // In a real application, you would log this error
             return false;
         }
     }
@@ -92,11 +85,9 @@ class UserModel extends System_Model
     {
         $this->db->beginTransaction();
         try {
-            // Generate a unique prospect ID (pid)
             $pid = bin2hex(random_bytes(16));
 
-            // Insert into prospects table with default stats
-            $sqlProspect = "INSERT INTO prospects (pid, name, height, weight, image, baseHp, strength, technicalAbility, brawlingAbility, stamina, aerialAbility, toughness, reversalAbility, submissionDefense, staminaRecoveryRate, moves, lvl) VALUES (:pid, :name, :height, :weight, :image, :baseHp, :strength, :technicalAbility, :brawlingAbility, :stamina, :aerialAbility, :toughness, :reversalAbility, :submissionDefense, :staminaRecoveryRate, :moves, 1)";
+            $sqlProspect = "INSERT INTO prospects (pid, name, height, weight, image, baseHp, strength, technicalAbility, brawlingAbility, stamina, aerialAbility, toughness, reversalAbility, submissionDefense, staminaRecoveryRate, moves, lvl, attribute_points) VALUES (:pid, :name, :height, :weight, :image, :baseHp, :strength, :technicalAbility, :brawlingAbility, :stamina, :aerialAbility, :toughness, :reversalAbility, :submissionDefense, :staminaRecoveryRate, :moves, 1, 5)";
             $stmtProspect = $this->db->prepare($sqlProspect);
             
             $defaultMoves = json_encode([
@@ -125,14 +116,12 @@ class UserModel extends System_Model
                 ':moves' => $defaultMoves
             ]);
 
-            // Update users table with the new prospect_id
             $sqlUser = "UPDATE users SET prospect_id = :pid WHERE user_id = :user_id";
             $stmtUser = $this->db->prepare($sqlUser);
             $stmtUser->execute([':pid' => $pid, ':user_id' => $userId]);
 
             $this->db->commit();
             
-            // Return the newly created prospect data
             return $this->getProspectByPid($pid);
 
         } catch (\PDOException $e) {
@@ -170,6 +159,23 @@ class UserModel extends System_Model
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             return false;
+        }
+    }
+
+    /**
+     * Fetches a wrestler's win/loss record.
+     * @param string $wrestlerId
+     * @return array
+     */
+    public function getWrestlerRecord($wrestlerId)
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT wins, losses FROM wrestler_records WHERE wrestler_id = :id");
+            $stmt->execute([':id' => $wrestlerId]);
+            $record = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $record ?: ['wins' => 0, 'losses' => 0];
+        } catch (\PDOException $e) {
+            return ['wins' => 0, 'losses' => 0];
         }
     }
 }

@@ -10,7 +10,6 @@ class User_Controller extends Base_Controller
      */
     public function login()
     {
-        // If the form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = $_POST['email'] ?? '';
             $password = $_POST['password'] ?? '';
@@ -19,21 +18,14 @@ class User_Controller extends Base_Controller
             $user = $userModel->verifyUser($email, $password);
 
             if ($user) {
-                // Set session variables
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['username'] = $user['name'];
-                
-                // Redirect to the career page upon successful login
-                header('Location: ' . $this->config->setting('site_url') . 'app/career');
+                $this->redirect('app/career');
                 exit;
             } else {
-                // Pass an error message to the view
-                $this->template->render('forms/login.html.twig', [
-                    'error' => 'Invalid email or password.'
-                ]);
+                $this->template->render('forms/login.html.twig', ['error' => 'Invalid email or password.']);
             }
         } else {
-            // Display the login form
             $this->template->render('forms/login.html.twig');
         }
     }
@@ -43,7 +35,6 @@ class User_Controller extends Base_Controller
      */
     public function register()
     {
-        // If the form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $username = $_POST['username'] ?? '';
             $email = $_POST['email'] ?? '';
@@ -51,7 +42,6 @@ class User_Controller extends Base_Controller
             $confirm_password = $_POST['confirm_password'] ?? '';
 
             $errors = [];
-
             if ($password !== $confirm_password) {
                 $errors[] = 'Passwords do not match.';
             }
@@ -61,21 +51,15 @@ class User_Controller extends Base_Controller
                 $result = $userModel->createNewUser($username, $email, $password);
 
                 if ($result === true) {
-                    // Redirect to the login page upon successful registration
-                    header('Location: ' . $this->config->setting('site_url') . 'user/login');
+                    $this->redirect('user/login');
                     exit;
                 } else {
-                    $errors[] = $result; // Show the error message from the model
+                    $errors[] = $result;
                 }
             }
             
-            // Pass errors back to the view
-            $this->template->render('forms/register.html.twig', [
-                'errors' => $errors
-            ]);
-
+            $this->template->render('forms/register.html.twig', ['errors' => $errors]);
         } else {
-            // Display the registration form
             $this->template->render('forms/register.html.twig');
         }
     }
@@ -86,15 +70,13 @@ class User_Controller extends Base_Controller
     public function create_prospect()
     {
         header('Content-Type: application/json');
-
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_SESSION['user_id'])) {
-            http_response_code(403); // Forbidden
+            http_response_code(403);
             echo json_encode(['error' => 'Unauthorized access.']);
             exit;
         }
 
         $data = json_decode(file_get_contents('php://input'), true);
-
         $prospectData = [
             'name' => $data['wrestlerName'] ?? null,
             'height' => $data['wrestlerHeight'] ?? null,
@@ -102,9 +84,8 @@ class User_Controller extends Base_Controller
             'avatar' => $data['wrestlerAvatar'] ?? null,
         ];
 
-        // Basic validation
         if (empty($prospectData['name']) || empty($prospectData['height']) || empty($prospectData['weight']) || empty($prospectData['avatar'])) {
-            http_response_code(400); // Bad Request
+            http_response_code(400);
             echo json_encode(['error' => 'All fields are required.']);
             exit;
         }
@@ -128,7 +109,7 @@ class User_Controller extends Base_Controller
         session_start();
         session_unset();
         session_destroy();
-        header('Location: ' . $this->config->setting('site_url'));
+        $this->redirect('');
         exit;
     }
 }

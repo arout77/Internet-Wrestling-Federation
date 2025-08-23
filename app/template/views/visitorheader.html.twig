@@ -1,10 +1,20 @@
-<header class="w-full max-w-6xl mx-auto py-6 px-4 flex justify-center md:justify-between items-center bg-transparent z-10">
-    <div class="flex flex-col items-center">
+<header class="w-full max-w-6xl mx-auto py-6 px-4 flex justify-between items-center bg-transparent z-10">
+    <div class="flex-shrink-0">
         <a href="{{ base_url }}">
             <img src="{{ base_url }}public/media/images/logo-10.png" alt="IWF Logo" class="h-16 md:h-24 object-contain animate-fade-in-up">
         </a>
     </div>
-    <!-- Navigation links -->
+
+    <!-- Hamburger Menu Button -->
+    <div class="md:hidden">
+        <button id="menu-toggle" class="text-white focus:outline-none">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Desktop Navigation links -->
     <nav class="hidden md:flex space-x-6 items-center">
         <a href="{{ base_url }}app/career" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-500 {% if route_action == 'career' %}text-yellow-400{% else %}text-gray-300{% endif %}">Career Mode</a>
         <a href="{{ base_url }}app/booking" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-500 {% if route_action == 'booking' %}text-yellow-400{% else %}text-gray-300{% endif %}">Booker Mode</a>
@@ -12,11 +22,18 @@
         <a href="{{ base_url }}app/wrestlers" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-600 {% if route_action == 'wrestlers' %}text-yellow-400{% else %}text-gray-300{% endif %}">Roster</a>
         
         {% if session.user_id %}
-            {% if prospect and prospect.gold is defined %}
-                <div class="text-yellow-400 font-bold text-lg animate-fade-in-up animation-delay-700 bg-gray-900 px-4 py-2 rounded-lg">
-                    💰 {{ prospect.gold }} Gold
-                </div>
-            {% endif %}
+            <div class="flex items-center gap-4">
+                {% if prospect and prospect.gold is defined %}
+                    <div class="text-yellow-400 font-bold text-lg animate-fade-in-up animation-delay-700 bg-gray-900 px-4 py-2 rounded-lg">
+                        💰 {{ prospect.gold }} Gold
+                    </div>
+                {% endif %}
+                {% if prospect and prospect.attribute_points > 0 %}
+                    <div class="text-green-400 font-bold text-lg animate-fade-in-up animation-delay-700 bg-gray-900 px-4 py-2 rounded-lg">
+                        ✨ {{ prospect.attribute_points }} AP
+                    </div>
+                {% endif %}
+            </div>
             <a href="{{ base_url }}user/logout" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors animate-fade-in-up animation-delay-700">Logout</a>
         {% else %}
             <a href="{{ base_url }}user/login" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-700 text-gray-300">Login</a>
@@ -24,3 +41,17 @@
         {% endif %}
     </nav>
 </header>
+
+<!-- Mobile Menu -->
+<div id="mobile-menu" class="hidden md:hidden bg-gray-800 p-4">
+    <a href="{{ base_url }}app/career" class="block text-white py-2">Career Mode</a>
+    <a href="{{ base_url }}app/booking" class="block text-white py-2">Booker Mode</a>
+    <a href="{{ base_url }}app/match" class="block text-white py-2">Simulator</a>
+    <a href="{{ base_url }}app/wrestlers" class="block text-white py-2">Roster</a>
+    {% if session.user_id %}
+        <a href="{{ base_url }}user/logout" class="block text-white py-2">Logout</a>
+    {% else %}
+        <a href="{{ base_url }}user/login" class="block text-white py-2">Login</a>
+        <a href="{{ base_url }}user/register" class="block text-white py-2">Register</a>
+    {% endif %}
+</div>

@@ -32,7 +32,7 @@
             <div class="animated-blob" style="width: 50vw;height: 50vw;top: 30vh;left: -30vw;--color-start: #3aa4ff;--color-end: #6a0497;--duration: 40s;--delay: 10s;--x-start: 0vw;--y-start: 0vh;--scale-start: 1.1;--x-mid: 30vw;--y-mid: -10vh;--scale-mid: 0.9;--x-end: 10vw;--y-end: 20vh;--scale-end: 1.1;"></div>
             <div class="animated-blob" style="width: 19vw;height: 35vw;top: -5vh;left: 80vw;--color-start: rgb(59 130 246 / 0.5);--color-end: rgb(59 130 246 / 0.5);--duration: 35s;--delay: 15s;--x-start: 0vw;--y-start: 0vh;--scale-start: 0.9;--x-mid: -20vw;--y-mid: 10vh;--x-end: -10vw;--y-end: -5vh;--scale-end: 0.9;"></div>
         </div>
-        <main class="container mx-auto px-4 py-8 flex-grow z-10" style="position: relative;">
+        <main class="container mx-auto px-4 py-8 flex-grow z-20">
             {% block content %}{% endblock %}
         </main>
         <div id="footer">
@@ -40,5 +40,11 @@
                 {{ include('footer.html.twig') }}
             {% endblock %}
         </div>
+        <script>
+            document.getElementById('menu-toggle').addEventListener('click', function() {
+                var mobileMenu = document.getElementById('mobile-menu');
+                mobileMenu.classList.toggle('hidden');
+            });
+        </script>
     </body>
 </html>

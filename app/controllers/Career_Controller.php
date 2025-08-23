@@ -50,7 +50,18 @@ class Career_Controller extends Base_Controller
         $winner = ($prospect_power >= $opponent_power) ? $prospect['name'] : $opponent['name'];
 
         $xp_earned = ($winner === $prospect['name']) ? 100 : 25;
-        $gold_earned = ($winner === $prospect['name']) ? 500 : 100;
+        
+        // Gold earnings now scale with the prospect's level
+        $base_gold_win = 500;
+        $base_gold_loss = 100;
+        $gold_per_level_win = 50;
+        $gold_per_level_loss = 10;
+
+        if ($winner === $prospect['name']) {
+            $gold_earned = $base_gold_win + ($prospect['lvl'] * $gold_per_level_win);
+        } else {
+            $gold_earned = $base_gold_loss + ($prospect['lvl'] * $gold_per_level_loss);
+        }
 
         if ($prospect['manager_id']) {
             $managerModel = $this->model('Manager');

@@ -12,7 +12,7 @@
     </style>
 
     <!-- Create Wrestler Modal -->
-    <div id="createWrestlerModal" class="modal pt-32">
+    <div id="createWrestlerModal" class="modal pt-32" style="display: none;">
         <div class="modal-content bg-gray-900 p-8 rounded-lg shadow-lg">
             <h2 class="text-3xl font-bold mb-6 text-center text-amber-400">Create Your Wrestler</h2>
             <form id="createWrestlerForm">
@@ -53,10 +53,9 @@
             
             <!-- Left Column: Wrestler Profile -->
             <div class="md:col-span-1 bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-bold mb-4 text-center text-amber-400">My Wrestler</h2>
                 <div class="text-center mb-4">
-                    <img id="playerAvatar" src="" alt="Player Avatar" class="w-32 h-32 rounded-full mx-auto border-4 border-amber-500">
-                    <h3 id="playerName" class="text-xl font-bold mt-4"></h3>
+                    <img id="playerAvatar" src="" alt="Player Avatar" class="w-64 h-64 rounded-full mx-auto border-4 border-amber-500">
+                    <h3 id="playerName" class="text-xl text-yellow-500 font-bold mt-4"></h3>
                     <p id="playerPhysique" class="text-gray-400"></p>
                     <p id="playerRecord" class="text-gray-400">Wins: 0 - Losses: 0</p>
                 </div>
@@ -75,11 +74,11 @@
             <!-- Center Column: Attributes & Actions -->
             <div class="md:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-bold mb-4 text-center text-amber-400">Attributes & Actions</h2>
-                <div class="grid grid-cols-2 gap-6">
+                <div class="grid grid-cols-2 gap-10">
                     <!-- Attributes -->
                     <div>
                         <h3 class="text-xl font-semibold mb-3">Skills</h3>
-                        <div id="attributesContainer"></div>
+                        <div id="attributesContainer" class="text-center"></div>
                     </div>
                     <!-- Actions -->
                     <div>
@@ -95,57 +94,28 @@
         </div>
     </div>
 
-    <!-- Opponent Selection Modal -->
-    <div id="opponentModal" class="modal">
-        <div class="modal-content bg-gray-800 p-8 rounded-lg shadow-lg">
-            <h2 class="text-3xl font-bold mb-6 text-center text-amber-400">Select Opponent</h2>
-            <div class="mb-4">
-                <button onclick="findRandomOpponent()" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-3 px-4 rounded-md transition duration-300 mb-4">Find Random Opponent</button>
-                <input type="text" id="wrestlerSearch" onkeyup="filterWrestlers()" placeholder="Search for a wrestler..." class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500">
-            </div>
-            <div id="opponentList" class="max-h-96 overflow-y-auto">
-                <!-- Opponent list will be populated by JS -->
-            </div>
-            <button onclick="closeOpponentSelection()" class="mt-6 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Close</button>
-        </div>
-    </div>
-
-
     <script>
-        // --- DATA ---
-        const allWrestlers = [
-            { id: 1, name: 'Hulk Hogan', level: 95, image: '{{ base_url }}public/media/images/hogan.webp' },
-            { id: 2, name: 'Ric Flair', level: 94, image: '{{ base_url }}public/media/images/flair.webp' },
-            { id: 3, name: 'Andre the Giant', level: 92, image: '{{ base_url }}public/media/images/andre.webp' },
-            { id: 4, name: 'Macho Man Randy Savage', level: 93, image: '{{ base_url }}public/media/images/savage.webp' },
-            { id: 21, name: 'Brooklyn Brawler', level: 1, image: '{{ base_url }}public/media/images/brawler.webp' },
-            { id: 22, name: 'Iron Mike Sharpe', level: 2, image: '{{ base_url }}public/media/images/sharpe.webp' },
-            { id: 23, name: 'Gillberg', level: 1, image: '{{ base_url }}public/media/images/gillberg.webp' }
-        ];
-
         let player = {
-            attributes: {
-                strength: { value: 50, cost: 25 },
-                technical: { value: 50, cost: 25 },
-                brawling: { value: 50, cost: 25 },
-                aerial: { value: 50, cost: 25 },
-                stamina: { value: 50, cost: 25 },
-                toughness: { value: 50, cost: 25 }
-            }
+            attributeDisplayNames: {
+                strength: 'Strength',
+                technicalAbility: 'Technical',
+                brawlingAbility: 'Brawling',
+                aerialAbility: 'Aerial',
+                stamina: 'Stamina',
+                toughness: 'Toughness'
+            },
+            attributes: {}
         };
-
-        // --- GAME LOGIC ---
 
         document.addEventListener('DOMContentLoaded', () => {
             const prospectData = {{ prospect|json_encode|raw }};
+            const recordData = {{ record|json_encode|raw }};
 
             if (prospectData) {
-                // If prospect exists, initialize player object and show game interface
-                initializePlayer(prospectData);
+                initializePlayer(prospectData, recordData);
                 document.getElementById('gameInterface').style.display = 'block';
                 updateUI();
             } else {
-                // If no prospect, show the creation modal
                 document.getElementById('createWrestlerModal').style.display = 'block';
             }
             
@@ -174,7 +144,7 @@
                     const result = await response.json();
 
                     if (response.ok && result.success) {
-                        initializePlayer(result.prospect);
+                        initializePlayer(result.prospect, {wins: 0, losses: 0});
                         document.getElementById('createWrestlerModal').style.display = 'none';
                         document.getElementById('gameInterface').style.display = 'block';
                         updateUI();
@@ -188,7 +158,7 @@
             });
         });
 
-        function initializePlayer(prospectData) {
+        function initializePlayer(prospectData, recordData) {
             player.name = prospectData.name;
             player.avatar = prospectData.image;
             player.height = prospectData.height;
@@ -196,14 +166,16 @@
             player.level = parseInt(prospectData.lvl) || 1;
             player.xp = parseInt(prospectData.current_xp) || 0;
             player.gold = parseInt(prospectData.gold) || 5000;
-            player.wins = 0; // This should come from a records table in the future
-            player.losses = 0; // This should come from a records table in the future
-            player.attributes.strength.value = parseInt(prospectData.strength) || 50;
-            player.attributes.technical.value = parseInt(prospectData.technicalAbility) || 50;
-            player.attributes.brawling.value = parseInt(prospectData.brawlingAbility) || 50;
-            player.attributes.aerial.value = parseInt(prospectData.aerialAbility) || 50;
-            player.attributes.stamina.value = parseInt(prospectData.stamina) || 50;
-            player.attributes.toughness.value = parseInt(prospectData.toughness) || 50;
+            player.attributePoints = parseInt(prospectData.attribute_points) || 0;
+            player.wins = recordData ? (parseInt(recordData.wins) || 0) : 0;
+            player.losses = recordData ? (parseInt(recordData.losses) || 0) : 0;
+            
+            player.attributes.strength = parseInt(prospectData.strength) || 50;
+            player.attributes.technicalAbility = parseInt(prospectData.technicalAbility) || 50;
+            player.attributes.brawlingAbility = parseInt(prospectData.brawlingAbility) || 50;
+            player.attributes.aerialAbility = parseInt(prospectData.aerialAbility) || 50;
+            player.attributes.stamina = parseInt(prospectData.stamina) || 50;
+            player.attributes.toughness = parseInt(prospectData.toughness) || 50;
         }
 
         function populateAvatarGallery() {
@@ -230,22 +202,40 @@
             document.getElementById('avatarPreview').src = avatarUrl;
         }
 
-        function upgradeAttribute(attribute) {
-            const attr = player.attributes[attribute];
-            if (player.gold >= attr.cost && attr.value < 100) {
-                player.gold -= attr.cost;
-                attr.value++;
-                attr.cost = Math.ceil(attr.cost * 1.10);
-                updateUI();
-            } else if (attr.value >= 100) {
-                alert("This attribute is already at its maximum level.");
-            } else {
-                alert("Not enough gold!");
+        async function upgradeAttribute(attributeKey) {
+            if (player.attributePoints <= 0) {
+                alert("No attribute points available.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`{{ base_url }}career/upgrade_attribute/${attributeKey}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    initializePlayer(result.prospect, {wins: player.wins, losses: player.losses});
+                    updateUI();
+                } else {
+                    alert('Error: ' + (result.error || 'Could not upgrade attribute.'));
+                }
+            } catch (error) {
+                console.error('Failed to upgrade attribute:', error);
+                alert('An error occurred. Please try again.');
             }
         }
         
         function getNextLevelXP() {
             return Math.floor(100 * Math.pow(1.1, player.level - 1));
+        }
+
+        function getBarColor(value) {
+            if (value >= 90) return '#2F855A'; // Dark Green (Tailwind green-800)
+            if (value >= 80) return '#38A169'; // Green (Tailwind green-600)
+            if (value >= 70) return '#48BB78'; // Light Green (Tailwind green-400)
+            if (value >= 60) return '#F6E05E'; // Yellow (Tailwind yellow-400)
+            return '#ED8936'; // Orange (Tailwind orange-500)
         }
 
         function updateUI() {
@@ -259,74 +249,31 @@
             document.getElementById('nextLevelXP').textContent = nextLevelXP;
             document.getElementById('xpBar').style.width = `${(player.xp / nextLevelXP) * 100}%`;
             document.getElementById('playerGold').textContent = player.gold;
+            document.getElementById('playerAP').textContent = player.attributePoints;
 
             const attributesContainer = document.getElementById('attributesContainer');
             attributesContainer.innerHTML = '';
-            for (const key in player.attributes) {
-                const attr = player.attributes[key];
+            for (const key in player.attributeDisplayNames) {
+                const displayName = player.attributeDisplayNames[key];
+                const currentValue = player.attributes[key];
+                const barColor = getBarColor(currentValue);
+                const buttonText = player.attributePoints > 0 ? `Free Upgrade (${player.attributePoints})` : 'No Upgrades';
                 const attributeHTML = `
                     <div class="mb-3">
                         <div class="flex justify-between items-center">
-                            <span class="capitalize font-semibold">${key}</span>
-                            <span class="font-bold text-lg">${attr.value}</span>
+                            <span class="capitalize font-semibold">${displayName}</span>
+                            <span class="font-bold text-lg">${currentValue}</span>
                         </div>
                         <div class="w-full bg-gray-700 rounded-full h-2.5">
-                            <div class="bg-amber-500 h-2.5 rounded-full" style="width: ${attr.value}%"></div>
+                            <div class="h-2.5 rounded-full" style="width: ${currentValue}%; background-color: ${barColor};"></div>
                         </div>
-                        <button onclick="upgradeAttribute('${key}')" class="w-full mt-1 bg-gray-600 hover:bg-gray-700 text-xs py-1 px-2 rounded-md transition duration-300">
-                            Upgrade (${attr.cost} G)
+                        <button onclick="upgradeAttribute('${key}')" class="w-1/2 mt-1 bg-green-600 hover:bg-green-700 text-xs py-1 px-2 rounded-md transition duration-300 upgrade-btn" ${player.attributePoints <= 0 ? 'disabled' : ''}>
+                            ${buttonText}
                         </button>
                     </div>
                 `;
                 attributesContainer.innerHTML += attributeHTML;
             }
         }
-
-        function showOpponentSelection() {
-            document.getElementById('opponentModal').style.display = 'block';
-            filterWrestlers();
-        }
-        
-        function closeOpponentSelection() {
-            document.getElementById('opponentModal').style.display = 'none';
-        }
-
-        function filterWrestlers() {
-            const searchTerm = document.getElementById('wrestlerSearch').value.toLowerCase();
-            const opponentList = document.getElementById('opponentList');
-            opponentList.innerHTML = '';
-            
-            const availableOpponents = allWrestlers.filter(w => w.level <= player.level);
-
-            availableOpponents
-                .filter(w => w.name.toLowerCase().includes(searchTerm))
-                .forEach(wrestler => {
-                    const wrestlerDiv = document.createElement('div');
-                    wrestlerDiv.className = 'flex items-center justify-between p-3 bg-gray-700 rounded-md mb-2';
-                    wrestlerDiv.innerHTML = `
-                        <div class="flex items-center">
-                            <img src="${wrestler.image}" alt="${wrestler.name}" class="w-12 h-12 rounded-full mr-4">
-                            <div>
-                                <p class="font-bold">${wrestler.name}</p>
-                                <p class="text-sm text-gray-400">Level: ${wrestler.level}</p>
-                            </div>
-                        </div>
-                        <button class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-sm">Challenge</button>
-                    `;
-                    opponentList.appendChild(wrestlerDiv);
-                });
-        }
-        
-        function findRandomOpponent() {
-            const availableOpponents = allWrestlers.filter(w => w.level <= player.level);
-            if (availableOpponents.length > 0) {
-                const randomOpponent = availableOpponents[Math.floor(Math.random() * availableOpponents.length)];
-                alert(`You have been matched with ${randomOpponent.name}!`);
-            } else {
-                alert("No opponents available at your level!");
-            }
-        }
-
     </script>
-
 {% endblock %}

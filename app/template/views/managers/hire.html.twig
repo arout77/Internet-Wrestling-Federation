@@ -7,6 +7,7 @@
     <header class="text-center my-8">
         <h1 class="text-5xl font-bold text-yellow-400">Hire a Manager</h1>
         <p class="text-xl text-gray-300">Invest in a legend to guide your career to new heights.</p>
+        <a href="{{ base_url }}app/career" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Career</a>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -18,7 +19,7 @@
                     <p class="text-gray-400 text-sm mb-4 flex-grow h-64 overflow-y-auto">{{ manager.description }}</p>
                     
                     <div class="bg-gray-700 p-4 rounded-md mb-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">Bonuses</h3>
+                        <h3 class="text-lg font-semibold text-white mb-3">Bonuses & Requirements</h3>
                         <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                             <p>XP Boost: <span class="font-bold text-green-400">+{{ manager.xp_bonus * 100 }}%</span></p>
                             <p>Gold Boost: <span class="font-bold text-green-400">+{{ manager.gold_bonus * 100 }}%</span></p>
@@ -28,12 +29,19 @@
                             <p>Aerial: <span class="font-bold text-blue-400">+{{ manager.aerialAbility_bonus }}</span></p>
                             <p>Stamina: <span class="font-bold text-blue-400">+{{ manager.stamina_bonus }}</span></p>
                             <p>Toughness: <span class="font-bold text-blue-400">+{{ manager.toughness_bonus }}</span></p>
+                            <p class="col-span-2">Level Req: <span class="font-bold text-gray-300">{{ manager.level_requirement }}</span></p>
                         </div>
                     </div>
 
-                    <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" onclick="hireManager({{ manager.id }})">
-                        Hire for ${{ manager.cost }}
-                    </button>
+                    {% if prospect.lvl >= manager.level_requirement %}
+                        <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" onclick="hireManager({{ manager.id }})">
+                            Hire for ${{ manager.cost }}
+                        </button>
+                    {% else %}
+                        <button class="w-full bg-gray-600 text-gray-400 font-bold py-3 px-4 rounded-md mt-auto" disabled>
+                            Requires Level {{ manager.level_requirement }}
+                        </button>
+                    {% endif %}
                 </div>
             </div>
         {% endfor %}
