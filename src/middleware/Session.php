@@ -93,6 +93,11 @@ namespace Src\Middleware {
 			return $_SESSION["$key"] = $value;
 		}
 
+		public function setFlash( $key, $value )
+		{
+			return $_SESSION['flash']["$key"] = $value;
+		}
+
 		public function start()
 		{
 			if ( session_status() < 2 )

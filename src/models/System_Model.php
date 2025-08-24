@@ -44,6 +44,11 @@ class System_Model extends R
 	/**
 	 * @var mixed
 	 */
+	protected $orm;
+
+	/**
+	 * @var mixed
+	 */
 	protected $load;
 
 	/**
@@ -58,7 +63,8 @@ class System_Model extends R
 	 */
 	public function __construct( \Pimple\Container $app )
 	{
-		$this->db     = $app['database'];
+		$this->db     = $app['db'];
+		$this->orm    = $app['orm'];
 		$this->config = $app['config'];
 		$this->log    = $app['log'];
 		//$this->hash         = self::hash();

@@ -40,6 +40,35 @@ class Train_Controller extends Base_Controller
         ]);
     }
 
+    public function upgrade()
+    {
+        $this->auth->requireLogin();
+        $this->load->model('train');
+        $user_id = $this->session->get('user_id');
+
+        // Load the prospect associated with the logged-in user
+        $prospect = R::findOne('prospects', 'user_id = ?', [$user_id]);
+
+        if (!$prospect) {
+            // Handle the case where the prospect is not found
+            // You might want to redirect or show an error message
+            return;
+        }
+
+        $attribute = $_POST['attribute'];
+        $cost = $_POST['cost'];
+
+        if ($this->train->can_upgrade($prospect, $cost)) {
+            $this->train->upgrade_attribute($prospect, $attribute, $cost);
+            $this->session->setFlash('success', 'Attribute upgraded successfully!');
+        } else {
+            $this->session->setFlash('error', 'You do not have enough gold to upgrade.');
+        }
+
+        header('Location: /train'); // Redirect back to the training page
+        exit;
+    }
+
     /**
      * Handles the purchase of a new move.
      */

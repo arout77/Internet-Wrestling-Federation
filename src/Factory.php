@@ -61,7 +61,7 @@ $app['router'] = function ( $c )
 	return new \Src\Router;
 };
 
-$app['db'] = function ( $c )
+$app['orm'] = function ( $c )
 {
 	$freeze           = strtoupper( $c['config']->setting( 'db_freeze' ) );
 	$dbengine         = strtolower( $c['config']->setting( 'db_type' ) );
@@ -126,7 +126,7 @@ $app['db'] = function ( $c )
 	return \RedBeanPHP\R::freeze( TRUE );
 };
 
-$app['database'] = function ( $c )
+$app['db'] = function ( $c )
 {
 	return new \Src\Database( $c );
 };

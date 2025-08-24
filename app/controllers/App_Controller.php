@@ -25,10 +25,14 @@ class App_Controller extends Base_Controller
             exit;
         }
 
+        $user = $this->model('User')->getProspectByUserId($_SESSION['user_id']);
+
         // The 'prospect' and 'record' variables are now globally available from the Base_Controller.
         // We just need to render the view.
         $this->template->render('app/career.html.twig', [
-            'isLoggedIn' => true
+            'isLoggedIn' => true,
+            'user'   => $user,
+            'prospect'   => $user,
         ]);
     }
 

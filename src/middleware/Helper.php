@@ -40,7 +40,8 @@ class Helper
 	public function __construct( \Pimple\Container $app )
 	{
 		$this->config = $app['config'];
-		$this->db     = $app['database'];
+		$this->db     = $app['db'];
+		$this->db     = $app['orm'];
 		$this->loader = $app['load'];
 		$this->app    = $app['app'];
 	}

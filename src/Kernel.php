@@ -175,7 +175,7 @@ class Kernel
 		$this->controller = $app['router']->controller;
 		// $this->cron          = $app['cron'];
 		$this->db            = $app['db'];
-		$this->database      = $app['database'];
+		$this->orm      = $app['orm'];
 		$this->db_info       = $app['database_info'];
 		$this->debug_mode    = $debug_mode;
 		$this->error_reports = $err_reporting;

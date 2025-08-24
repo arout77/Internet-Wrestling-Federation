@@ -12,9 +12,10 @@
     </style>
 
     <!-- Create Wrestler Modal -->
-    <div id="createWrestlerModal" class="modal pt-32" style="display: none;">
+    {% if not prospect %}
+    <div id="createWrestlerModal" class="modal pt-32">
         <div class="modal-content bg-gray-900 p-8 rounded-lg shadow-lg">
-            <h2 class="text-3xl font-bold mb-6 text-center text-amber-400">Create Your Wrestler</h2>
+            <h2 class="text-3xl font-bold mb-6 text-center text-amber-400">Create Your Wrestler {{ user.prospect_id }}</h2>
             <form id="createWrestlerForm">
                 <div class="mb-4">
                     <label for="wrestlerName" class="block text-sm font-medium mb-2">Wrestler Name</label>
@@ -46,6 +47,7 @@
             </form>
         </div>
     </div>
+    {% endif %}
 
     <!-- Main Game Interface -->
     <div id="gameInterface" class="container mx-auto p-4" style="display: none;">
@@ -56,12 +58,14 @@
                 <div class="text-center mb-4">
                     <img id="playerAvatar" src="" alt="Player Avatar" class="w-64 h-64 rounded-full mx-auto border-4 border-amber-500">
                     <h3 id="playerName" class="text-xl text-yellow-500 font-bold mt-4"></h3>
-                    <p id="playerPhysique" class="text-gray-400"></p>
-                    <p id="playerRecord" class="text-gray-400">Wins: 0 - Losses: 0</p>
+                    <p id="playerPhysique" class="text-gray-200"></p>
+                    <p id="playerRecord" class="text-gray-200">Wins: 0 - Losses: 0</p>
                 </div>
                 <div>
                     <p class="flex justify-between"><strong>Level:</strong> <span id="playerLevel">1</span></p>
-                    <p class="flex justify-between"><strong>XP:</strong> <span id="playerXP">0</span> / <span id="nextLevelXP">100</span></p>
+                    <p class="flex flex-start justify-between">
+                        <span><strong>XP:</strong></span> <span><span id="playerXP">0</span> / <span id="nextLevelXP">100</span></span>
+                    </p>
                     <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4"><div id="xpBar" class="bg-amber-500 h-2.5 rounded-full" style="width: 0%"></div></div>
                     <p class="flex justify-between"><strong>Gold:</strong> <span id="playerGold" class="text-yellow-400">5000</span></p>
                     <p class="flex justify-between"><strong>Attribute Points:</strong> <span id="playerAP" class="text-green-400 font-bold">0</span></p>
@@ -88,6 +92,18 @@
                             <a href="{{ base_url }}manager/hire" class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Hire Manager</a>
                             <a href="{{ base_url }}career/find_match" class="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Find Match</a>
                         </div>
+                        <div class="mt-4 text-sm text-gray-300 space-y-1">
+                            <p>* Attributes affect your performance in matches. Upgrade them to improve your chances of winning!</p>
+                            <p>* Attribute points can be used to upgrade skills, and are earned when you level up.</p>
+                            <p>* Gold can also be used to upgrade skills if you are out of attribute points.</p>
+                            <p>* Each upgrade increases the skill by 1 point, up to a maximum of 100.</p>
+                            <p>* Upgrade costs increase as the skill level increases.</p>
+                            <p>* Winning matches earns you XP and Gold to help you progress.</p>
+                            <p>* Hiring a manager provides bonuses to XP and Gold earnings, as well as attribute boosts.</p>
+                            <p>* Find Matches allows you to challenge other wrestlers in the league.</p>
+                            <p>* Winning matches against higher-level opponents will earn you more rewards.</p>
+                            <p>* Losing matches may result in penalties or loss of attribute points.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -95,185 +111,255 @@
     </div>
 
     <script>
-        let player = {
-            attributeDisplayNames: {
-                strength: 'Strength',
-                technicalAbility: 'Technical',
-                brawlingAbility: 'Brawling',
-                aerialAbility: 'Aerial',
-                stamina: 'Stamina',
-                toughness: 'Toughness'
-            },
-            attributes: {}
-        };
+    let player = {
+        attributeDisplayNames: {
+            strength: 'Strength',
+            technicalAbility: 'Technical',
+            brawlingAbility: 'Brawling',
+            aerialAbility: 'Aerial',
+            stamina: 'Stamina',
+            toughness: 'Toughness'
+        },
+        attributes: {}
+    };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const prospectData = {{ prospect|json_encode|raw }};
-            const recordData = {{ record|json_encode|raw }};
+    document.addEventListener('DOMContentLoaded', () => {
+        const prospectData = {{ prospect|json_encode|raw }};
+        const recordData = {{ record|json_encode|raw }};
 
-            if (prospectData) {
-                initializePlayer(prospectData, recordData);
-                document.getElementById('gameInterface').style.display = 'block';
-                updateUI();
-            } else {
-                document.getElementById('createWrestlerModal').style.display = 'block';
-            }
-            
-            populateAvatarGallery();
-            
-            const createWrestlerForm = document.getElementById('createWrestlerForm');
-            createWrestlerForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const prospectPayload = {
-                    wrestlerName: document.getElementById('wrestlerName').value,
-                    wrestlerHeight: document.getElementById('wrestlerHeight').value,
-                    wrestlerWeight: document.getElementById('wrestlerWeight').value,
-                    wrestlerAvatar: document.getElementById('wrestlerAvatar').value
-                };
-
-                try {
-                    const response = await fetch('{{ base_url }}user/create_prospect', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(prospectPayload)
-                    });
-
-                    const result = await response.json();
-
-                    if (response.ok && result.success) {
-                        initializePlayer(result.prospect, {wins: 0, losses: 0});
-                        document.getElementById('createWrestlerModal').style.display = 'none';
-                        document.getElementById('gameInterface').style.display = 'block';
-                        updateUI();
-                    } else {
-                        alert('Error: ' + (result.error || 'Could not create wrestler.'));
-                    }
-                } catch (error) {
-                    console.error('Failed to create prospect:', error);
-                    alert('An error occurred. Please try again.');
-                }
-            });
-        });
-
-        function initializePlayer(prospectData, recordData) {
-            player.name = prospectData.name;
-            player.avatar = prospectData.image;
-            player.height = prospectData.height;
-            player.weight = prospectData.weight;
-            player.level = parseInt(prospectData.lvl) || 1;
-            player.xp = parseInt(prospectData.current_xp) || 0;
-            player.gold = parseInt(prospectData.gold) || 5000;
-            player.attributePoints = parseInt(prospectData.attribute_points) || 0;
-            player.wins = recordData ? (parseInt(recordData.wins) || 0) : 0;
-            player.losses = recordData ? (parseInt(recordData.losses) || 0) : 0;
-            
-            player.attributes.strength = parseInt(prospectData.strength) || 50;
-            player.attributes.technicalAbility = parseInt(prospectData.technicalAbility) || 50;
-            player.attributes.brawlingAbility = parseInt(prospectData.brawlingAbility) || 50;
-            player.attributes.aerialAbility = parseInt(prospectData.aerialAbility) || 50;
-            player.attributes.stamina = parseInt(prospectData.stamina) || 50;
-            player.attributes.toughness = parseInt(prospectData.toughness) || 50;
+        if (prospectData) {
+            initializePlayer(prospectData, recordData);
+            document.getElementById('gameInterface').style.display = 'block';
+            updateUI();
+        } else {
+            document.getElementById('createWrestlerModal').style.display = 'block';
         }
 
-        function populateAvatarGallery() {
-            const gallery = document.getElementById('avatarGallery');
-            const avatarPath = '{{ base_url }}public/media/images/avatars/';
-            for (let i = 1; i <= 17; i++) {
-                const img = document.createElement('img');
-                const fileName = `gen${i}.png`;
-                img.src = `${avatarPath}${fileName}`;
-                img.alt = `Avatar ${i}`;
-                img.classList.add('w-full', 'rounded-md', 'hover:opacity-75');
-                img.onclick = () => selectAvatar(img, `${avatarPath}${fileName}`);
-                gallery.appendChild(img);
-            }
-        }
-
-        function selectAvatar(imgElement, avatarUrl) {
-            const selected = document.querySelector('.avatar-gallery img.selected');
-            if (selected) {
-                selected.classList.remove('selected');
-            }
-            imgElement.classList.add('selected');
-            document.getElementById('wrestlerAvatar').value = avatarUrl;
-            document.getElementById('avatarPreview').src = avatarUrl;
-        }
-
-        async function upgradeAttribute(attributeKey) {
-            if (player.attributePoints <= 0) {
-                alert("No attribute points available.");
-                return;
-            }
-
+        {% if not prospect %}
+        populateAvatarGallery();
+        
+        const createWrestlerForm = document.getElementById('createWrestlerForm');
+        createWrestlerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const prospectPayload = {
+                wrestlerName: document.getElementById('wrestlerName').value,
+                wrestlerHeight: document.getElementById('wrestlerHeight').value,
+                wrestlerWeight: document.getElementById('wrestlerWeight').value,
+                wrestlerAvatar: document.getElementById('wrestlerAvatar').value
+            };
             try {
-                const response = await fetch(`{{ base_url }}career/upgrade_attribute/${attributeKey}`, {
-                    method: 'POST'
+                const response = await fetch('{{ base_url }}user/create_prospect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(prospectPayload)
                 });
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    initializePlayer(result.prospect, {wins: player.wins, losses: player.losses});
+                    initializePlayer(result.prospect, {wins: 0, losses: 0});
+                    document.getElementById('createWrestlerModal').style.display = 'none';
+                    document.getElementById('gameInterface').style.display = 'block';
                     updateUI();
                 } else {
-                    alert('Error: ' + (result.error || 'Could not upgrade attribute.'));
+                    alert('Error: ' + (result.error || 'Could not create wrestler.'));
                 }
             } catch (error) {
-                console.error('Failed to upgrade attribute:', error);
+                console.error('Failed to create prospect:', error);
                 alert('An error occurred. Please try again.');
             }
-        }
+        });
+        {% endif %}
+    });
+
+    function initializePlayer(prospectData, recordData) {
+        player.name = prospectData.name;
+        player.avatar = prospectData.image;
+        player.height = prospectData.height;
+        player.weight = prospectData.weight;
+        player.level = parseInt(prospectData.lvl) || 1;
+        player.xp = parseInt(prospectData.current_xp) || 0;
+        player.gold = parseInt(prospectData.gold) || 0;
+        player.attributePoints = parseInt(prospectData.attribute_points) || 0;
+        player.wins = recordData ? (parseInt(recordData.wins) || 0) : 0;
+        player.losses = recordData ? (parseInt(recordData.losses) || 0) : 0;
         
-        function getNextLevelXP() {
-            return Math.floor(100 * Math.pow(1.1, player.level - 1));
+        player.attributes.strength = parseInt(prospectData.strength) || 50;
+        player.attributes.technicalAbility = parseInt(prospectData.technicalAbility) || 50;
+        player.attributes.brawlingAbility = parseInt(prospectData.brawlingAbility) || 50;
+        player.attributes.aerialAbility = parseInt(prospectData.aerialAbility) || 50;
+        player.attributes.stamina = parseInt(prospectData.stamina) || 50;
+        player.attributes.toughness = parseInt(prospectData.toughness) || 50;
+    }
+
+    function populateAvatarGallery() {
+        const gallery = document.getElementById('avatarGallery');
+        const avatarPath = '{{ base_url }}public/media/images/avatars/';
+        for (let i = 1; i <= 17; i++) {
+            const img = document.createElement('img');
+            const fileName = `gen${i}.png`;
+            img.src = `${avatarPath}${fileName}`;
+            img.alt = `Avatar ${i}`;
+            img.classList.add('w-full', 'rounded-md', 'hover:opacity-75', 'cursor-pointer');
+            img.onclick = () => selectAvatar(img, `${avatarPath}${fileName}`);
+            gallery.appendChild(img);
         }
+    }
 
-        function getBarColor(value) {
-            if (value >= 90) return '#2F855A'; // Dark Green (Tailwind green-800)
-            if (value >= 80) return '#38A169'; // Green (Tailwind green-600)
-            if (value >= 70) return '#48BB78'; // Light Green (Tailwind green-400)
-            if (value >= 60) return '#F6E05E'; // Yellow (Tailwind yellow-400)
-            return '#ED8936'; // Orange (Tailwind orange-500)
+    function selectAvatar(imgElement, avatarUrl) {
+        const selected = document.querySelector('#avatarGallery img.selected');
+        if (selected) {
+            selected.classList.remove('selected');
         }
+        imgElement.classList.add('selected');
+        document.getElementById('wrestlerAvatar').value = avatarUrl;
+        document.getElementById('avatarPreview').src = avatarUrl;
+    }
 
-        function updateUI() {
-            document.getElementById('playerName').textContent = player.name;
-            document.getElementById('playerAvatar').src = player.avatar;
-            document.getElementById('playerPhysique').textContent = `${player.height} / ${player.weight} lbs`;
-            document.getElementById('playerRecord').textContent = `Wins: ${player.wins} - Losses: ${player.losses}`;
-            document.getElementById('playerLevel').textContent = player.level;
-            document.getElementById('playerXP').textContent = player.xp;
-            const nextLevelXP = getNextLevelXP();
-            document.getElementById('nextLevelXP').textContent = nextLevelXP;
-            document.getElementById('xpBar').style.width = `${(player.xp / nextLevelXP) * 100}%`;
-            document.getElementById('playerGold').textContent = player.gold;
-            document.getElementById('playerAP').textContent = player.attributePoints;
+    async function upgradeAttribute(attributeKey) {
+        try {
+            const response = await fetch(`{{ base_url }}career/upgrade_attribute/${attributeKey}`, {
+                method: 'POST'
+            });
+            const result = await response.json();
 
-            const attributesContainer = document.getElementById('attributesContainer');
-            attributesContainer.innerHTML = '';
-            for (const key in player.attributeDisplayNames) {
-                const displayName = player.attributeDisplayNames[key];
-                const currentValue = player.attributes[key];
-                const barColor = getBarColor(currentValue);
-                const buttonText = player.attributePoints > 0 ? `Free Upgrade (${player.attributePoints})` : 'No Upgrades';
-                const attributeHTML = `
-                    <div class="mb-3">
-                        <div class="flex justify-between items-center">
-                            <span class="capitalize font-semibold">${displayName}</span>
-                            <span class="font-bold text-lg">${currentValue}</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-2.5">
-                            <div class="h-2.5 rounded-full" style="width: ${currentValue}%; background-color: ${barColor};"></div>
-                        </div>
-                        <button onclick="upgradeAttribute('${key}')" class="w-1/2 mt-1 bg-green-600 hover:bg-green-700 text-xs py-1 px-2 rounded-md transition duration-300 upgrade-btn" ${player.attributePoints <= 0 ? 'disabled' : ''}>
-                            ${buttonText}
-                        </button>
-                    </div>
-                `;
-                attributesContainer.innerHTML += attributeHTML;
+            if (response.ok && result.success) {
+                // Re-initialize player data with the updated prospect info from the server
+                initializePlayer(result.prospect, {wins: player.wins, losses: player.losses});
+                updateUI(); // Refresh the entire UI with the new data
+            } else {
+                alert('Error: ' + (result.error || 'Could not upgrade attribute.'));
             }
+        } catch (error) {
+            console.error('Failed to upgrade attribute:', error);
+            alert('An error occurred. Please try again.');
         }
-    </script>
+    }
+    
+    function getNextLevelXP() {
+        return Math.floor(100 * Math.pow(1.1, player.level - 1));
+    }
+
+    function getBarColor(value) {
+        if (value >= 90) return '#2F855A'; // Dark Green
+        if (value >= 80) return '#38A169'; // Green
+        if (value >= 70) return '#48BB78'; // Light Green
+        if (value >= 60) return '#F6E05E'; // Yellow
+        return '#ED8936'; // Orange
+    }
+
+    function updateUI() {
+        document.getElementById('playerName').textContent = player.name;
+        document.getElementById('playerAvatar').src = player.avatar;
+        document.getElementById('playerPhysique').textContent = `${player.height} / ${player.weight} lbs`;
+        document.getElementById('playerRecord').textContent = `Wins: ${player.wins} - Losses: ${player.losses}`;
+        document.getElementById('playerLevel').textContent = player.level;
+        document.getElementById('playerXP').textContent = player.xp;
+        const nextLevelXP = getNextLevelXP();
+        document.getElementById('nextLevelXP').textContent = nextLevelXP;
+        document.getElementById('xpBar').style.width = `${(player.xp / nextLevelXP) * 100}%`;
+        document.getElementById('playerGold').textContent = player.gold;
+        document.getElementById('playerAP').textContent = player.attributePoints;
+
+        const attributesContainer = document.getElementById('attributesContainer');
+        attributesContainer.innerHTML = '';
+        for (const key in player.attributeDisplayNames) {
+            const displayName = player.attributeDisplayNames[key];
+            const currentValue = player.attributes[key];
+            const barColor = getBarColor(currentValue);
+            
+            let buttonText = 'Max Level';
+            let buttonClass = 'bg-gray-600';
+            let isDisabled = true;
+
+            if (currentValue < 100) {
+                // **THE FIX:** Use the correct compounding cost formula.
+                const upgradeCost = Math.ceil(50 * Math.pow(1.1, currentValue - 50));
+
+                if (player.attributePoints > 0) {
+                    buttonText = `Free Upgrade (${player.attributePoints})`;
+                    buttonClass = 'bg-green-600 hover:bg-green-700';
+                    isDisabled = false;
+                } else if (player.gold >= upgradeCost) {
+                    buttonText = `Upgrade (${upgradeCost} Gold)`;
+                    buttonClass = 'bg-blue-500 hover:bg-blue-700';
+                    isDisabled = false;
+                } else {
+                    buttonText = `Needed: ${upgradeCost} Gold`;
+                    buttonClass = 'bg-red-800';
+                    isDisabled = true;
+                }
+            }
+
+            const attributeHTML = `
+                <div class="mb-3">
+                    <div class="flex justify-between items-center">
+                        <div class="capitalize font-semibold">${displayName}</div>
+                        <div class="font-bold text-lg">${currentValue}</div>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                        <div class="h-2.5 rounded-full" style="width: ${currentValue}%; background-color: ${barColor};"></div>
+                    </div>
+                    <button onclick="upgradeAttribute('${key}')" class="w-full mt-1 text-white text-xs py-1 px-2 rounded-md transition duration-300 upgrade-btn ${buttonClass}" ${isDisabled ? 'disabled' : ''}>
+                        ${buttonText}
+                    </button>
+                </div>
+            `;
+            attributesContainer.innerHTML += attributeHTML;
+        }
+    }
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const prospectData = {{ prospect|json_encode|raw }};
+    const recordData = {{ record|json_encode|raw }};
+    const createWrestlerModal = document.getElementById('createWrestlerModal');
+
+    if (prospectData) {
+        // This block runs if the user already has a prospect.
+        initializePlayer(prospectData, recordData);
+        document.getElementById('gameInterface').style.display = 'block';
+        updateUI();
+
+    } else if (createWrestlerModal) {
+        // This block runs ONLY if the user needs to create a prospect.
+        createWrestlerModal.style.display = 'block';
+        
+        populateAvatarGallery();
+        
+        // **THE FIX:** The form and its event listener are now safely inside this block.
+        const createWrestlerForm = document.getElementById('createWrestlerForm');
+        createWrestlerForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const prospectPayload = {
+                wrestlerName: document.getElementById('wrestlerName').value,
+                wrestlerHeight: document.getElementById('wrestlerHeight').value,
+                wrestlerWeight: document.getElementById('wrestlerWeight').value,
+                wrestlerAvatar: document.getElementById('wrestlerAvatar').value
+            };
+            try {
+                const response = await fetch('{{ base_url }}user/create_prospect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(prospectPayload)
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    initializePlayer(result.prospect, {wins: 0, losses: 0});
+                    createWrestlerModal.style.display = 'none';
+                    document.getElementById('gameInterface').style.display = 'block';
+                    updateUI();
+                } else {
+                    alert('Error: ' + (result.error || 'Could not create wrestler.'));
+                }
+            } catch (error) {
+                console.error('Failed to create prospect:', error);
+                alert('An error occurred. Please try again.');
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

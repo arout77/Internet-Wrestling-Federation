@@ -153,13 +153,42 @@ class UserModel extends System_Model
      */
     public function getProspectByUserId($userId)
     {
-        try {
-            $stmt = $this->db->prepare("SELECT p.* FROM prospects p JOIN users u ON p.pid = u.prospect_id WHERE u.user_id = :user_id");
-            $stmt->execute([':user_id' => $userId]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (\PDOException $e) {
-            return false;
+        $sql = "SELECT p.*, u.user_id FROM prospects p JOIN users u ON p.pid = u.prospect_id WHERE u.user_id = :user_id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':user_id' => $userId]);
+        $prospectData = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$prospectData) {
+            return null;
         }
+
+        // **THE FIX:** Ensures all keys are consistent camelCase for JavaScript.
+        return [
+            'id' => $prospectData['id'],
+            'pid' => $prospectData['pid'],
+            'name' => $prospectData['name'],
+            'height' => $prospectData['height'],
+            'weight' => $prospectData['weight'],
+            'description' => $prospectData['description'],
+            'gold' => $prospectData['gold'],
+            'current_xp' => $prospectData['current_xp'],
+            'lvl' => $prospectData['lvl'],
+            'attribute_points' => $prospectData['attribute_points'],
+            'baseHp' => $prospectData['baseHp'],
+            'strength' => $prospectData['strength'],
+            'technicalAbility' => $prospectData['technicalAbility'],
+            'brawlingAbility' => $prospectData['brawlingAbility'],
+            'stamina' => $prospectData['stamina'],
+            'aerialAbility' => $prospectData['aerialAbility'],
+            'toughness' => $prospectData['toughness'],
+            'reversalAbility' => $prospectData['reversalAbility'],
+            'submissionDefense' => $prospectData['submissionDefense'],
+            'staminaRecoveryRate' => $prospectData['staminaRecoveryRate'],
+            'moves' => $prospectData['moves'],
+            'image' => $prospectData['image'],
+            'manager_id' => $prospectData['manager_id'],
+            'user_id' => $prospectData['user_id']
+        ];
     }
 
     /**
