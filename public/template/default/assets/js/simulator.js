@@ -68,14 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-lg font-bold text-yellow-200 mb-3 pointer-events-none">Overall: ${wrestler.overall}</p>
                 <div class="text-left text-sm text-gray-300 grid grid-cols-2 gap-x-4 pointer-events-none">
                     <div>
-                        <div class="flex justify-between"><span><strong>Str:</strong></span> <span>${wrestler.strength}</span></div>
-                        <div class="flex justify-between"><span><strong>Tech:</strong></span> <span>${wrestler.technicalAbility}</span></div>
-                        <div class="flex justify-between"><span><strong>Brawl:</strong></span> <span>${wrestler.brawlingAbility}</span></div>
+                        <div class="flex justify-between"><span><strong>Strength:</strong></span> <span>${wrestler.strength}</span></div>
+                        <div class="flex justify-between"><span><strong>Technical:</strong></span> <span>${wrestler.technicalAbility}</span></div>
+                        <div class="flex justify-between"><span><strong>Brawling:</strong></span> <span>${wrestler.brawlingAbility}</span></div>
                     </div>
                     <div>
-                        <div class="flex justify-between"><span><strong>Fly:</strong></span> <span>${wrestler.aerialAbility}</span></div>
-                        <div class="flex justify-between"><span><strong>Stam:</strong></span> <span>${wrestler.stamina}</span></div>
-                        <div class="flex justify-between"><span><strong>Tough:</strong></span> <span>${wrestler.toughness}</span></div>
+                        <div class="flex justify-between"><span><strong>Aerial:</strong></span> <span>${wrestler.aerialAbility}</span></div>
+                        <div class="flex justify-between"><span><strong>Stamina:</strong></span> <span>${wrestler.stamina}</span></div>
+                        <div class="flex justify-between"><span><strong>Toughness:</strong></span> <span>${wrestler.toughness}</span></div>
                     </div>
                 </div>
             </div>
