@@ -4,6 +4,13 @@ namespace App\Controller {
 
 	class Documentation_Controller extends Base_Controller
 	{
+		public function simulation_engine()
+		{
+			$this->template->render('docs/components/simulation-engine.html.twig', [
+				'title' => 'Simulation Engine Documentation',
+			]);
+		}
+
 		public function architecture()
 		{
 			$page    = $this->route->parameter[1];

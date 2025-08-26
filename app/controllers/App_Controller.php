@@ -38,13 +38,18 @@ class App_Controller extends Base_Controller
 
     public function match()
     {
-        $this->template->render(
-            'app/match.html.twig',
-            [
-                'message'   => 'Page Not Found',
-                'site_name' => 'Rhapsody Framework',
-            ]
-        );
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /user/login');
+            exit;
+        }
+
+        $apiModel = $this->model('Api');
+        $wrestlers = $apiModel->get_all_wrestlers();
+
+        $this->template->render('app/match.html.twig', [
+            'title'     => 'Match Simulator',
+            'wrestlers' => $wrestlers,
+        ]);
     }
 
     public function index()

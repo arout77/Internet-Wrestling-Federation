@@ -21,8 +21,15 @@ class Api_Controller extends Base_Controller
      */
     public function get_all_wrestlers()
     {
-        $model = $this->model( 'Api' );
-        return $model->get_all_wrestlers();
+        // **THE FIX - PART 1:** Set the content type header to JSON.
+        header('Content-Type: application/json');
+
+        $model = $this->model('Api');
+        $wrestlers = $model->get_all_wrestlers();
+
+        // **THE FIX - PART 2:** Echo the JSON-encoded data and exit.
+        echo json_encode($wrestlers);
+        exit;
     }
 
     /**
@@ -1022,5 +1029,83 @@ class Api_Controller extends Base_Controller
 
         // Send the response
         echo json_encode(['probabilities' => $probabilities]);
+    }
+
+    /**
+     * Runs a match simulation and returns the result.
+     * This is the new endpoint for the simulator.
+     */
+    public function run_simulation()
+    {
+        header('Content-Type: application/json');
+        
+        // **THE FIX:** Read wrestler IDs from the incoming POST request.
+        $wrestler1_id = $_POST['wrestler1_id'] ?? null;
+        $wrestler2_id = $_POST['wrestler2_id'] ?? null;
+
+        if (!$wrestler1_id || !$wrestler2_id) {
+            http_response_code(400); // Bad Request
+            echo json_encode(['error' => 'Please provide IDs for both wrestlers.']);
+            exit;
+        }
+
+        // Load the necessary models
+        $apiModel = $this->model('Api');
+        $simulatorModel = $this->model('Simulator');
+
+        // Fetch the full data for both wrestlers
+        $wrestler1 = $apiModel->getWrestlerById($wrestler1_id);
+        $wrestler2 = $apiModel->getWrestlerById($wrestler2_id);
+
+        if (!$wrestler1 || !$wrestler2) {
+            http_response_code(404);
+            echo json_encode(['error' => 'One or both wrestlers could not be found.']);
+            exit;
+        }
+
+        // Run the simulation
+        $result = $simulatorModel->simulateMatch($wrestler1, $wrestler2);
+
+        // Return the result as JSON
+        http_response_code(200);
+        echo json_encode($result);
+        exit;
+    }
+
+    /**
+     * Runs a bulk simulation for calculating odds or showing win rates.
+     */
+    public function run_bulk_simulation()
+    {
+        header('Content-Type: application/json');
+        
+        $wrestler1_id = $_POST['wrestler1_id'] ?? null;
+        $wrestler2_id = $_POST['wrestler2_id'] ?? null;
+        $sim_count = (int)($_POST['sim_count'] ?? 100);
+
+        if (!$wrestler1_id || !$wrestler2_id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Please provide IDs for both wrestlers.']);
+            exit;
+        }
+
+        $apiModel = $this->model('Api');
+        $simulatorModel = $this->model('Simulator');
+
+        $wrestler1 = $apiModel->getWrestlerById($wrestler1_id);
+        $wrestler2 = $apiModel->getWrestlerById($wrestler2_id);
+
+        if (!$wrestler1 || !$wrestler2) {
+            http_response_code(404);
+            echo json_encode(['error' => 'One or both wrestlers could not be found.']);
+            exit;
+        }
+
+        // Call the new bulk simulation method in the model
+        $result = $simulatorModel->runBulkSimulations($wrestler1, $wrestler2, $sim_count);
+
+        http_response_code(200);
+        echo json_encode($result);
+        exit;
     }
 }

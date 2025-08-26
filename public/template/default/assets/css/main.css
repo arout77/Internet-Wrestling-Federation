@@ -202,7 +202,7 @@ html {
   backdrop-filter: blur(10px); /* Frosted glass effect */
   -webkit-backdrop-filter: blur(10px); /* Safari support */
   border: 1px solid var(--roster-border); /* Subtle light border */
-  box-shadow: inset -3px 9px 32px 20px rgba(0, 0, 0, 0.37); /* Shadow for depth */
+  width: -webkit-fill-available;
 }
 
 /* Responsive adjustments to prevent horizontal scrolling */
@@ -227,14 +227,7 @@ html {
   flex-wrap: wrap;
   gap: 1rem; /* Space between cards */
   justify-content: center; /* Center cards when fewer than full row */
-}
-
-#rosterContainer {
   background-color: var(--roster-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--roster-border);
-  box-shadow: inset -3px 9px 32px 20px rgba(0, 0, 0, 0.37);
 }
 
 /* Shiny CTA button */
@@ -523,6 +516,7 @@ html {
   transition: all 0.3s ease-in-out; /* Smooth transition for all properties */
   position: relative; /* Needed for pseudo-elements */
   overflow: hidden; /* Ensures gradient border doesn't spill out */
+  width: -webkit-fill-available;
   background: radial-gradient(circle, rgb(81, 0, 112) 0%, rgb(5, 32, 82) 100%);
   border-color: var(--card-border); /* Use theme variable for border */
 }
@@ -867,5 +861,62 @@ html {
   }
 }
 /* Conical Glass - ENDS */
+/* === Search Bar Styling === */
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #4A5568; /* gray-700 */
+  border-radius: 9999px;
+  padding: 0.5rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.search-icon {
+  color: #E2E8F0; /* gray-300 */
+  cursor: pointer;
+}
+
+.search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  width: 0;
+  padding-left: 0;
+  transition: all 0.3s ease-in-out;
+}
+
+.search-container.expanded {
+  background-color: #2D3748; /* gray-800 */
+  border: 1px solid #4A5568; /* gray-700 */
+}
+
+.search-container.expanded .search-input {
+  width: 200px;
+  padding-left: 0.5rem;
+}
+
+/* Help Button */
+.help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid #FBBF23 !important;
+  background-color: #4479F5;
+  color: white;
+  font-weight: bold;
+  font-size: 20px;
+  border: 1px solid #2D3748; /* gray-800 */
+  transition: background-color 0.3s;
+  vertical-align: middle; /* Aligns button with others */
+}
+
+.help-button:hover {
+  background-color: #2D3748; /* gray-800 */
+}
 
 /*# sourceMappingURL=main.css.map */

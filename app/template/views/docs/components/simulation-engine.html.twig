@@ -1,0 +1,68 @@
+{% extends "docs.html.twig" %}
+
+{% block docs_content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold text-yellow-400 mb-4">Simulation Engine Deep Dive</h1>
+    <p class="text-lg text-gray-300 mb-6">
+        The IWF match simulation engine is a turn-based system designed to create realistic and dramatic match narratives. It goes beyond simple stat comparisons to simulate a match moment-by-moment, using a combination of wrestler attributes, move data, and weighted probabilities to determine the outcome. This document breaks down the key factors that influence a match.
+    </p>
+
+    <hr class="border-gray-700 my-8">
+
+    <h2 class="text-3xl font-bold text-yellow-400 mb-4">Understanding the Overall Rating</h2>
+    <p class="text-gray-400 mb-4">
+        A wrestler's Overall Rating is a quick measure of their general capabilities, but it doesn't tell the whole story.
+    </p>
+    <ul class="list-disc list-inside space-y-2 text-gray-400 mb-6">
+        <li>
+            <strong>Calculation:</strong> The Overall Rating is calculated by taking a wrestler's six core attributes (Strength, Technical, Brawling, Aerial, Stamina, Toughness), discarding the single lowest score, and then averaging the remaining five.
+        </li>
+        <li>
+            <strong>Meaning:</strong> A high Overall Rating indicates a well-rounded wrestler with a wide skill set and thus more ways to win a match. It is a representation of their skill level in all areas combined, but does not take into account other factors such as size and weight.
+        </li>
+        <li>
+            <strong>The Underdog Factor:</strong> Having a high Overall Rating doesn't guarantee a win. A wrestler with a lower overall rating may still be able to win if they specialize in one particular aspect of wrestling (e.g., a brawler with a high Strength stat) and can leverage that advantage during the match.
+        </li>
+    </ul>
+
+    <hr class="border-gray-700 my-8">
+
+    <h2 class="text-3xl font-bold text-yellow-400 mb-4">Key Factors in Determining a Winner</h2>
+    <p class="text-gray-400 mb-6">Victory is determined by a complex interplay of the following systems:</p>
+
+    <div class="space-y-8">
+        <div>
+            <h3 class="text-2xl font-semibold text-white mb-2">1. The "David vs. Goliath" Factor (Size Discrepancy)</h3>
+            <p class="text-gray-400">
+                The difference in a wrestler's height and weight creates strategic advantages and disadvantages.
+            </p>
+            <ul class="list-disc list-inside space-y-2 text-gray-400 mt-4">
+                <li>A significant weight advantage grants a damage bonus to <strong>Strength-based</strong> moves like slams and powerbombs.</li>
+                <li>A significant weight *disadvantage* grants a damage bonus to <strong>Aerial-based</strong> moves, reflecting greater agility.</li>
+                <li>A smaller wrestler has a higher chance to reverse a power move, while a larger wrestler has a higher chance to "catch" a high-flyer out of the air.</li>
+            </ul>
+        </div>
+
+        <div>
+            <h3 class="text-2xl font-semibold text-white mb-2">2. Stamina: The Pace of the Match</h3>
+            <p class="text-gray-400">
+                Stamina is the resource that dictates the match's flow. A wrestler with low stamina becomes less effective, suffering penalties to their hit chance and damage output. If a wrestler's stamina is completely depleted, they enter a "Gassed" state where their defensive capabilities are severely reduced.
+            </p>
+        </div>
+
+        <div>
+            <h3 class="text-2xl font-semibold text-white mb-2">3. Toughness: The Will to Survive</h3>
+            <p class="text-gray-400">
+                Toughness represents a wrestler's resilience. It acts as a direct damage reduction, meaning a wrestler with high Toughness will take less damage from every move. This stat is also a critical factor in their ability to kick out of pinfall attempts.
+            </p>
+        </div>
+        
+        <div>
+            <h3 class="text-2xl font-semibold text-white mb-2">4. Momentum: The Drama of the Fight</h3>
+            <p class="text-gray-400">
+                Momentum creates the dramatic swings of a wrestling match. It is gained by successfully landing moves and reversing attacks. The wrestler with higher momentum has a greater chance of controlling the pace of the match and being the attacker in any given turn. A full momentum bar is required to attempt a powerful Finisher.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
