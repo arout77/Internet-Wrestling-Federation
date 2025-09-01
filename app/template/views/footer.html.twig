@@ -8,7 +8,7 @@
 <script type="module" src="{{ template_url }}assets/js/data.js"></script>
 {# This tells Twig to only load app.js if a variable named 'load_app_js' is not defined or is false #}
 {% if load_app_js is not defined or load_app_js == false %}
-    <script src="{{ base_url }}assets/js/app.js"></script>
+    <script type="module" src="{{ template_url }}assets/js/app.js"></script>
 {% endif %}
 <script type="module" src="{{ template_url }}assets/js/dom.js"></script>
 {% endif %}

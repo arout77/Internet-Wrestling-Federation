@@ -109,6 +109,39 @@ body {
   box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
 }
 
+.btn-success {
+  background-color: #199f2e;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #27cf41;
+}
+
+.btn-error {
+  background-color: #dc2626;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: white;
+}
+
+.btn-error:hover {
+  background-color: #f13636;
+}
+
+.btn-info {
+  background-color: #121B57;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #4479F5;
+}
+
 #matchSetup {
   box-shadow: inset -3px 9px 108px 61px rgba(12, 4, 108, 0.46);
   border: 0px solid var(--matchsetup-border);

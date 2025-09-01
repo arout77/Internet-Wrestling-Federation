@@ -19,7 +19,7 @@
         <a href="{{ base_url }}app/career" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-500 {% if route_action == 'career' %}text-yellow-400{% else %}text-gray-300{% endif %}">Career Mode</a>
         <a href="{{ base_url }}app/booking" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-500 {% if route_action == 'booking' %}text-yellow-400{% else %}text-gray-300{% endif %}">Booker Mode</a>
         <a href="{{ base_url }}app/match" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-400 {% if route_action == 'match' %}text-yellow-400{% else %}text-gray-300{% endif %}">Simulator</a>
-        <a href="{{ base_url }}app/wrestlers" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-600 {% if route_action == 'wrestlers' %}text-yellow-400{% else %}text-gray-300{% endif %}">Roster</a>
+        <a href="{{ base_url }}tournament" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-600 {% if route_action == 'wrestlers' %}text-yellow-400{% else %}text-gray-300{% endif %}">Tournament</a>
         
         {% if session.user_id %}
             <div class="flex items-center gap-4">

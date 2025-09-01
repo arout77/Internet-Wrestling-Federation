@@ -22,13 +22,13 @@ class Api_Controller extends Base_Controller
     public function get_all_wrestlers()
     {
         // **THE FIX - PART 1:** Set the content type header to JSON.
-        header('Content-Type: application/json');
+        header( 'Content-Type: application/json' );
 
-        $model = $this->model('Api');
+        $model     = $this->model( 'Api' );
         $wrestlers = $model->get_all_wrestlers();
 
         // **THE FIX - PART 2:** Echo the JSON-encoded data and exit.
-        echo json_encode($wrestlers);
+        echo json_encode( $wrestlers );
         exit;
     }
 
@@ -39,6 +39,68 @@ class Api_Controller extends Base_Controller
     {
         $model = $this->model( 'Api' );
         return $model->get_moves();
+    }
+
+    /**
+     * Fetches all defined tag teams and their members.
+     */
+    public function get_tag_teams()
+    {
+        header( 'Content-Type: application/json' );
+        try {
+            $sql = "
+                SELECT
+                    tt.team_id,
+                    tt.team_name,
+                    tt.team_image,
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'wrestler_id', r.wrestler_id,
+                            'name', r.name,
+                            'image', r.image
+                        )
+                    ) AS members
+                FROM
+                    tag_teams tt
+                JOIN
+                    tag_team_members ttm ON tt.team_id = ttm.team_id
+                JOIN
+                    roster r ON ttm.wrestler_id = r.wrestler_id
+                GROUP BY
+                    tt.team_id, tt.team_name, tt.team_image
+                ORDER BY
+                    tt.team_name;
+            ";
+
+            $stmt  = $this->db->query( $sql );
+            $teams = $stmt->fetchAll( PDO::FETCH_ASSOC );
+
+            // The 'members' column is a JSON string from the DB, so we need to decode it
+            foreach ( $teams as &$team )
+            {
+                $team['members'] = json_decode( $team['members'] );
+            }
+
+            echo json_encode( ['success' => true, 'teams' => $teams] );
+
+        }
+        catch ( PDOException $e )
+        {
+            // Handle potential database errors
+            http_response_code( 500 ); // Internal Server Error
+            echo json_encode( ['success' => false, 'message' => 'Failed to fetch tag teams: ' . $e->getMessage()] );
+        }
+        exit;
+    }
+
+    /**
+     * Helper to send JSON response
+     */
+    private function json( $data, $statusCode = 200 )
+    {
+        http_response_code( $statusCode );
+        echo json_encode( $data );
+        exit;
     }
 
     public function index()
@@ -912,102 +974,121 @@ class Api_Controller extends Base_Controller
      */
     public function simulate_odds()
     {
-        header("Access-Control-Allow-Origin: *");
-        header("Content-Type: application/json; charset=UTF-8");
-        header("Access-Control-Allow-Methods: POST");
-        header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+        header( "Access-Control-Allow-Origin: *" );
+        header( "Content-Type: application/json; charset=UTF-8" );
+        header( "Access-Control-Allow-Methods: POST" );
+        header( "Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With" );
 
-        $input = json_decode(file_get_contents('php://input'), true);
+        $input = json_decode( file_get_contents( 'php://input' ), true );
 
-        if (!$input || !isset($input['selectedWrestlers'], $input['currentMatchType'], $input['numSimulations'])) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid input data for odds simulation.']);
+        if ( !$input || !isset( $input['selectedWrestlers'], $input['currentMatchType'], $input['numSimulations'] ) )
+        {
+            http_response_code( 400 );
+            echo json_encode( ['error' => 'Invalid input data for odds simulation.'] );
             return;
         }
 
-        $selectedWrestlers = $input['selectedWrestlers'];
-        $currentMatchType = $input['currentMatchType'];
-        $numSimulations = (int)$input['numSimulations'];
-        $allWrestlersInMatch = array_values(array_filter($selectedWrestlers));
-
+        $selectedWrestlers   = $input['selectedWrestlers'];
+        $currentMatchType    = $input['currentMatchType'];
+        $numSimulations      = (int) $input['numSimulations'];
+        $allWrestlersInMatch = array_values( array_filter( $selectedWrestlers ) );
 
         $winCounts = [
             'player1' => 0,
             'player2' => 0,
-            'team1' => 0,
-            'team2' => 0,
-            'draw' => 0
+            'team1'   => 0,
+            'team2'   => 0,
+            'draw'    => 0,
         ];
 
-        for ($i = 0; $i < $numSimulations; $i++) {
+        for ( $i = 0; $i < $numSimulations; $i++ )
+        {
             // Initialize a fresh match state for each simulation
             $matchState = [
-                'currentHp' => [], 'currentStamina' => [], 'initialHp' => [],
-                'initialStamina' => [], 'currentRound' => 0,
-                'maxRounds' => $currentMatchType === 'single' ? 75 : 125,
-                'finisherUsed' => [], 'currentMomentum' => []
+                'currentHp'      => [], 'currentStamina'  => [], 'initialHp' => [],
+                'initialStamina' => [], 'currentRound'    => 0,
+                'maxRounds'      => $currentMatchType === 'single' ? 75 : 125,
+                'finisherUsed'   => [], 'currentMomentum' => [],
             ];
 
             // Populate initial state for all wrestlers in the match
-            foreach ($allWrestlersInMatch as $wrestler) {
-                if ($wrestler) {
-                    $id = $wrestler['id'];
-                    $matchState['initialHp'][$id] = ($wrestler['baseHp'] ?? 1000) + ($wrestler['stats']['stamina'] ?? 50);
-                    $matchState['currentHp'][$id] = $matchState['initialHp'][$id];
-                    $matchState['initialStamina'][$id] = $wrestler['stats']['stamina'] ?? 50;
-                    $matchState['currentStamina'][$id] = $matchState['initialStamina'][$id];
+            foreach ( $allWrestlersInMatch as $wrestler )
+            {
+                if ( $wrestler )
+                {
+                    $id                                 = $wrestler['id'];
+                    $matchState['initialHp'][$id]       = ( $wrestler['baseHp'] ?? 1000 ) + ( $wrestler['stats']['stamina'] ?? 50 );
+                    $matchState['currentHp'][$id]       = $matchState['initialHp'][$id];
+                    $matchState['initialStamina'][$id]  = $wrestler['stats']['stamina'] ?? 50;
+                    $matchState['currentStamina'][$id]  = $matchState['initialStamina'][$id];
                     $matchState['currentMomentum'][$id] = 50;
                 }
             }
 
             $winner = null;
-            while ($winner === null && $matchState['currentRound'] < $matchState['maxRounds']) {
+            while ( $winner === null && $matchState['currentRound'] < $matchState['maxRounds'] )
+            {
                 $matchState['currentRound']++;
-                
+
                 // This is a simplified simulation loop for the backend.
                 // In a real implementation, you would call the refactored private helper methods
                 // for a full turn simulation, just like in the `simulate_turn` endpoint.
-                
+
                 $availableWrestlers = [];
-                foreach($allWrestlersInMatch as $w) {
-                    if($w && ($matchState['currentHp'][$w['id']] ?? 0) > 0) {
+                foreach ( $allWrestlersInMatch as $w )
+                {
+                    if ( $w && ( $matchState['currentHp'][$w['id']] ?? 0 ) > 0 )
+                    {
                         $availableWrestlers[] = $w;
                     }
                 }
 
-                if (count($availableWrestlers) < 2) {
-                    break; 
+                if ( count( $availableWrestlers ) < 2 )
+                {
+                    break;
                 }
 
                 // Simplified turn logic for demonstration
-                $attacker = $availableWrestlers[array_rand($availableWrestlers)];
+                $attacker = $availableWrestlers[array_rand( $availableWrestlers )];
                 $defender = null;
-                do {
-                    $defender = $availableWrestlers[array_rand($availableWrestlers)];
-                } while ($defender['id'] === $attacker['id']);
+                do
+                {
+                    $defender = $availableWrestlers[array_rand( $availableWrestlers )];
+                } while ( $defender['id'] === $attacker['id'] );
 
-                $damage = $this->getRandomInt(10, 50); // Simplified damage
+                $damage = $this->getRandomInt( 10, 50 ); // Simplified damage
                 $matchState['currentHp'][$defender['id']] -= $damage;
-                
-                $winner = $this->determineWinner($matchState, $selectedWrestlers, $currentMatchType);
+
+                $winner = $this->determineWinner( $matchState, $selectedWrestlers, $currentMatchType );
             }
 
             // If loop finishes due to max rounds, it's a draw
-            if ($winner === null) {
+            if ( $winner === null )
+            {
                 $winner = 'draw';
             }
 
             // Tally the result
-            if ($winner === 'draw') {
+            if ( $winner === 'draw' )
+            {
                 $winCounts['draw']++;
-            } else if ($winner === 'Team 1') {
+            }
+            else if ( $winner === 'Team 1' )
+            {
                 $winCounts['team1']++;
-            } else if ($winner === 'Team 2') {
+            }
+            else if ( $winner === 'Team 2' )
+            {
                 $winCounts['team2']++;
-            } else if (is_array($winner) && isset($winner['id'])) {
-                if ($winner['id'] === ($selectedWrestlers['player1']['id'] ?? null)) {
+            }
+            else if ( is_array( $winner ) && isset( $winner['id'] ) )
+            {
+                if ( $winner['id'] === ( $selectedWrestlers['player1']['id'] ?? null ) )
+                {
                     $winCounts['player1']++;
-                } else if ($winner['id'] === ($selectedWrestlers['player2']['id'] ?? null)) {
+                }
+                else if ( $winner['id'] === ( $selectedWrestlers['player2']['id'] ?? null ) )
+                {
                     $winCounts['player2']++;
                 }
             }
@@ -1015,20 +1096,23 @@ class Api_Controller extends Base_Controller
 
         // Calculate probabilities
         $probabilities = [];
-        if ($currentMatchType === 'single') {
-            $p1_name = $selectedWrestlers['player1']['name'];
-            $p2_name = $selectedWrestlers['player2']['name'];
+        if ( $currentMatchType === 'single' )
+        {
+            $p1_name                 = $selectedWrestlers['player1']['name'];
+            $p2_name                 = $selectedWrestlers['player2']['name'];
             $probabilities[$p1_name] = $winCounts['player1'] / $numSimulations;
             $probabilities[$p2_name] = $winCounts['player2'] / $numSimulations;
-            $probabilities['draw'] = $winCounts['draw'] / $numSimulations;
-        } else { // tagTeam
+            $probabilities['draw']   = $winCounts['draw'] / $numSimulations;
+        }
+        else
+        { // tagTeam
             $probabilities['Team 1'] = $winCounts['team1'] / $numSimulations;
             $probabilities['Team 2'] = $winCounts['team2'] / $numSimulations;
-            $probabilities['draw'] = $winCounts['draw'] / $numSimulations;
+            $probabilities['draw']   = $winCounts['draw'] / $numSimulations;
         }
 
         // Send the response
-        echo json_encode(['probabilities' => $probabilities]);
+        echo json_encode( ['probabilities' => $probabilities] );
     }
 
     /**
@@ -1037,38 +1121,44 @@ class Api_Controller extends Base_Controller
      */
     public function run_simulation()
     {
-        header('Content-Type: application/json');
-        
-        // **THE FIX:** Read wrestler IDs from the incoming POST request.
-        $wrestler1_id = $_POST['wrestler1_id'] ?? null;
-        $wrestler2_id = $_POST['wrestler2_id'] ?? null;
+        header( 'Content-Type: application/json' );
 
-        if (!$wrestler1_id || !$wrestler2_id) {
-            http_response_code(400); // Bad Request
-            echo json_encode(['error' => 'Please provide IDs for both wrestlers.']);
-            exit;
+        // --- THIS IS THE FIX ---
+        // Read the raw POST data and decode it from JSON
+        $data = json_decode( file_get_contents( 'php://input' ), true );
+
+        $wrestler1_id = $data['wrestler1_id'] ?? null;
+        $wrestler2_id = $data['wrestler2_id'] ?? null;
+        $match_type   = $data['type'] ?? 'single';
+        // --- END FIX ---
+
+        if ( empty( $wrestler1_id ) || empty( $wrestler2_id ) )
+        {
+            echo json_encode( ['error' => 'Please provide IDs for both wrestlers.'] );
+            return;
         }
 
         // Load the necessary models
-        $apiModel = $this->model('Api');
-        $simulatorModel = $this->model('Simulator');
+        $apiModel       = $this->model( 'Api' );
+        $simulatorModel = $this->model( 'Simulator' );
 
         // Fetch the full data for both wrestlers
-        $wrestler1 = $apiModel->getWrestlerById($wrestler1_id);
-        $wrestler2 = $apiModel->getWrestlerById($wrestler2_id);
+        $wrestler1 = $apiModel->getWrestlerById( $wrestler1_id );
+        $wrestler2 = $apiModel->getWrestlerById( $wrestler2_id );
 
-        if (!$wrestler1 || !$wrestler2) {
-            http_response_code(404);
-            echo json_encode(['error' => 'One or both wrestlers could not be found.']);
+        if ( !$wrestler1 || !$wrestler2 )
+        {
+            http_response_code( 404 );
+            echo json_encode( ['error' => 'One or both wrestlers could not be found.'] );
             exit;
         }
 
         // Run the simulation
-        $result = $simulatorModel->simulateMatch($wrestler1, $wrestler2);
+        $result = $simulatorModel->simulateMatch( $wrestler1, $wrestler2 );
 
         // Return the result as JSON
-        http_response_code(200);
-        echo json_encode($result);
+        http_response_code( 200 );
+        echo json_encode( $result );
         exit;
     }
 
@@ -1077,35 +1167,99 @@ class Api_Controller extends Base_Controller
      */
     public function run_bulk_simulation()
     {
-        header('Content-Type: application/json');
-        
-        $wrestler1_id = $_POST['wrestler1_id'] ?? null;
-        $wrestler2_id = $_POST['wrestler2_id'] ?? null;
-        $sim_count = (int)($_POST['sim_count'] ?? 100);
+        header( 'Content-Type: application/json' );
 
-        if (!$wrestler1_id || !$wrestler2_id) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Please provide IDs for both wrestlers.']);
-            exit;
+        // --- THIS IS THE FIX ---
+        // Read the raw POST data and decode it from JSON
+        $data = json_decode( file_get_contents( 'php://input' ), true );
+
+        $wrestler1_id = $data['wrestler1_id'] ?? null;
+        $wrestler2_id = $data['wrestler2_id'] ?? null;
+        $match_type   = $data['type'] ?? 'single';
+        $sim_count    = $data['sim_count'] ?? 100;
+        // --- END FIX ---
+
+        if ( empty( $wrestler1_id ) || empty( $wrestler2_id ) )
+        {
+            echo json_encode( ['error' => 'Please provide IDs for both wrestlers.'] );
+            return;
         }
 
-        $apiModel = $this->model('Api');
-        $simulatorModel = $this->model('Simulator');
+        $apiModel       = $this->model( 'Api' );
+        $simulatorModel = $this->model( 'Simulator' );
 
-        $wrestler1 = $apiModel->getWrestlerById($wrestler1_id);
-        $wrestler2 = $apiModel->getWrestlerById($wrestler2_id);
+        $wrestler1 = $apiModel->getWrestlerById( $wrestler1_id );
+        $wrestler2 = $apiModel->getWrestlerById( $wrestler2_id );
 
-        if (!$wrestler1 || !$wrestler2) {
-            http_response_code(404);
-            echo json_encode(['error' => 'One or both wrestlers could not be found.']);
+        if ( !$wrestler1 || !$wrestler2 )
+        {
+            http_response_code( 404 );
+            echo json_encode( ['error' => 'One or both wrestlers could not be found.'] );
             exit;
         }
 
         // Call the new bulk simulation method in the model
-        $result = $simulatorModel->runBulkSimulations($wrestler1, $wrestler2, $sim_count);
+        $result = $simulatorModel->runBulkSimulations( $wrestler1, $wrestler2, $sim_count );
 
-        http_response_code(200);
-        echo json_encode($result);
+        http_response_code( 200 );
+        echo json_encode( $result );
         exit;
     }
+
+    /**
+     * API endpoint to fetch all defined tag teams and their members.
+     * This will be called by the simulator to populate the tag team selection area.
+     */
+    public function getTagTeams()
+    {
+        // Set the content type to application/json
+        header( 'Content-Type: application/json' );
+
+        try {
+            // SQL query to get teams and their members, aggregating wrestler info into a JSON array for each team.
+            // This is more efficient than running N+1 queries.
+            $sql = "
+                SELECT
+                    tt.team_id,
+                    tt.team_name,
+                    tt.team_image,
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'wrestler_id', r.wrestler_id,
+                            'name', r.name,
+                            'image', r.image
+                        )
+                    ) AS members
+                FROM
+                    tag_teams tt
+                JOIN
+                    tag_team_members ttm ON tt.team_id = ttm.team_id
+                JOIN
+                    roster r ON ttm.wrestler_id = r.wrestler_id
+                GROUP BY
+                    tt.team_id, tt.team_name, tt.team_image
+                ORDER BY
+                    tt.team_name;
+            ";
+
+            $stmt  = $this->db->query( $sql );
+            $teams = $stmt->fetchAll( PDO::FETCH_ASSOC );
+
+            // The 'members' column is a JSON string from the DB, so we need to decode it
+            foreach ( $teams as &$team )
+            {
+                $team['members'] = json_decode( $team['members'] );
+            }
+
+            echo json_encode( ['success' => true, 'teams' => $teams] );
+
+        }
+        catch ( PDOException $e )
+        {
+            // Handle potential database errors
+            http_response_code( 500 ); // Internal Server Error
+            echo json_encode( ['success' => false, 'message' => 'Failed to fetch tag teams: ' . $e->getMessage()] );
+        }
+    }
+
 }
