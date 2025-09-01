@@ -13,5 +13,3 @@ If you're more interested in the behind the scenes / business aspect of pro wres
 
 ## SIMULATOR
 Step into the ring with IWF! Have you ever wondered how stars from the 80s or 90s would fare against today's wrestlers? Create your dream wrestling matches and simulate epic battles using your favorite historical wrestlers from the Golden Age to present in this ultimate online wrestling simulator.
-
-<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="andrewrout" data-description="Support me on Buy me a coffee!" data-message="" data-color="#BD5FFF" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
