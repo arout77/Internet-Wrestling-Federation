@@ -132,12 +132,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderWrestlerCard(wrestler) {
-        // This function is from your original code
+        // NEW: Generate HTML for traits if they exist
+        let traitsHtml = '';
+        if (wrestler.traits && wrestler.traits.length > 0) {
+            const traitBadges = wrestler.traits.map(trait => 
+                `<span class="bg-indigo-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">${trait}</span>`
+            ).join('');
+            traitsHtml = `<div class="mt-2 mb-2">${traitBadges}</div>`;
+        }
+
         return `
             <div id="wrestler-card-${wrestler.wrestler_id}" class="wrestler-card rounded-lg shadow-md p-4 text-center transform hover:scale-105 transition-transform duration-200 cursor-pointer border-2 border-indigo-900" data-wrestler-id="${wrestler.wrestler_id}" draggable="true">
                 <img src="../public/media/images/${wrestler.image}.webp" alt="${wrestler.name}" class="w-36 h-36 rounded-full mx-auto mb-2 object-cover border-2 border-gray-600 pointer-events-none">
                 <h3 class="text-xl font-bold text-yellow-400 mb-2 pointer-events-none">${wrestler.name}</h3>
-                <p class="text-lg font-bold text-yellow-200 mb-3 pointer-events-none">Overall: ${wrestler.overall}</p>
+                ${traitsHtml} <p class="text-lg font-bold text-yellow-200 mb-3 pointer-events-none">Overall: ${wrestler.overall}</p>
                 <div class="text-left text-sm text-gray-300 grid grid-cols-1 lg:grid-cols-2 gap-x-1 lg:gap-x-10 pointer-events-none">
                     <div>
                         <div class="flex justify-between"><span><strong>Strength:</strong></span> <span>${wrestler.strength}</span></div>
@@ -278,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // NOTE: You will need to update your backend to handle the new 'type' and 'teams' structure
-            const response = await fetch('http://localhost/iwf-betting/api/run_simulation', { 
+            const response = await fetch(baseUrl + 'api/run_simulation', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(matchData)
@@ -326,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch('http://localhost/iwf-betting/api/run_bulk_simulation', { 
+            const response = await fetch(baseUrl + 'api/run_bulk_simulation', { 
                  method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(simData)

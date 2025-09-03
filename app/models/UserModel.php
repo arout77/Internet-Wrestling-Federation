@@ -85,41 +85,43 @@ class UserModel extends System_Model
     }
 
     /**
-     * Gets the current gold amount for a given user.
-     * @param string $userId
-     * @return int The amount of gold.
+     * Retrieves the gold amount for a given user by finding their associated prospect.
+     * @param string $user_id
+     * @return int|false
      */
-    public function getGold( $userId )
+    public function getGold( $user_id )
     {
-        $sql  = "SELECT p.gold FROM prospects p JOIN users u ON p.pid = u.prospect_id WHERE u.user_id = :user_id";
-        $stmt = $this->db->prepare( $sql );
-        $stmt->execute( [':user_id' => $userId] );
-        $result = $stmt->fetch( PDO::FETCH_ASSOC );
-        return $result ? (int) $result['gold'] : 0;
+        $stmt = $this->db->prepare( "SELECT p.gold
+                                   FROM prospects p
+                                   JOIN users u ON u.prospect_id = p.pid
+                                   WHERE u.user_id = ?" );
+        $stmt->execute( [$user_id] );
+        $result = $stmt->fetchColumn();
+
+        return ( $result !== false ) ? (int) $result : false;
     }
 
     /**
-     * Updates a user's gold balance by a given amount (can be negative).
-     * @param string $userId
-     * @param int $amount The amount to add (e.g., 25) or subtract (e.g., -1).
-     * @return bool True on success, false on failure.
+     * Updates the gold amount for a given user's associated prospect.
+     * @param string $user_id
+     * @param int $amount The amount to add (can be negative).
+     * @return bool
      */
-    public function updateGold( $userId, $amount )
+    public function updateGold( $user_id, $amount )
     {
-        $stmt = $this->db->prepare( "SELECT prospect_id FROM users WHERE user_id = :user_id" );
-        $stmt->execute( [':user_id' => $userId] );
-        $user = $stmt->fetch( PDO::FETCH_OBJ );
+        // First, find the prospect ID associated with the user ID.
+        $stmt = $this->db->prepare( "SELECT prospect_id FROM users WHERE user_id = ?" );
+        $stmt->execute( [$user_id] );
+        $prospect_id = $stmt->fetchColumn();
 
-        if ( !$user || !$user->prospect_id )
+        if ( $prospect_id )
         {
-            return false;
+            // Now, update the gold in the prospects table using the correct ID.
+            $update_stmt = $this->db->prepare( "UPDATE prospects SET gold = gold + ? WHERE pid = ?" );
+            return $update_stmt->execute( [(int) $amount, $prospect_id] );
         }
 
-        $prospectId = $user->prospect_id;
-
-        $sql  = "UPDATE prospects SET gold = gold + :amount WHERE pid = :pid";
-        $stmt = $this->db->prepare( $sql );
-        return $stmt->execute( [':amount' => $amount, ':pid' => $prospectId] );
+        return false;
     }
 
     /**

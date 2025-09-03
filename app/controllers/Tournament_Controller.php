@@ -8,8 +8,6 @@ use \Src\Controller\Base_Controller;
 
 class Tournament_Controller extends Base_Controller
 {
-    // ... [index, calculateOdds, convertToMoneyline, simulateMatch, json, and start methods remain the same as the last PDO version] ...
-
     public function index()
     {
         $model         = $this->model( 'Api' );
@@ -51,29 +49,102 @@ class Tournament_Controller extends Base_Controller
     }
 
     /**
-     * @param $wrestler1
-     * @param $wrestler2
+     * Calculates win probability by running a batch of simulations.
+     * This provides a more accurate prediction than simple stat comparison.
+     *
+     * @param object $wrestler1
+     * @param object $wrestler2
+     * @return array
      */
     private function calculateOdds( $wrestler1, $wrestler2 )
     {
-        $score1     = ( $wrestler1->strength ?? 60 ) + ( $wrestler1->technicalAbility ?? 60 ) + ( $wrestler1->brawlingAbility ?? 60 ) + ( $wrestler1->stamina ?? 60 ) + ( $wrestler1->toughness ?? 60 );
-        $score2     = ( $wrestler2->strength ?? 60 ) + ( $wrestler2->technicalAbility ?? 60 ) + ( $wrestler2->brawlingAbility ?? 60 ) + ( $wrestler2->stamina ?? 60 ) + ( $wrestler2->toughness ?? 60 );
-        $totalScore = $score1 + $score2;
+        $simulatorModel   = $this->model( 'Simulator' );
+        $simulation_count = 100; // Number of simulations to run for an accurate percentage
+        $wrestler1_wins   = 0;
 
-        if ( $totalScore == 0 )
+        for ( $i = 0; $i < $simulation_count; $i++ )
         {
-            return ['wrestler1' => 50, 'wrestler2' => 50];
+            $result = $simulatorModel->start_simulation( $wrestler1->wrestler_id, $wrestler2->wrestler_id );
+            if ( isset( $result['winner'] ) && $result['winner']->wrestler_id == $wrestler1->wrestler_id )
+            {
+                $wrestler1_wins++;
+            }
         }
 
-        $odds1 = round( ( $score1 / $totalScore ) * 100 );
+        $odds1 = round( ( $wrestler1_wins / $simulation_count ) * 100 );
         $odds2 = 100 - $odds1;
 
         return ['wrestler1' => $odds1, 'wrestler2' => $odds2];
     }
 
     /**
+     * API endpoint for purchasing and retrieving match odds.
+     */
+    public function get_odds()
+    {
+        $this->db->beginTransaction();
+        try {
+            if ( !isset( $_SESSION['user_id'] ) )
+            {
+                $this->json( ['success' => false, 'message' => 'You must be logged in.'], 403 );
+            }
+
+            $postData     = json_decode( file_get_contents( 'php://input' ), true );
+            $tournamentId = (int) ( $postData['tournament_id'] ?? 0 );
+            $userId       = $_SESSION['user_id'];
+
+            $userModel = $this->model( 'User' );
+            if ( $userModel->getGold( $userId ) < 1 )
+            {
+                $this->json( ['success' => false, 'message' => 'Not enough gold! (Cost: 1 Gold)'] );
+            }
+
+            $userModel->updateGold( $userId, -1 );
+
+            $stmt = $this->db->prepare( "SELECT * FROM tournaments WHERE id = :id AND user_id = :user_id" );
+            $stmt->execute( [':id' => $tournamentId, ':user_id' => $userId] );
+            $tournament = $stmt->fetch( PDO::FETCH_OBJ );
+
+            if ( !$tournament )
+            {
+                $this->json( ['success' => false, 'message' => 'Tournament not found.'], 404 );
+            }
+
+            $wrestlerIdsInTournament = json_decode( $tournament->wrestler_ids ?? '[]' );
+            $matchups                = array_chunk( $wrestlerIdsInTournament, 2 );
+            $apiModel                = $this->model( 'Api' );
+            $odds_data               = [];
+
+            foreach ( $matchups as $match )
+            {
+                $wrestler1 = $apiModel->getWrestlerById( $match[0] );
+                $wrestler2 = $apiModel->getWrestlerById( $match[1] );
+                if ( $wrestler1 && $wrestler2 )
+                {
+                    $odds        = $this->calculateOdds( $wrestler1, $wrestler2 );
+                    $odds_data[] = [
+                        'wrestler1' => ['name' => $wrestler1->name],
+                        'wrestler2' => ['name' => $wrestler2->name],
+                        'odds'      => $odds,
+                    ];
+                }
+            }
+
+            $this->db->commit();
+            $this->json( ['success' => true, 'odds_data' => $odds_data] );
+
+        }
+        catch ( Exception $e )
+        {
+            $this->db->rollBack();
+            $this->json( ['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500 );
+        }
+    }
+
+    /**
      * @param $percentage
      */
+    // This method is no longer used by the index() action but is kept for potential future use.
     private function convertToMoneyline( $percentage )
     {
         if ( $percentage <= 0 )
@@ -105,17 +176,6 @@ class Tournament_Controller extends Base_Controller
     }
 
     /**
-     * @param $wrestler1
-     * @param $wrestler2
-     */
-    private function simulateMatch( $wrestler1, $wrestler2 )
-    {
-        $score1 = ( $wrestler1->strength ?? 60 ) + ( $wrestler1->technicalAbility ?? 60 ) + ( $wrestler1->brawlingAbility ?? 60 );
-        $score2 = ( $wrestler2->strength ?? 60 ) + ( $wrestler2->technicalAbility ?? 60 ) + ( $wrestler2->brawlingAbility ?? 60 );
-        return ( $score1 >= $score2 ) ? $wrestler1 : $wrestler2;
-    }
-
-    /**
      * @param $data
      * @param $statusCode
      */
@@ -129,6 +189,7 @@ class Tournament_Controller extends Base_Controller
 
     public function start()
     {
+        $this->db->beginTransaction();
         try {
             if ( !isset( $_SESSION['user_id'] ) )
             {
@@ -137,34 +198,33 @@ class Tournament_Controller extends Base_Controller
 
             $userId    = $_SESSION['user_id'];
             $userModel = $this->model( 'User' );
-
             if ( $userModel->getGold( $userId ) < 1 )
             {
                 $this->json( ['success' => false, 'message' => 'Not enough gold to enter! (Cost: 1 Gold)'] );
             }
 
             $userModel->updateGold( $userId, -1 );
-
             $apiModel      = $this->model( 'Api' );
             $all_wrestlers = $apiModel->get_all_wrestlers();
             shuffle( $all_wrestlers );
             $tournament_wrestlers = array_slice( $all_wrestlers, 0, 32 );
-
-            $wrestler_ids = array_map( fn( $w ) => $w->wrestler_id, $tournament_wrestlers );
-
-            $stmt = $this->db->prepare( "INSERT INTO tournaments (user_id, wrestler_ids) VALUES (?, ?)" );
+            $wrestler_ids         = array_map( fn( $w ) => $w->wrestler_id, $tournament_wrestlers );
+            $stmt                 = $this->db->prepare( "INSERT INTO tournaments (user_id, wrestler_ids) VALUES (?, ?)" );
             $stmt->execute( [$userId, json_encode( $wrestler_ids )] );
-
-            $this->json( ['success' => true, 'message' => 'Tournament started!', 'tournament_id' => $this->db->lastInsertId()] );
+            $tournamentId = $this->db->lastInsertId();
+            $this->db->commit();
+            $this->json( ['success' => true, 'message' => 'Tournament started!', 'tournament_id' => $tournamentId] );
         }
         catch ( Exception $e )
         {
+            $this->db->rollBack();
             $this->json( ['success' => false, 'message' => 'An unexpected error occurred: ' . $e->getMessage()], 500 );
         }
     }
 
     public function simulate()
     {
+        $this->db->beginTransaction();
         try {
             if ( !isset( $_SESSION['user_id'] ) )
             {
@@ -172,11 +232,11 @@ class Tournament_Controller extends Base_Controller
             }
 
             $postData     = json_decode( file_get_contents( 'php://input' ), true );
-            $tournamentId = $postData['tournament_id'];
+            $tournamentId = (int) ( $postData['tournament_id'] ?? 0 );
             $userPicks    = $postData['picks'];
 
-            $stmt = $this->db->prepare( "SELECT * FROM tournaments WHERE id = ? AND user_id = ?" );
-            $stmt->execute( [$tournamentId, $_SESSION['user_id']] );
+            $stmt = $this->db->prepare( "SELECT * FROM tournaments WHERE id = :id AND user_id = :user_id FOR UPDATE" );
+            $stmt->execute( [':id' => $tournamentId, ':user_id' => $_SESSION['user_id']] );
             $tournament = $stmt->fetch( PDO::FETCH_OBJ );
 
             if ( !$tournament )
@@ -186,6 +246,7 @@ class Tournament_Controller extends Base_Controller
 
             $currentRound            = $tournament->current_round;
             $wrestlerIdsInTournament = json_decode( $tournament->wrestler_ids ?? '[]' );
+            $simulatorModel          = $this->model( 'Simulator' );
             $apiModel                = $this->model( 'Api' );
             $actualWinners           = [];
             $all_correct             = true;
@@ -193,23 +254,15 @@ class Tournament_Controller extends Base_Controller
 
             foreach ( $matchups as $index => $match )
             {
-                $wrestler1 = $apiModel->getWrestlerById( $match[0] );
-                $wrestler2 = $apiModel->getWrestlerById( $match[1] );
-
-                if ( !$wrestler1 || !$wrestler2 )
+                $simulationResult = $simulatorModel->start_simulation( $match[0], $match[1] );
+                if ( !isset( $simulationResult['winner'] ) )
                 {
-                    throw new Exception( "Could not find wrestler data for match index {$index}." );
+                    throw new Exception( "Simulation failed for match index {$index}." );
                 }
 
-                $winner = $this->simulateMatch( $wrestler1, $wrestler2 );
-                if ( !isset( $winner->wrestler_id ) )
-                {
-                    throw new Exception( "Simulation returned an invalid winner object." );
-                }
-
-                $actualWinners[$index] = $winner->wrestler_id;
-
-                if ( !isset( $userPicks[(string) $index] ) || $userPicks[(string) $index] != $winner->wrestler_id )
+                $winnerId              = $simulationResult['winner']->wrestler_id;
+                $actualWinners[$index] = $winnerId;
+                if ( !isset( $userPicks[(string) $index] ) || $userPicks[(string) $index] != $winnerId )
                 {
                     $all_correct = false;
                 }
@@ -217,8 +270,8 @@ class Tournament_Controller extends Base_Controller
 
             $currentUserPicks                          = json_decode( $tournament->user_picks ?? '[]', true );
             $currentUserPicks['round' . $currentRound] = $userPicks;
-            $stmt                                      = $this->db->prepare( "UPDATE tournaments SET user_picks = ? WHERE id = ?" );
-            $stmt->execute( [json_encode( $currentUserPicks ), $tournamentId] );
+            $updateStmt                                = $this->db->prepare( "UPDATE tournaments SET user_picks = :picks WHERE id = :id" );
+            $updateStmt->execute( [':picks' => json_encode( $currentUserPicks ), ':id' => $tournamentId] );
 
             $response = ['success' => true, 'actual_winners' => array_values( $actualWinners )];
 
@@ -233,8 +286,12 @@ class Tournament_Controller extends Base_Controller
                 else
                 {
                     $nextRoundWrestlerIds = array_values( $actualWinners );
-                    $stmt                 = $this->db->prepare( "UPDATE tournaments SET current_round = current_round + 1, wrestler_ids = ? WHERE id = ?" );
-                    $stmt->execute( [json_encode( $nextRoundWrestlerIds ), $tournamentId] );
+                    $stmt                 = $this->db->prepare( "UPDATE tournaments SET current_round = current_round + 1, wrestler_ids = :wrestler_ids WHERE id = :id" );
+                    $stmt->execute( [':wrestler_ids' => json_encode( $nextRoundWrestlerIds ), ':id' => $tournamentId] );
+                    if ( $stmt->rowCount() === 0 )
+                    {
+                        throw new Exception( "Failed to advance tournament round: Database record was not updated." );
+                    }
 
                     $response['all_correct'] = true;
                     $response['message']     = 'Perfect round! Advancing...';
@@ -253,21 +310,19 @@ class Tournament_Controller extends Base_Controller
                 $response['message']      = 'You had one or more incorrect picks.';
             }
 
+            $this->db->commit();
             $this->json( $response );
         }
         catch ( Exception $e )
         {
+            $this->db->rollBack();
             $this->json( ['success' => false, 'message' => 'A server error occurred: ' . $e->getMessage()], 500 );
         }
     }
 
     public function payToContinue()
     {
-        // Define a log file in the root of your project directory
-        $logFile = 'tournament_debug.log';
-        // Clear the log file for each new request for easier reading
-        file_put_contents( $logFile, "--- PayToContinue Request at " . date( 'Y-m-d H:i:s' ) . " ---\n" );
-
+        $this->db->beginTransaction();
         try {
             if ( !isset( $_SESSION['user_id'] ) )
             {
@@ -276,16 +331,14 @@ class Tournament_Controller extends Base_Controller
 
             $userId       = $_SESSION['user_id'];
             $postData     = json_decode( file_get_contents( 'php://input' ), true );
-            $tournamentId = $postData['tournament_id'];
-            file_put_contents( $logFile, "1. Received Tournament ID: {$tournamentId}\n", FILE_APPEND );
+            $tournamentId = (int) ( $postData['tournament_id'] ?? 0 );
 
-            $stmt = $this->db->prepare( "SELECT * FROM tournaments WHERE id = ? AND user_id = ?" );
-            $stmt->execute( [$tournamentId, $userId] );
+            $stmt = $this->db->prepare( "SELECT * FROM tournaments WHERE id = :id AND user_id = :user_id FOR UPDATE" );
+            $stmt->execute( [':id' => $tournamentId, ':user_id' => $userId] );
             $tournament = $stmt->fetch( PDO::FETCH_OBJ );
 
             if ( !$tournament || $tournament->current_round != 1 )
             {
-                file_put_contents( $logFile, "ERROR: Eligibility check failed. Tournament not found or not in round 1.\n", FILE_APPEND );
                 $this->json( ['success' => false, 'message' => 'Not eligible to continue.'], 400 );
             }
 
@@ -298,37 +351,26 @@ class Tournament_Controller extends Base_Controller
             $userModel->updateGold( $userId, -3 );
 
             $wrestlerIdsInTournament = json_decode( $tournament->wrestler_ids ?? '[]' );
-            file_put_contents( $logFile, "2. Wrestler IDs loaded from DB for Round 1: \n" . print_r( $wrestlerIdsInTournament, true ) . "\n", FILE_APPEND );
-
-            $apiModel      = $this->model( 'Api' );
-            $actualWinners = [];
-            $matchups      = array_chunk( $wrestlerIdsInTournament, 2 );
+            $simulatorModel          = $this->model( 'Simulator' );
+            $apiModel                = $this->model( 'Api' );
+            $actualWinners           = [];
+            $matchups                = array_chunk( $wrestlerIdsInTournament, 2 );
 
             foreach ( $matchups as $match )
             {
-                $wrestler1 = $apiModel->getWrestlerById( $match[0] );
-                $wrestler2 = $apiModel->getWrestlerById( $match[1] );
-                if ( $wrestler1 && $wrestler2 )
+                $simulationResult = $simulatorModel->start_simulation( $match[0], $match[1] );
+                if ( isset( $simulationResult['winner'] ) )
                 {
-                    $winner          = $this->simulateMatch( $wrestler1, $wrestler2 );
-                    $actualWinners[] = $winner->wrestler_id;
+                    $actualWinners[] = $simulationResult['winner']->wrestler_id;
                 }
             }
-            file_put_contents( $logFile, "3. Calculated winners for Round 2: \n" . print_r( $actualWinners, true ) . "\n", FILE_APPEND );
 
-            $updateQuery  = "UPDATE tournaments SET current_round = 2, wrestler_ids = ? WHERE id = ?";
-            $updateStmt   = $this->db->prepare( $updateQuery );
-            $updateResult = $updateStmt->execute( [json_encode( $actualWinners ), $tournamentId] );
+            $stmt = $this->db->prepare( "UPDATE tournaments SET current_round = 2, wrestler_ids = :wrestler_ids WHERE id = :id" );
+            $stmt->execute( [':wrestler_ids' => json_encode( $actualWinners ), ':id' => $tournamentId] );
 
-            if ( $updateResult )
+            if ( $stmt->rowCount() === 0 )
             {
-                file_put_contents( $logFile, "4. SUCCESS: Database updated with new wrestler IDs.\n", FILE_APPEND );
-            }
-            else
-            {
-                $errorInfo = $updateStmt->errorInfo();
-                file_put_contents( $logFile, "4. FAILED: Database update failed. Error: \n" . print_r( $errorInfo, true ) . "\n", FILE_APPEND );
-                throw new Exception( "Database update failed." );
+                throw new Exception( "Failed to save progress: The tournament record was not updated in the database." );
             }
 
             $nextRoundWrestlers = [];
@@ -336,6 +378,8 @@ class Tournament_Controller extends Base_Controller
             {
                 $nextRoundWrestlers[] = $apiModel->getWrestlerById( $id );
             }
+
+            $this->db->commit();
 
             $this->json( [
                 'success'             => true,
@@ -345,7 +389,7 @@ class Tournament_Controller extends Base_Controller
         }
         catch ( Exception $e )
         {
-            file_put_contents( $logFile, "EXCEPTION caught: " . $e->getMessage() . "\n", FILE_APPEND );
+            $this->db->rollBack();
             $this->json( ['success' => false, 'message' => 'An unexpected error occurred: ' . $e->getMessage()], 500 );
         }
     }

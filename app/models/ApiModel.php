@@ -18,12 +18,27 @@ class ApiModel extends System_Model
      * @param int $wrestler_id The ID of the wrestler to fetch.
      * @return object|false The wrestler data object, or false if not found.
      */
-    public function getWrestlerById($wrestler_id)
+    public function getWrestlerById( $id )
     {
-        $sql = "SELECT * FROM roster WHERE wrestler_id = :wrestler_id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':wrestler_id' => $wrestler_id]);
-        return $stmt->fetch(\PDO::FETCH_OBJ);
+        // ... (your existing code to fetch the wrestler)
+        $stmt = $this->db->prepare( "SELECT * FROM roster WHERE wrestler_id = ?" );
+        $stmt->execute( [$id] );
+        $wrestler = $stmt->fetch( \PDO::FETCH_OBJ );
+
+        if ( $wrestler )
+        {
+            // NEW: Fetch and attach traits
+            $traitStmt = $this->db->prepare( "
+                SELECT t.name FROM traits t
+                JOIN roster_traits rt ON t.trait_id = rt.trait_id
+                WHERE rt.roster_wrestler_id = ?
+            " );
+            $traitStmt->execute( [$id] );
+            $traits           = $traitStmt->fetchAll( \PDO::FETCH_COLUMN );
+            $wrestler->traits = $traits ?: []; // Attach traits as an array
+        }
+
+        return $wrestler;
     }
 
     /**
@@ -32,51 +47,96 @@ class ApiModel extends System_Model
      */
     public function get_all_wrestlers()
     {
-        $sql = "SELECT * FROM roster";
-        $stmt = $this->db->prepare($sql);
+        $sql  = "SELECT * FROM roster";
+        $stmt = $this->db->prepare( $sql );
         $stmt->execute();
-        $wrestlers = $stmt->fetchAll(\PDO::FETCH_OBJ);
+        $wrestlers = $stmt->fetchAll( \PDO::FETCH_OBJ );
 
-        foreach ($wrestlers as $wrestler) {
+        foreach ( $wrestlers as $wrestler )
+        {
             // Step 1: Calculate Core Skill Score (weighted)
-            $coreSkillSum = 
-                ($wrestler->strength * 1.01) + 
-                ($wrestler->technicalAbility * 1.2) + 
-                $wrestler->brawlingAbility + 
-                ($wrestler->aerialAbility * 1.15);
+            $coreSkillSum =
+            ( $wrestler->strength * 1.01 ) +
+            ( $wrestler->technicalAbility * 1.2 ) +
+            $wrestler->brawlingAbility +
+                ( $wrestler->aerialAbility * 1.15 );
             $coreSkillAvg = $coreSkillSum / 4.36; // Divide by total weight
 
             // Step 2: Calculate Durability Modifier
-            $durabilityAvg = ($wrestler->stamina + $wrestler->toughness) / 2;
+            $durabilityAvg = ( $wrestler->stamina + $wrestler->toughness ) / 2;
 
             // Step 3: Combine for a preliminary score
-            $preliminaryOverall = ($coreSkillAvg * 0.7) + ($durabilityAvg * 0.3);
+            $preliminaryOverall = ( $coreSkillAvg * 0.7 ) + ( $durabilityAvg * 0.3 );
 
             // Step 4: Apply Prime, Legend, or Icon Bonuses
             $num_stats_over_80 = 0;
             $num_stats_over_95 = 0;
-            if ($wrestler->strength >= 80) $num_stats_over_80++;
-            if ($wrestler->technicalAbility >= 80) $num_stats_over_80++;
-            if ($wrestler->brawlingAbility >= 80) $num_stats_over_80++;
-            if ($wrestler->aerialAbility >= 80) $num_stats_over_80++;
-            if ($wrestler->strength >= 95) $num_stats_over_95++;
-            if ($wrestler->technicalAbility >= 95) $num_stats_over_95++;
-            if ($wrestler->brawlingAbility >= 95) $num_stats_over_95++;
-            if ($wrestler->aerialAbility >= 95) $num_stats_over_95++;
-            // if ($wrestler->stamina >= 90) $num_stats_over_80++;
-            // if ($wrestler->toughness >= 90) $num_stats_over_80++;
+            if ( $wrestler->strength >= 80 )
+            {
+                $num_stats_over_80++;
+            }
+
+            if ( $wrestler->technicalAbility >= 80 )
+            {
+                $num_stats_over_80++;
+            }
+
+            if ( $wrestler->brawlingAbility >= 80 )
+            {
+                $num_stats_over_80++;
+            }
+
+            if ( $wrestler->aerialAbility >= 80 )
+            {
+                $num_stats_over_80++;
+            }
+
+            if ( $wrestler->strength >= 95 )
+            {
+                $num_stats_over_95++;
+            }
+
+            if ( $wrestler->technicalAbility >= 95 )
+            {
+                $num_stats_over_95++;
+            }
+
+            if ( $wrestler->brawlingAbility >= 95 )
+            {
+                $num_stats_over_95++;
+            }
+
+            if ( $wrestler->aerialAbility >= 95 )
+            {
+                $num_stats_over_95++;
+            }
 
             $bonus = 0;
-            if ($num_stats_over_80 >= 4 && $durabilityAvg >= 90) {
+            if ( $num_stats_over_80 >= 4 && $durabilityAvg >= 90 )
+            {
                 $bonus = 5 + $num_stats_over_95; // Icon Bonus
-            } elseif ($num_stats_over_80 >= 3) {
+            }
+            elseif ( $num_stats_over_80 >= 3 )
+            {
                 $bonus = 3 + $num_stats_over_95; // Legend Bonus
-            } elseif ($num_stats_over_80 >= 2) {
+            }
+            elseif ( $num_stats_over_80 >= 2 )
+            {
                 $bonus = 1 + $num_stats_over_95; // Prime Bonus
             }
-            
+
             // Final Overall is the preliminary score plus the bonus
-            $wrestler->overall = round($preliminaryOverall + $bonus);
+            $wrestler->overall = round( $preliminaryOverall + $bonus );
+
+            // Fetch and attach traits for each wrestler
+            $traitStmt = $this->db->prepare( "
+                SELECT t.name FROM traits t
+                JOIN roster_traits rt ON t.trait_id = rt.trait_id
+                WHERE rt.roster_wrestler_id = ?
+            " );
+            $traitStmt->execute( [$wrestler->wrestler_id] );
+            $traits           = $traitStmt->fetchAll( \PDO::FETCH_COLUMN );
+            $wrestler->traits = $traits ?: [];
         }
 
         return $wrestlers;
@@ -88,10 +148,10 @@ class ApiModel extends System_Model
      */
     public function getAllMoves()
     {
-        $sql = "SELECT * FROM all_moves";
-        $stmt = $this->db->prepare($sql);
+        $sql  = "SELECT * FROM all_moves";
+        $stmt = $this->db->prepare( $sql );
         $stmt->execute();
-        return $stmt->fetchAll(\PDO::FETCH_OBJ);
+        return $stmt->fetchAll( \PDO::FETCH_OBJ );
     }
 
     /**
@@ -326,20 +386,24 @@ class ApiModel extends System_Model
     /**
      * Runs a specified number of simulations and returns the aggregated results.
      */
-    public function runBulkSimulations($wrestler1, $wrestler2, $simCount)
+    public function runBulkSimulations( $wrestler1, $wrestler2, $simCount )
     {
         $winCounts = [
             $wrestler1->name => 0,
             $wrestler2->name => 0,
-            'draw' => 0,
+            'draw'           => 0,
         ];
 
-        for ($i = 0; $i < $simCount; $i++) {
-            $result = $this->simulateMatch($wrestler1, $wrestler2, true); 
-            
-            if (is_object($result['winner'])) {
+        for ( $i = 0; $i < $simCount; $i++ )
+        {
+            $result = $this->simulateMatch( $wrestler1, $wrestler2, true );
+
+            if ( is_object( $result['winner'] ) )
+            {
                 $winCounts[$result['winner']->name]++;
-            } else {
+            }
+            else
+            {
                 $winCounts['draw']++;
             }
         }
@@ -347,16 +411,17 @@ class ApiModel extends System_Model
         // **NEW:** Calculate probabilities and moneyline odds
         $probabilities = [];
         $moneylineOdds = [];
-        foreach ($winCounts as $name => $wins) {
-            $probability = $wins / $simCount;
+        foreach ( $winCounts as $name => $wins )
+        {
+            $probability          = $wins / $simCount;
             $probabilities[$name] = $probability;
-            $moneylineOdds[$name] = $this->calculateMoneyline($probability);
+            $moneylineOdds[$name] = $this->calculateMoneyline( $probability );
         }
 
         return [
-            'wins' => $winCounts,
+            'wins'          => $winCounts,
             'probabilities' => $probabilities,
-            'moneyline' => $moneylineOdds,
+            'moneyline'     => $moneylineOdds,
         ];
     }
 
@@ -365,29 +430,42 @@ class ApiModel extends System_Model
      * @param float $probability The probability of an outcome (0 to 1).
      * @return string The moneyline odds string (e.g., "+250", "-150").
      */
-    private function calculateMoneyline($probability)
+    private function calculateMoneyline( $probability )
     {
-        if ($probability <= 0) return '+99900';
-        if ($probability >= 1) return '-99900';
+        if ( $probability <= 0 )
+        {
+            return '+99900';
+        }
+
+        if ( $probability >= 1 )
+        {
+            return '-99900';
+        }
 
         // Calculate the true, fair odds first
         $trueOdds = 0;
-        if ($probability < 0.5) {
-            $trueOdds = (100 / $probability) - 100;
-        } else {
-            $trueOdds = -100 / ((100 / (100 * $probability)) - 1);
+        if ( $probability < 0.5 )
+        {
+            $trueOdds = ( 100 / $probability ) - 100;
+        }
+        else
+        {
+            $trueOdds = -100 / ( ( 100 / ( 100 * $probability ) ) - 1 );
         }
 
         // **THE FIX:** Apply a 10% vig (commission) to the profit.
-        if ($trueOdds > 0) {
+        if ( $trueOdds > 0 )
+        {
             // For underdogs, the profit is the odds value. Reduce it by 10%.
             $finalOdds = $trueOdds * 0.90;
-            return '+' . round($finalOdds);
-        } else {
+            return '+' . round( $finalOdds );
+        }
+        else
+        {
             // For favorites, the profit is 100 for a bet of |odds|.
             // To take a 10% vig, the user now has to bet more to win the same 100.
             $finalOdds = $trueOdds / 0.90;
-            return round($finalOdds);
+            return round( $finalOdds );
         }
     }
 }

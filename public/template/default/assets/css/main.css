@@ -132,14 +132,23 @@ body {
 }
 
 .btn-info {
-  background-color: #121B57;
+  background-color: #4479F5;
   padding: 4px 8px;
   border-radius: 6px;
   color: white;
 }
 
 .btn-info:hover {
-  background-color: #4479F5;
+  background-color: #121B57;
+}
+
+.btn-generic {
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.btn-alert:hover {
+  background-color: #121B57;
 }
 
 #matchSetup {

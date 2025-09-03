@@ -15,42 +15,42 @@ $app['app'] = $app;
 
 $app['global_config_import'] = function ()
 {
-	if ( !defined( 'ENV_PATH' ) )
-	{
-		require_once 'Paths.php';
-	}
+    if ( !defined( 'ENV_PATH' ) )
+    {
+        require_once 'Paths.php';
+    }
 
-	return new \Src\Import( ENV_PATH );
+    return new \Src\Import( ENV_PATH );
 };
 
 $app['config'] = function ( $c )
 {
-	return new \Src\Config( $c['global_config_import'] );
+    return new \Src\Config( $c['global_config_import'] );
 };
 
 # Set error reporting level [via Config.php]
 switch ( $app['config']->setting( 'error_reports' ) )
 {
-case "ON":
-	ini_set( 'display_errors', 1 );
-	error_reporting( E_ALL & ~E_NOTICE );
-	break;
+    case "ON":
+        ini_set( 'display_errors', 1 );
+        error_reporting( E_ALL & ~E_NOTICE );
+        break;
 
-case "DEV MODE":
-	ini_set( 'display_errors', 1 );
-	error_reporting( E_ALL );
-	break;
+    case "DEV MODE":
+        ini_set( 'display_errors', 1 );
+        error_reporting( E_ALL );
+        break;
 
-default:
-	ini_set( 'display_errors', 0 );
-	error_reporting( 0 );
+    default:
+        ini_set( 'display_errors', 0 );
+        error_reporting( 0 );
 }
 
 // # Set log file
 if ( $app['config']->setting( 'log_errors' ) == "TRUE" )
 {
-	ini_set( "log_errors", TRUE );
-	ini_set( 'error_log', $app['config']->setting( 'log_path' ) . 'system.log' );
+    ini_set( "log_errors", true );
+    ini_set( 'error_log', $app['config']->setting( 'log_path' ) . 'system.log' );
 }
 
 // # Set time zone [via Config.php]
@@ -58,203 +58,203 @@ date_default_timezone_set( $app['config']->setting( 'time_zone' ) );
 
 $app['router'] = function ( $c )
 {
-	return new \Src\Router;
+    return new \Src\Router;
 };
 
 $app['orm'] = function ( $c )
 {
-	$freeze           = strtoupper( $c['config']->setting( 'db_freeze' ) );
-	$dbengine         = strtolower( $c['config']->setting( 'db_type' ) );
-	$freeze_setting   = BOOLEAN::tryFrom( $freeze );
-	$dbengine_setting = DBTYPE::tryFrom( $dbengine );
+    $freeze           = strtoupper( $c['config']->setting( 'db_freeze' ) );
+    $dbengine         = strtolower( $c['config']->setting( 'db_type' ) );
+    $freeze_setting   = BOOLEAN::tryFrom( $freeze );
+    $dbengine_setting = DBTYPE::tryFrom( $dbengine );
 
-	/**
-	 * @param $params
-	 * @param $c
-	 */
-	function throwError( $params, $c )
-	{
-		$e                = new Error( $c );
-		$e->type          = $params['type'];
-		$e->category      = $params['category'];
-		$e->triggeredBy   = $params['triggeredBy'];
-		$e->object        = $params['object'];
-		$e->value         = $params['value'];
-		$e->valid_options = $params['valid_options'];
-		$e->display();exit;
-	}
+    /**
+     * @param $params
+     * @param $c
+     */
+    function throwError( $params, $c )
+    {
+        $e                = new Error( $c );
+        $e->type          = $params['type'];
+        $e->category      = $params['category'];
+        $e->triggeredBy   = $params['triggeredBy'];
+        $e->object        = $params['object'];
+        $e->value         = $params['value'];
+        $e->valid_options = $params['valid_options'];
+        $e->display();exit;
+    }
 
-	if ( is_null( $dbengine_setting ) )
-	{
-		$params = [
-			'type'          => 'Enum',
-			'category'      => 'Configuration',
-			'triggeredBy'   => DBTYPE::class,
-			'object'        => 'db_type',
-			'value'         => $c['config']->setting( 'db_type' ),
-			'valid_options' => DBTYPE::cases(),
-		];
+    if ( is_null( $dbengine_setting ) )
+    {
+        $params = [
+            'type'          => 'Enum',
+            'category'      => 'Configuration',
+            'triggeredBy'   => DBTYPE::class,
+            'object'        => 'db_type',
+            'value'         => $c['config']->setting( 'db_type' ),
+            'valid_options' => DBTYPE::cases(),
+        ];
 
-		return throwError( $params, $c );
-	}
+        return throwError( $params, $c );
+    }
 
-	if ( is_null( $freeze_setting ) )
-	{
-		$params = [
-			'type'          => 'Enum',
-			'category'      => 'Configuration',
-			'triggeredBy'   => BOOLEAN::class,
-			'object'        => 'db_freeze',
-			'value'         => $c['config']->setting( 'db_freeze' ),
-			'valid_options' => BOOLEAN::cases(),
-		];
+    if ( is_null( $freeze_setting ) )
+    {
+        $params = [
+            'type'          => 'Enum',
+            'category'      => 'Configuration',
+            'triggeredBy'   => BOOLEAN::class,
+            'object'        => 'db_freeze',
+            'value'         => $c['config']->setting( 'db_freeze' ),
+            'valid_options' => BOOLEAN::cases(),
+        ];
 
-		return throwError( $params, $c );
-	}
-	// Create instance of redbean orm
-	require_once VENDOR_PATH . 'gabordemooij/redbean/RedBeanPHP/R.php';
-	\RedBeanPHP\R::setup(
-		"{$dbengine}:host=" . $c['config']->setting( 'db_host' ) . ";
+        return throwError( $params, $c );
+    }
+    // Create instance of redbean orm
+    require_once VENDOR_PATH . 'gabordemooij/redbean/RedBeanPHP/R.php';
+    \RedBeanPHP\R::setup(
+        "{$dbengine}:host=" . $c['config']->setting( 'db_host' ) . ";
 		dbname=" . $c['config']->setting( 'db_name' ) . "", $c['config']->setting( 'db_user' ), $c['config']->setting( 'db_pass' ) );
-	// \RedBeanPHP\R::fancyDebug(TRUE);
-	if ( $freeze === BOOLEAN::OFF )
-	{
-		return \RedBeanPHP\R::getDatabaseAdapter()->getDatabase()->getPDO()->setAttribute( PDO::ATTR_EMULATE_PREPARES, FALSE );
-	}
+    // \RedBeanPHP\R::fancyDebug(TRUE);
+    if ( $freeze === BOOLEAN::OFF )
+    {
+        return \RedBeanPHP\R::getDatabaseAdapter()->getDatabase()->getPDO()->setAttribute( PDO::ATTR_EMULATE_PREPARES, false );
+    }
 
-	\RedBeanPHP\R::getDatabaseAdapter()->getDatabase()->getPDO()->setAttribute( PDO::ATTR_EMULATE_PREPARES, FALSE );
-	return \RedBeanPHP\R::freeze( TRUE );
+    \RedBeanPHP\R::getDatabaseAdapter()->getDatabase()->getPDO()->setAttribute( PDO::ATTR_EMULATE_PREPARES, false );
+    return \RedBeanPHP\R::freeze( true );
 };
 
 $app['db'] = function ( $c )
 {
-	return new \Src\Database( $c );
+    return new \Src\Database( $c );
 };
 
 $app['database_info'] = function ( $c )
 {
-	$db = new \Src\Database( $c );
-	return $db->sql_info( $c );
+    $db = new \Src\Database( $c );
+    return $db->sql_info( $c );
 };
 
 $app['load'] = function ( $c )
 {
-	return new \Src\Loader( $c );
+    return new \Src\Loader( $c );
 };
 
 $app['log'] = function ( $c )
 {
-	return new \Src\Logger( $c );
+    return new \Src\Logger( $c );
 };
 
 $app['system_model'] = function ( \Pimple\Container $app )
 {
-	return new \Src\Model\System_Model( $app );
+    return new \Src\Model\System_Model( $app );
 };
 
 $app['toolbox'] = function ( $app )
 {
-	// Used to pass the toolbox as a function parameter to other objects
-	return $app;
+    // Used to pass the toolbox as a function parameter to other objects
+    return $app;
 };
 
 $app['profiler'] = function ( $c )
 {
-	return new \Src\Profiler( $c, $middlewareArr = [] );
+    return new \Src\Profiler( $c, $middlewareArr = [] );
 };
 
 // $app['event_manager'] = function ( $app )
 // {
-// 	return new \Src\EventManager( $app );
+//     return new \Src\EventManager( $app );
 // };
 
 $app['base_controller'] = function ( $c )
 {
-	return new \Src\Controller\Base_Controller( $c );
+    return new \Src\Controller\Base_Controller( $c );
 };
 
 $app['middleware'] = function ( $app )
 {
-	return new \Src\Middleware\Helper( $app );
+    return new \Src\Middleware\Helper( $app );
 };
 
 $app['mailer'] = function ( $c, MailerInterface $mailer )
 {
-	return $mailer;
+    return $mailer;
 };
 
 $app['email'] = function ( $c )
 {
-	return new \Src\Middleware\Email( $c );
+    return new \Src\Middleware\Email( $c );
 };
 
 $app['pagination'] = function ( $c )
 {
-	return new \Src\Middleware\Pagination( $c );
+    return new \Src\Middleware\Pagination( $c );
 };
 
 $app['format'] = function ( $c )
 {
-	return new \Src\Middleware\Format;
+    return new \Src\Middleware\Format;
 };
 
 // new geo module
 $app['geoip'] = function ( $c )
 {
-	return new \Src\Middleware\Geoip( $c );
+    return new \Src\Middleware\Geoip( $c );
 };
 
 $app['hash'] = function ( $c )
 {
-	return new \Src\Middleware\Hash;
+    return new \Src\Middleware\Hash;
 };
 
 $app['session'] = function ( $c )
 {
-	return new \Src\Middleware\Session( $c );
+    return new \Src\Middleware\Session( $c );
 };
 
 $app['template'] = function ( $c )
 {
-	return new \Src\Template( $c );
+    return new \Src\Template( $c );
 };
 
 // $app['html_purify'] = function ($c) {
-// 	require_once VENDOR_PATH . 'ezyang/htmlpurifier/library/HTMLPurifier.auto.php';
-// 	$config = HTMLPurifier_Config::createDefault();
-// 	$config->set('Core.Encoding', 'UTF-8'); // replace with your encoding
-// 	$config->set('HTML.Doctype', 'HTML 4.01 Strict'); // replace with your doctype
-// 	$config->set('Cache.DefinitionImpl', null); // Turns off definition caching for dev purposes. Turn on for live environment
-// 	return new HTMLPurifier($config);
+//     require_once VENDOR_PATH . 'ezyang/htmlpurifier/library/HTMLPurifier.auto.php';
+//     $config = HTMLPurifier_Config::createDefault();
+//     $config->set('Core.Encoding', 'UTF-8'); // replace with your encoding
+//     $config->set('HTML.Doctype', 'HTML 4.01 Strict'); // replace with your doctype
+//     $config->set('Cache.DefinitionImpl', null); // Turns off definition caching for dev purposes. Turn on for live environment
+//     return new HTMLPurifier($config);
 // };
 
 // $app['login'] = function ($c) {
-// 	return new \Src\Middleware\Login($c);
+//     return new \Src\Middleware\Login($c);
 // };
 
 // $app['paypal'] = function ($c) {
-// 	return new \Src\Middleware\Paypal($c);
+//     return new \Src\Middleware\Paypal($c);
 // };
 
 // $app['sanitize'] = function ($c) {
-// 	return new \Src\Middleware\Sanitize($c);
+//     return new \Src\Middleware\Sanitize($c);
 // };
 
 // $app['title'] = function ($app) {
 
-// 	$title = new \Src\Middleware\Title($app['toolbox']);
-// 	require_once MODULES_PATH . 'Titlesettings.php';
-// 	# Pass the Titlesettings() function from the included file above to $title->set()
-// 	$title->set(Titlesettings($app));
-// 	return $title;
+//     $title = new \Src\Middleware\Title($app['toolbox']);
+//     require_once MODULES_PATH . 'Titlesettings.php';
+//     # Pass the Titlesettings() function from the included file above to $title->set()
+//     $title->set(Titlesettings($app));
+//     return $title;
 // };
 
 // $app['validate'] = function ($c) {
-// 	return new \Src\Middleware\Validation;
+//     return new \Src\Middleware\Validation;
 // };
 
 // $app['whitelist'] = function ($app) {
-// 	return new \Src\Middleware\Whitelist($app);
+//     return new \Src\Middleware\Whitelist($app);
 // };
 
 /*
@@ -283,9 +283,9 @@ return new \Src\Parse($c);
 
 // $app['orm'] = function ($c) {
 // Create instance of redbean orm
-// 	require_once VENDOR_PATH . 'gabordemooij/redbean/RedBeanPHP/R.php';
-// 	return \RedBeanPHP\R::setup("mysql:host=" . $c['config']->setting('db_host') . ";
-// 		dbname=" . $c['config']->setting('db_name') . "", $c['config']->setting('db_user'), $c['config']->setting('db_pass'));
+//     require_once VENDOR_PATH . 'gabordemooij/redbean/RedBeanPHP/R.php';
+//     return \RedBeanPHP\R::setup("mysql:host=" . $c['config']->setting('db_host') . ";
+//         dbname=" . $c['config']->setting('db_name') . "", $c['config']->setting('db_user'), $c['config']->setting('db_pass'));
 
 // uncomment the below in production environment to prevent database columns from changing
 // R::freeze( TRUE );

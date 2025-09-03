@@ -18,6 +18,30 @@ class SimulatorModel extends System_Model
      * @var array
      */
     private $allMoves = [];
+    /**
+     * @var mixed
+     */
+    private $wrestler1_data;
+    /**
+     * @var mixed
+     */
+    private $wrestler2_data;
+    /**
+     * @var array
+     */
+    protected $simulation_log = [];
+    /**
+     * @var mixed
+     */
+    private $winner;
+    /**
+     * @var mixed
+     */
+    private $loser;
+    /**
+     * @var array
+     */
+    private $comeback_activated = []; // NEW: Track comeback trait usage
 
     /**
      * @param $app
@@ -29,30 +53,77 @@ class SimulatorModel extends System_Model
     }
 
     /**
-     * Main function to simulate a match between two wrestlers.
+     * @param $wrestler1_id
+     * @param $wrestler2_id
+     */
+    public function start_simulation( $wrestler1_id, $wrestler2_id )
+    {
+        $api_model            = new ApiModel( $this->app );
+        $this->wrestler1_data = $api_model->getWrestlerById( $wrestler1_id );
+        $this->wrestler2_data = $api_model->getWrestlerById( $wrestler2_id );
+
+        if ( !$this->wrestler1_data || !$this->wrestler2_data )
+        {
+            return ['error' => 'Could not retrieve wrestler data.'];
+        }
+
+        // This is a legacy method and can be removed if you only use simulateMatch
+        $this->run_full_simulation();
+
+        return [
+            'winner' => $this->winner,
+            'loser'  => $this->loser,
+            'log'    => $this->matchLog, // Return the correct log
+        ];
+    }
+
+    // This is a legacy method now, you may want to refactor or remove it
+    private function run_full_simulation()
+    {
+        $result       = $this->simulateMatch( $this->wrestler1_data, $this->wrestler2_data );
+        $this->winner = $result['winner'];
+        $this->loser  = ( $result['winner']->wrestler_id == $this->wrestler1_data->wrestler_id ) ? $this->wrestler2_data : $this->wrestler1_data;
+    }
+
+    /**
+     * @param $wrestler1
+     * @param $wrestler2
+     * @param $isBulk
      */
     public function simulateMatch( $wrestler1, $wrestler2, $isBulk = false )
     {
-        $this->matchLog = [];
-        $turn           = 0;
-        $winner         = null;
+        $this->matchLog           = [];
+        $turn                     = 0;
+        $winner                   = null;
+        $this->comeback_activated = [];
 
         $matchState = $this->initializeMatchState( $wrestler1, $wrestler2 );
 
         if ( !$isBulk )
         {
             $this->logMessage( "--- Match Start: {$wrestler1->name} vs. {$wrestler2->name} ---" );
-        }
-
-        // **THE FIX:** Use wrestler_id to access the match state array
-        if ( !$isBulk )
-        {
             $this->logMessage( "{$wrestler1->name} starts with {$matchState[$wrestler1->wrestler_id]['hp']} HP and {$matchState[$wrestler1->wrestler_id]['stamina']} Stamina." );
+            $this->logMessage( "{$wrestler2->name} starts with {$matchState[$wrestler2->wrestler_id]['hp']} HP and {$matchState[$wrestler2->wrestler_id]['stamina']} Stamina." );
         }
 
-        if ( !$isBulk )
+        // NEW: Intimidator Trait Check
+        if ( in_array( 'Intimidator', $wrestler1->traits ) && rand( 1, 100 ) <= 10 )
         {
-            $this->logMessage( "{$wrestler2->name} starts with {$matchState[$wrestler2->wrestler_id]['hp']} HP and {$matchState[$wrestler2->wrestler_id]['stamina']} Stamina." );
+            $matchState[$wrestler2->wrestler_id]['stunned'] = 1;
+            if ( !$isBulk )
+            {
+                $this->logMessage( "{$wrestler2->name} is stunned by {$wrestler1->name}'s intimidating presence and misses the first turn!" );
+            }
+
+        }
+        if ( in_array( 'Intimidator', $wrestler2->traits ) && rand( 1, 100 ) <= 10 )
+        {
+            $matchState[$wrestler1->wrestler_id]['stunned'] = 1;
+            if ( !$isBulk )
+            {
+                $this->logMessage( "{$wrestler1->name} is stunned by {$wrestler2->name}'s intimidating presence and misses the first turn!" );
+            }
+
         }
 
         while ( $turn < $this->maxTurns && $winner === null )
@@ -63,13 +134,25 @@ class SimulatorModel extends System_Model
                 $this->logMessage( "--- Turn {$turn} ---" );
             }
 
-            // **THE FIX:** Use wrestler_id to determine the attacker/defender
             $attackerId = $this->determineAttacker( $matchState, $wrestler1->wrestler_id, $wrestler2->wrestler_id );
             $defenderId = ( $attackerId === $wrestler1->wrestler_id ) ? $wrestler2->wrestler_id : $wrestler1->wrestler_id;
 
-            // Use references to easily modify the state
             $attackerState = &$matchState[$attackerId];
             $defenderState = &$matchState[$defenderId];
+
+            // Check if stunned
+            if ( $attackerState['stunned'] > 0 )
+            {
+                if ( !$isBulk )
+                {
+                    $this->logMessage( "{$attackerState['data']->name} is stunned and cannot make a move!" );
+                }
+
+                $attackerState['stunned']--;
+                // In a singles match, we just skip to the next full turn where attacker is re-determined.
+                // This effectively makes them lose their turn.
+                continue;
+            }
 
             if ( !$isBulk )
             {
@@ -84,31 +167,48 @@ class SimulatorModel extends System_Model
                     $this->logMessage( "{$attackerState['data']->name} is too tired to perform a move and catches their breath." );
                 }
 
-                $attackerState['stamina'] += 100; // Small stamina recovery
+                $attackerState['stamina'] += 100;
                 continue;
             }
 
             $hitChance = $this->calculateHitChance( $attackerState, $defenderState, $move );
             $roll      = rand( 1, 100 );
 
+            // NEW: Dirty Player Trait Check
+            if ( $move->type === 'grapple' && in_array( 'Dirty Player', $defenderState['data']->traits ) && rand( 1, 100 ) <= 5 )
+            {
+                if ( !$isBulk )
+                {
+                    $this->logMessage( "{$attackerState['data']->name} goes for a grapple, but {$defenderState['data']->name} plays dirty with a LOW BLOW!" );
+                }
+
+                $attackerState['stunned'] = 1; // Stun attacker for 1 turn
+                $defenderState['momentum'] += 20;
+                continue; // Skip the rest of the turn
+            }
+
             if ( $roll <= $hitChance )
             {
-                $damage = $this->calculateDamage( $attackerState, $defenderState, $move );
+                $damage = $this->calculateDamage( $attackerState, $defenderState, $move, $isBulk );
                 $defenderState['hp'] -= $damage;
 
-                $attackerState['stamina'] -= $move->stamina_cost;
-                $attackerState['momentum'] += $move->momentumGain;
+                // NEW: Workhorse Trait stamina reduction
+                $staminaCost = in_array( 'Workhorse', $attackerState['data']->traits ) ? $move->stamina_cost * 0.85 : $move->stamina_cost;
+                $attackerState['stamina'] -= $staminaCost;
+
+                $momentumGain = $move->momentumGain;
+                // NEW: Showman Trait momentum gain
+                if ( in_array( 'Showman', $attackerState['data']->traits ) && ( $move->type === 'highFlying' || $move->type === 'finisher' ) )
+                {
+                    $momentumGain *= 1.5;
+                }
+                $attackerState['momentum'] += $momentumGain;
 
                 if ( !$isBulk )
                 {
                     $this->logMessage( "{$attackerState['data']->name} hits a {$move->move_name} for {$damage} damage!" );
-                }
-
-                if ( !$isBulk )
-                {
                     $this->logMessage( "{$defenderState['data']->name} has {$defenderState['hp']} HP remaining." );
                 }
-
             }
             else
             {
@@ -118,39 +218,91 @@ class SimulatorModel extends System_Model
                 }
 
                 $defenderState['momentum'] += 15;
-                $attackerState['stamina'] -= ceil( $move->stamina_cost / 2 ); // Penalize stamina for a missed move
+                $attackerState['stamina'] -= ceil( $move->stamina_cost / 2 );
             }
 
             $attackerState['momentum'] = max( 0, $attackerState['momentum'] - 5 );
             $defenderState['momentum'] = max( 0, $defenderState['momentum'] - 5 );
 
+            // NEW: Comeback Kid Trait Check
+            $comebackThreshold = $attackerState['data']->baseHp * 0.25;
+            if ( $attackerState['hp'] <= $comebackThreshold && !isset( $this->comeback_activated[$attackerId] ) )
+            {
+                if ( in_array( 'Comeback Kid', $attackerState['data']->traits ) )
+                {
+                    $attackerState['momentum'] += 50; // Huge momentum boost
+                    $attackerState['damage_modifier']      = 1.20; // 20% damage boost for 3 turns
+                    $attackerState['comeback_turns']       = 3;
+                    $this->comeback_activated[$attackerId] = true;
+                    if ( !$isBulk )
+                    {
+                        $this->logMessage( "{$attackerState['data']->name} is hurt but fires up! The crowd is going wild!" );
+                    }
+
+                }
+            }
+
+            // Manage comeback turns
+            if ( isset( $attackerState['comeback_turns'] ) && $attackerState['comeback_turns'] > 0 )
+            {
+                $attackerState['comeback_turns']--;
+                if ( $attackerState['comeback_turns'] == 0 )
+                {
+                    $attackerState['damage_modifier'] = 1.0;
+                    if ( !$isBulk )
+                    {
+                        $this->logMessage( "{$attackerState['data']->name}'s comeback surge wears off." );
+                    }
+
+                }
+            }
+
             if ( $defenderState['hp'] <= 0 )
             {
-                if ( !$isBulk )
+                $isResilient    = in_array( 'Resilient', $defenderState['data']->traits );
+                $resilienceRoll = rand( 1, 100 );
+
+                if ( $isResilient && $resilienceRoll <= 5 )
                 {
-                    $this->logMessage( "{$defenderState['data']->name} has been pinned!" );
+                    $defenderState['hp'] = 1;
+                    if ( !$isBulk )
+                    {
+                        $this->logMessage( "{$defenderState['data']->name} was about to be pinned, but they're still in it! Unbelievable resilience!" );
+                    }
+
                 }
+                else
+                {
+                    if ( !$isBulk )
+                    {
+                        $this->logMessage( "{$defenderState['data']->name} has been pinned!" );
+                    }
 
-                $winner = $attackerState['data'];
+                    $winner = $attackerState['data'];
+                }
             }
         }
 
-        if ( $winner )
+        if ( !$winner )
         {
             if ( !$isBulk )
             {
-                $this->logMessage( "--- Match End: The winner is {$winner->name}! ---" );
+                $this->logMessage( "--- Match End: The time limit has expired. ---" );
             }
 
+            if ( $matchState[$wrestler1->wrestler_id]['hp'] == $matchState[$wrestler2->wrestler_id]['hp'] )
+            {
+                $winner = 'draw';
+            }
+            else
+            {
+                $winner = ( $matchState[$wrestler1->wrestler_id]['hp'] > $matchState[$wrestler2->wrestler_id]['hp'] ) ? $wrestler1 : $wrestler2;
+            }
         }
-        else
-        {
-            if ( !$isBulk )
-            {
-                $this->logMessage( "--- Match End: The time limit has expired. It's a draw! ---" );
-            }
 
-            $winner = 'draw';
+        if ( is_object( $winner ) && !$isBulk )
+        {
+            $this->logMessage( "--- The winner is {$winner->name}! ---" );
         }
 
         return [
@@ -160,8 +312,260 @@ class SimulatorModel extends System_Model
     }
 
     /**
-     * Runs a specified number of simulations and returns the aggregated results,
-     * including win counts, probabilities, and moneyline odds.
+     * @param $attackerState
+     * @param $defenderState
+     * @param $move
+     * @param $isBulk
+     */
+    private function calculateDamage( $attackerState, $defenderState, $move, $isBulk = false )
+    {
+        $minDamage     = 0;
+        $maxDamage     = 0;
+        $decodedDamage = json_decode( $move->min_damage, true );
+
+        if ( json_last_error() === JSON_ERROR_NONE && isset( $decodedDamage['min'] ) && isset( $decodedDamage['max'] ) )
+        {
+            $minDamage = (int) $decodedDamage['min'];
+            $maxDamage = (int) $decodedDamage['max'];
+        }
+        else
+        {
+            $minDamage = (int) $move->min_damage;
+            $maxDamage = (int) $move->max_damage;
+        }
+
+        $baseDamage         = rand( $minDamage, $maxDamage );
+        $attackerStatValue  = $attackerState['data']->{$move->stat} ?? 50;
+        $statBonus          = $attackerStatValue * 0.5;
+        $sizeModifier       = $this->getSizeModifier( $attackerState['data'], $defenderState['data'], $move->type );
+        $grossDamage        = ( $baseDamage + $statBonus ) * $sizeModifier;
+        $toughnessReduction = $defenderState['data']->toughness * 0.25;
+        $finalDamage        = ceil( $grossDamage - $toughnessReduction );
+
+        // Apply Traits
+        if ( in_array( 'Brawler', $attackerState['data']->traits ) && $move->type === 'strike' && rand( 1, 100 ) <= 10 )
+        {
+            $finalDamage *= 1.5; // 50% critical hit bonus
+            if ( !$isBulk )
+            {
+                $this->logMessage( "CRITICAL HIT!" );
+            }
+
+        }
+        if ( in_array( 'Powerhouse', $attackerState['data']->traits ) && $move->type === 'grapple' )
+        {
+            $finalDamage *= 1.1; // 10% powerhouse bonus
+        }
+        if ( in_array( 'Submission Specialist', $attackerState['data']->traits ) && $move->submissionAttemptChance > 0 )
+        {
+            $finalDamage *= 1.2; // 20% submission bonus
+        }
+        if ( in_array( 'Brick Wall', $defenderState['data']->traits ) )
+        {
+            $finalDamage *= 0.90; // 10% damage reduction
+        }
+
+        // Apply comeback damage modifier if active
+        if ( isset( $attackerState['damage_modifier'] ) )
+        {
+            $finalDamage *= $attackerState['damage_modifier'];
+        }
+
+        return max( 1, (int) round( $finalDamage ) );
+    }
+
+    /**
+     * @param $attackerState
+     * @param $defenderState
+     * @param $move
+     */
+    private function calculateHitChance( $attackerState, $defenderState, $move )
+    {
+        $baseChance        = (float) $move->baseHitChance * 100;
+        $attackerStatValue = $attackerState['data']->{$move->stat} ?? 50;
+        $defenderStatValue = $defenderState['data']->reversalAbility ?? 50;
+        $statDifference    = $attackerStatValue - $defenderStatValue;
+        $statBonus         = $statDifference * 0.5;
+
+        $staminaPercentage = $attackerState['stamina'] > 0 ? $attackerState['stamina'] / ( $attackerState['data']->stamina * 10 ) : 0;
+        $staminaPenalty    = ( $staminaPercentage < 0.3 ) ? 20 : ( ( $staminaPercentage < 0.5 ) ? 10 : 0 );
+
+        $finalChance = $baseChance + $statBonus - $staminaPenalty;
+
+        if ( $move->type === 'highFlying' && in_array( 'High-Flyer', $attackerState['data']->traits ) )
+        {
+            $finalChance += 10;
+        }
+        if ( $move->type === 'grapple' && in_array( 'Giant', $defenderState['data']->traits ) )
+        {
+            $finalChance -= 15;
+        }
+        if ( $move->submissionAttemptChance > 0 && in_array( 'Submission Specialist', $attackerState['data']->traits ) )
+        {
+            $finalChance += 10;
+        }
+
+        return max( 5, min( 95, $finalChance ) );
+    }
+
+    /**
+     * @param $wrestler1
+     * @param $wrestler2
+     * @return mixed
+     */
+    private function initializeMatchState( $wrestler1, $wrestler2 )
+    {
+        $state = [];
+        foreach ( [$wrestler1, $wrestler2] as $wrestler )
+        {
+            $initialHp      = $wrestler->baseHp + ( $wrestler->toughness * 10 );
+            $initialStamina = $wrestler->stamina * 10;
+
+            $state[$wrestler->wrestler_id] = [
+                'hp'              => $initialHp,
+                'stamina'         => $initialStamina,
+                'momentum'        => 50,
+                'data'            => $wrestler,
+                'stunned'         => 0,
+                'damage_modifier' => 1.0,
+            ];
+        }
+        return $state;
+    }
+
+    private function loadAllMoves()
+    {
+        $apiModel       = new \App\Model\ApiModel( $this->app );
+        $this->allMoves = $apiModel->getAllMoves();
+    }
+
+    /**
+     * @param $message
+     */
+    private function logMessage( $message )
+    {
+        $this->matchLog[] = $message;
+    }
+
+    /**
+     * @param $matchState
+     * @param $id1
+     * @param $id2
+     */
+    private function determineAttacker( $matchState, $id1, $id2 )
+    {
+        $momentum1        = $matchState[$id1]['momentum'];
+        $momentum2        = $matchState[$id2]['momentum'];
+        $wrestler1_chance = 50 + ( ( $momentum1 - $momentum2 ) / 2 );
+        $wrestler1_chance = max( 10, min( 90, $wrestler1_chance ) );
+        return ( rand( 1, 100 ) <= $wrestler1_chance ) ? $id1 : $id2;
+    }
+
+    /**
+     * @param $attackerState
+     * @return mixed
+     */
+    private function selectMove( $attackerState )
+    {
+        $wrestlerMoves = json_decode( $attackerState['data']->moves, true );
+
+        if ( empty( $wrestlerMoves ) || !is_array( $wrestlerMoves ) || count( $wrestlerMoves ) === 0 )
+        {
+            return (object) [
+                'move_name'    => 'Struggle', 'baseHitChance' => 1.0, 'stat'                         => 'strength',
+                'stamina_cost' => 10, 'momentumGain'          => 2, 'min_damage'                     => '{"min": 5, "max": 10}',
+                'max_damage'   => 0, 'type'                   => 'strike', 'submissionAttemptChance' => 0,
+            ];
+        }
+
+        $allWrestlerMoveNames = array_merge( ...array_values( $wrestlerMoves ) );
+
+        if ( empty( $allWrestlerMoveNames ) )
+        {
+            return (object) [
+                'move_name'    => 'Struggle', 'baseHitChance' => 1.0, 'stat'                         => 'strength',
+                'stamina_cost' => 10, 'momentumGain'          => 2, 'min_damage'                     => '{"min": 5, "max": 10}',
+                'max_damage'   => 0, 'type'                   => 'strike', 'submissionAttemptChance' => 0,
+            ];
+        }
+
+        $fullMoveDetails = array_filter( $this->allMoves, function ( $move ) use ( $allWrestlerMoveNames )
+        {
+            return in_array( $move->move_name, $allWrestlerMoveNames );
+        } );
+
+        $staminaCostModifier = in_array( 'Workhorse', $attackerState['data']->traits ) ? 0.85 : 1.0;
+        $executableMoves     = array_filter( $fullMoveDetails, function ( $move ) use ( $attackerState, $staminaCostModifier )
+        {
+            return $attackerState['stamina'] >= ( $move->stamina_cost * $staminaCostModifier );
+        } );
+
+        if ( empty( $executableMoves ) )
+        {
+            return null;
+        }
+
+        $weightedMoves = [];
+        foreach ( $executableMoves as $move )
+        {
+            $weight = 10;
+            if ( $move->type === 'finisher' && $attackerState['momentum'] >= 100 )
+            {
+                $weight += 50;
+            }
+
+            for ( $i = 0; $i < $weight; $i++ )
+            {
+                $weightedMoves[] = $move;
+            }
+
+        }
+
+        return $weightedMoves[array_rand( $weightedMoves )];
+    }
+
+    /**
+     * @param $attacker
+     * @param $defender
+     * @param $moveType
+     * @return mixed
+     */
+    private function getSizeModifier( $attacker, $defender, $moveType )
+    {
+        $weightDifference = $attacker->weight - $defender->weight;
+        $modifier         = 1.0;
+
+        if ( $moveType === 'grapple' || $moveType === 'strike' )
+        {
+            if ( $weightDifference > 50 )
+            {
+                $modifier += 0.15;
+            }
+            elseif ( $weightDifference > 20 )
+            {
+                $modifier += 0.07;
+            }
+        }
+
+        if ( $moveType === 'highFlying' )
+        {
+            if ( $weightDifference < -50 )
+            {
+                $modifier += 0.15;
+            }
+            elseif ( $weightDifference < -20 )
+            {
+                $modifier += 0.07;
+            }
+        }
+
+        return $modifier;
+    }
+
+    /**
+     * @param $wrestler1
+     * @param $wrestler2
+     * @param $simCount
      */
     public function runBulkSimulations( $wrestler1, $wrestler2, $simCount = 100 )
     {
@@ -173,7 +577,6 @@ class SimulatorModel extends System_Model
 
         for ( $i = 0; $i < $simCount; $i++ )
         {
-            // Pass 'true' to indicate a bulk simulation, which is faster.
             $result = $this->simulateMatch( $wrestler1, $wrestler2, true );
 
             if ( is_object( $result['winner'] ) )
@@ -181,12 +584,11 @@ class SimulatorModel extends System_Model
                 $winCounts[$result['winner']->name]++;
             }
             else
-            { // It's a draw
+            {
                 $winCounts['draw']++;
             }
         }
 
-        // **THE FIX:** Calculate probabilities and moneyline odds before returning.
         $probabilities = [];
         $moneylineOdds = [];
         foreach ( $winCounts as $name => $wins )
@@ -195,7 +597,6 @@ class SimulatorModel extends System_Model
             {
                 $probability          = $wins / $simCount;
                 $probabilities[$name] = $probability;
-                // The calculateMoneyline helper function is required for this to work.
                 $moneylineOdds[$name] = $this->calculateMoneyline( $probability );
             }
         }
@@ -208,9 +609,7 @@ class SimulatorModel extends System_Model
     }
 
     /**
-     * Helper function to calculate American (moneyline) odds from a probability.
-     * @param float $probability The probability of an outcome (0 to 1).
-     * @return string The moneyline odds string (e.g., "+250", "-150").
+     * @param $probability
      */
     private function calculateMoneyline( $probability )
     {
@@ -234,241 +633,5 @@ class SimulatorModel extends System_Model
             $odds = -100 / ( ( 100 / ( 100 * $probability ) ) - 1 );
             return round( $odds );
         }
-    }
-
-    /**
-     * Calculates the damage a move inflicts.
-     */
-    private function calculateDamage( $attackerState, $defenderState, $move )
-    {
-        // **THE FIX:** This logic now correctly handles both plain numbers and JSON strings.
-        $minDamage     = 0;
-        $maxDamage     = 0;
-        $decodedDamage = json_decode( $move->min_damage, true );
-
-        if ( json_last_error() === JSON_ERROR_NONE && isset( $decodedDamage['min'] ) && isset( $decodedDamage['max'] ) )
-        {
-            // Handle JSON format: e.g., {"min": 18, "max": 28}
-            $minDamage = (int) $decodedDamage['min'];
-            $maxDamage = (int) $decodedDamage['max'];
-        }
-        else
-        {
-            // Handle plain number format
-            $minDamage = (int) $move->min_damage;
-            $maxDamage = (int) $move->max_damage;
-        }
-
-        // 1. Get base damage from the move
-        $baseDamage = rand( $minDamage, $maxDamage );
-
-        // 2. Add bonus based on attacker's relevant stat
-        $attackerStatValue = $attackerState['data']->{$move->stat} ?? 50;
-        $statBonus         = $attackerStatValue * 0.5;
-
-        // 3. Apply modifier for size difference
-        $sizeModifier = $this->getSizeModifier( $attackerState['data'], $defenderState['data'], $move->type );
-
-        // 4. Calculate total damage before defender's reduction
-        $grossDamage = ( $baseDamage + $statBonus ) * $sizeModifier;
-
-        // 5. Reduce damage based on defender's toughness
-        $toughnessReduction = $defenderState['data']->toughness * 0.25;
-
-        $finalDamage = ceil( $grossDamage - $toughnessReduction );
-
-        return max( 1, $finalDamage ); // Ensure a move always does at least 1 damage
-    }
-
-    /**
-     * Calculates a damage modifier based on the size difference between wrestlers.
-     */
-    private function getSizeModifier( $attacker, $defender, $moveType )
-    {
-        $weightDifference = $attacker->weight - $defender->weight;
-        $modifier         = 1.0; // Start with no modification
-
-        // Bonus for heavier wrestlers using power/strength moves
-        if ( $moveType === 'grapple' || $moveType === 'strike' )
-        {
-            if ( $weightDifference > 50 )
-            {
-                $modifier += 0.15; // 15% bonus for a significant weight advantage
-            }
-            elseif ( $weightDifference > 20 )
-            {
-                $modifier += 0.07; // 7% bonus for a minor weight advantage
-            }
-        }
-
-        // Bonus for lighter wrestlers using high-flying moves
-        if ( $moveType === 'highFlying' )
-        {
-            if ( $weightDifference < -50 )
-            {
-                $modifier += 0.15; // 15% bonus for a significant weight disadvantage (agility)
-            }
-            elseif ( $weightDifference < -20 )
-            {
-                $modifier += 0.07; // 7% bonus for a minor weight disadvantage
-            }
-        }
-
-        return $modifier;
-    }
-
-    /**
-     * @param $attackerState
-     * @return mixed
-     */
-    private function selectMove( $attackerState )
-    {
-        $wrestlerMoves = json_decode( $attackerState['data']->moves, true );
-
-        // **THE FIX:** Check if the wrestler has any moves before proceeding.
-        if ( empty( $wrestlerMoves ) || !is_array( $wrestlerMoves ) || count( $wrestlerMoves ) === 0 )
-        {
-            // This wrestler has no moves, return a default 'struggle' move
-            return (object) [
-                'move_name'     => 'Struggle',
-                'baseHitChance' => 1.0,
-                'stat'          => 'strength',
-                'stamina_cost'  => 10,
-                'momentumGain'  => 2,
-                'min_damage'    => '{"min": 5, "max": 10}',
-                'max_damage'    => 0,
-                'type'          => 'strike',
-            ];
-        }
-
-        $allWrestlerMoveNames = array_merge( ...array_values( $wrestlerMoves ) );
-
-        // This can happen if the moves JSON is structured but the move type arrays are empty
-        if ( empty( $allWrestlerMoveNames ) )
-        {
-            return (object) [
-                'move_name'     => 'Struggle',
-                'baseHitChance' => 1.0,
-                'stat'          => 'strength',
-                'stamina_cost'  => 10,
-                'momentumGain'  => 2,
-                'min_damage'    => '{"min": 5, "max": 10}',
-                'max_damage'    => 0,
-                'type'          => 'strike',
-            ];
-        }
-
-        $fullMoveDetails = array_filter( $this->allMoves, function ( $move ) use ( $allWrestlerMoveNames )
-        {
-            return in_array( $move->move_name, $allWrestlerMoveNames );
-        } );
-
-        $executableMoves = array_filter( $fullMoveDetails, function ( $move ) use ( $attackerState )
-        {
-            return $attackerState['stamina'] >= $move->stamina_cost;
-        } );
-
-        if ( empty( $executableMoves ) )
-        {
-            return null; // Wrestler is too tired
-        }
-
-        $weightedMoves = [];
-        foreach ( $executableMoves as $move )
-        {
-            $weight = 10;
-            if ( $move->type === 'finisher' && $attackerState['momentum'] >= 100 )
-            {
-                $weight += 50;
-            }
-            for ( $i = 0; $i < $weight; $i++ )
-            {
-                $weightedMoves[] = $move;
-            }
-        }
-
-        return $weightedMoves[array_rand( $weightedMoves )];
-    }
-
-    /**
-     * @param $attackerState
-     * @param $defenderState
-     * @param $move
-     */
-    private function calculateHitChance( $attackerState, $defenderState, $move )
-    {
-        $baseChance        = (float) $move->baseHitChance * 100;
-        $attackerStatValue = $attackerState['data']->{$move->stat} ?? 50;
-        $defenderStatValue = $defenderState['data']->reversalAbility ?? 50;
-        $statDifference    = $attackerStatValue - $defenderStatValue;
-        $statBonus         = $statDifference * 0.5;
-
-        $staminaPercentage = $attackerState['stamina'] / ( $attackerState['data']->stamina * 10 );
-        $staminaPenalty    = 0;
-        if ( $staminaPercentage < 0.3 )
-        {
-            $staminaPenalty = 20;
-        }
-        else if ( $staminaPercentage < 0.5 )
-        {
-            $staminaPenalty = 10;
-        }
-
-        $finalChance = $baseChance + $statBonus - $staminaPenalty;
-        return max( 5, min( 95, $finalChance ) );
-    }
-
-    private function loadAllMoves()
-    {
-        // **THE FIX:** Manually create an instance of the ApiModel.
-        // The $this->app variable is available because we are extending System_Model.
-        $apiModel       = new \App\Model\ApiModel( $this->app );
-        $this->allMoves = $apiModel->getAllMoves();
-    }
-
-    /**
-     * @param $matchState
-     * @param $id1
-     * @param $id2
-     */
-    private function determineAttacker( $matchState, $id1, $id2 )
-    {
-        $momentum1        = $matchState[$id1]['momentum'];
-        $momentum2        = $matchState[$id2]['momentum'];
-        $wrestler1_chance = 50 + ( ( $momentum1 - $momentum2 ) / 2 );
-        $wrestler1_chance = max( 10, min( 90, $wrestler1_chance ) );
-        return ( rand( 1, 100 ) <= $wrestler1_chance ) ? $id1 : $id2;
-    }
-
-    /**
-     * @param $wrestler1
-     * @param $wrestler2
-     * @return mixed
-     */
-    private function initializeMatchState( $wrestler1, $wrestler2 )
-    {
-        $state = [];
-        foreach ( [$wrestler1, $wrestler2] as $wrestler )
-        {
-            $initialHp      = $wrestler->baseHp + ( $wrestler->toughness * 10 );
-            $initialStamina = $wrestler->stamina * 10;
-
-            // **THE FIX:** Use the correct property 'wrestler_id' instead of 'id'.
-            $state[$wrestler->wrestler_id] = [
-                'hp'       => $initialHp,
-                'stamina'  => $initialStamina,
-                'momentum' => 50,
-                'data'     => $wrestler,
-            ];
-        }
-        return $state;
-    }
-
-    /**
-     * @param $message
-     */
-    private function logMessage( $message )
-    {
-        $this->matchLog[] = $message;
     }
 }
