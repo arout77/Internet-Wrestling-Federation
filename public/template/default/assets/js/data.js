@@ -8,7 +8,7 @@ export const getRandomInt = (min, max) => {
 };
 
 // Base URL for wrestler images
-const IMAGE_BASE_URL = 'http://localhost/iwf-betting/public/media/images/';
+const IMAGE_BASE_URL = baseUrl + 'public/media/images/';
 
 // Global variable to store all moves data once fetched
 let allMovesData = [];
@@ -19,7 +19,7 @@ let allMovesData = [];
  */
 async function fetchMovesData() {
     try {
-        const response = await fetch('http://localhost/iwf-betting/api/get_moves'); // Path to your PHP script for moves
+        const response = await fetch(baseUrl + 'api/get_moves'); // Path to your PHP script for moves
         if (!response.ok) {
             console.error(`[fetchMovesData] HTTP error! Status: ${response.status} - ${response.statusText}`);
             const errorText = await response.text();
@@ -41,7 +41,7 @@ async function fetchMovesData() {
 // Function to fetch wrestler data from the PHP backend
 async function fetchWrestlerData() {
     try {
-        const response = await fetch('http://localhost/iwf-betting/api/get_all_wrestlers'); // Path to your PHP script for wrestlers
+        const response = await fetch(baseUrl + 'api/get_all_wrestlers'); // Path to your PHP script for wrestlers
         if (!response.ok) {
             console.error(`[fetchWrestlerData] HTTP error! Status: ${response.status} - ${response.statusText}`);
             const errorText = await response.text();

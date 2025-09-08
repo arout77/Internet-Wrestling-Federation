@@ -3,363 +3,230 @@
 {% block title %}Career Mode{% endblock %}
 
 {% block content %}
-    <style>
-        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #2a2a2a; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 860px; border-radius: 8px; }
-        .avatar-gallery img { cursor: pointer; border: 2px solid transparent; transition: border-color 0.3s; }
-        .avatar-gallery img.selected { border-color: #f59e0b; }
-        .upgrade-btn:disabled { background-color: #4a5568; cursor: not-allowed; }
-    </style>
+<div class="container mx-auto p-4">
+    {% if prospect %}
+        <!-- Prospect Details and Actions -->
+        <div id="career-dashboard" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Wrestler Info & Stats -->
+            <div class="lg:col-span-1 bg-gray-800 p-6 rounded-lg shadow-lg">
+                <div class="text-center mb-6">
+                    <img id="prospect-avatar" src="{{ prospect.image }}" alt="{{ prospect.name }}" class="w-48 h-48 rounded-full mx-auto mb-4 border-4 border-yellow-500 object-cover object-top">
+                    <h1 id="prospect-name" class="text-4xl font-bold text-yellow-400">{{ prospect.name }}</h1>
+                    <p class="text-lg text-gray-400">{{ prospect.height }} / {{ prospect.weight }} lbs</p>
+                </div>
+                
+                <div class="text-center mb-6 max-w-xs mx-auto">
+                    <p class="text-xl">Level: <span id="prospect-level" class="font-bold text-white">{{ prospect.lvl }}</span></p>
+                    <div class="w-full bg-gray-700 rounded-full h-4 mt-2">
+                        <div id="xp-bar" class="bg-green-500 h-4 rounded-full" style="width: 0%;"></div>
+                    </div>
+                    <p id="xp-display" class="text-sm text-gray-400 mt-1">XP: {{ prospect.current_xp }} / 0</p>
+                </div>
 
-    <!-- Create Wrestler Modal -->
-    {% if not prospect %}
-    <div id="createWrestlerModal" class="modal pt-32">
-        <div class="modal-content bg-gray-900 p-8 rounded-lg shadow-lg">
-            <h2 class="text-3xl font-bold mb-6 text-center text-amber-400">Create Your Wrestler {{ user.prospect_id }}</h2>
-            <form id="createWrestlerForm">
+                <div class="text-center text-lg space-y-2">
+                    <p>Record: <span id="prospect-wins" class="font-bold text-green-400">{{ record.wins|default(0) }}</span> - <span id="prospect-losses" class="font-bold text-red-400">{{ record.losses|default(0) }}</span></p>
+                    <p>Gold: <span id="prospect-gold" class="font-bold text-yellow-400">{{ prospect.gold }}</span></p>
+                    <p>Attribute Points: <span id="prospect-ap" class="font-bold text-blue-400">{{ prospect.attribute_points }}</span></p>
+                </div>
+                 {% if manager %}
+                    <div class="mt-6 pt-6 border-t border-gray-700 text-center">
+                        <h3 class="text-xl font-semibold text-white mb-2">Your Manager</h3>
+                        <img src="{{ base_url }}public/media/images/managers/{{ manager.image }}.webp" alt="{{ manager.name }}" class="w-48 h-48 rounded-full mx-auto mb-2 border-2 border-gray-600 object-cover object-top">
+                        <p class="font-bold text-lg text-yellow-400">{{ manager.name }}</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Right Column: Attributes & Actions -->
+            <div class="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Attributes</h2>
+                
+                <!-- Attributes -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {% set attributes = {
+                        'strength': 'Strength', 'technicalAbility': 'Technical', 'brawlingAbility': 'Brawling', 
+                        'stamina': 'Stamina', 'aerialAbility': 'Aerial', 'toughness': 'Toughness'
+                    } %}
+                    {% for key, name in attributes %}
+                        <div class="bg-gray-700 p-4 rounded-md flex justify-between items-center">
+                            <div>
+                                <p class="text-lg font-semibold text-white">{{ name }}</p>
+                                <p id="attr-{{ key }}" class="text-2xl font-bold text-gray-300">{{ attribute(prospect, key) }}</p>
+                            </div>
+                            <div class="text-right">
+                                <button class="upgrade-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors" data-attribute="{{ key }}">+</button>
+                                <span id="cost-{{ key }}" class="block text-xs text-yellow-400 mt-1"></span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Action Buttons -->
+                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Actions</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <a href="{{ base_url }}career/find_match" class="bg-red-600 hover:bg-red-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">Find a Match</a>
+                    <a href="{{ base_url }}career/train" class="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">Training Center</a>
+                    <a href="{{ base_url }}career/moveset" class="bg-purple-600 hover:bg-purple-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">View Moveset</a>
+                    <a href="{{ base_url }}career/hire_manager" class="bg-yellow-600 hover:bg-yellow-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">Hire a Manager</a>
+                </div>
+                <div class="mt-4 text-sm text-gray-300 bg-gray-900 p-4 space-y-1">
+                    <p>* Attributes affect your performance in matches. Upgrade them to improve your chances of winning!</p>
+                    <p>* Attribute points can be used to upgrade skills, and are earned when you level up.</p>
+                    <p>* Gold can also be used to upgrade skills if you are out of attribute points.</p>
+                    <p>* Each upgrade increases the skill by 1 point, up to a maximum of 100.</p>
+                    <p>* Upgrade costs increase as the skill level increases.</p>
+                    <p>* Winning matches earns you XP and Gold to help you progress.</p>
+                    <p>* Hiring a manager provides bonuses to XP and Gold earnings, as well as attribute boosts.</p>
+                    <p>* Find Matches allows you to challenge other wrestlers in the league.</p>
+                    <p>* Winning matches against higher-level opponents will earn you more rewards.</p>
+                    <p>* Losing matches may result in penalties or loss of attribute points.</p>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Prospect Creation Modal -->
+        <div id="creation-modal" class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-lg mx-auto">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Create Your Wrestler</h2>
+            <form id="create-prospect-form">
+                <div class="grid grid-cols-4 gap-4 mb-4">
+                    {% for i in 1..8 %}
+                        <img src="{{ base_url }}public/media/images/avatars/gen{{ i }}.png" class="w-24 h-24 rounded-full cursor-pointer border-4 border-transparent hover:border-yellow-500 transition-all duration-200 avatar-selection" data-avatar="{{ base_url }}public/media/images/avatars/gen{{ i }}.png">
+                    {% endfor %}
+                </div>
+                <input type="hidden" id="wrestler-avatar" required>
+
                 <div class="mb-4">
-                    <label for="wrestlerName" class="block text-sm font-medium mb-2">Wrestler Name</label>
-                    <input type="text" id="wrestlerName" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500" required>
+                    <label for="wrestler-name" class="block text-gray-300 mb-2">Name</label>
+                    <input type="text" id="wrestler-name" class="w-full bg-gray-700 p-2 rounded text-white" required>
                 </div>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label for="wrestlerHeight" class="block text-sm font-medium mb-2">Height (e.g., 6'2")</label>
-                        <input type="text" id="wrestlerHeight" pattern="\d+'\d{1,2}\"" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500" required>
+                <div class="flex gap-4 mb-6">
+                    <div class="w-1/2">
+                        <label for="wrestler-height" class="block text-gray-300 mb-2">Height</label>
+                        <input type="text" id="wrestler-height" class="w-full bg-gray-700 p-2 rounded text-white" placeholder="e.g., 6'2&quot;" required>
                     </div>
-                    <div>
-                        <label for="wrestlerWeight" class="block text-sm font-medium mb-2">Weight (lbs)</label>
-                        <input type="number" id="wrestlerWeight" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500" required>
+                    <div class="w-1/2">
+                        <label for="wrestler-weight" class="block text-gray-300 mb-2">Weight (lbs)</label>
+                        <input type="number" id="wrestler-weight" class="w-full bg-gray-700 p-2 rounded text-white" placeholder="e.g., 250" required>
                     </div>
                 </div>
-                <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2">Choose Avatar</label>
-                    <div class="flex gap-4">
-                        <div id="avatarGallery" class="grid grid-cols-4 gap-2 bg-gray-700 p-2 rounded-md w-2/3">
-                            <!-- Avatars will be injected here by JavaScript -->
-                        </div>
-                        <div class="w-1/3 flex items-center justify-center bg-gray-700 p-2 rounded-md">
-                            <img id="avatarPreview" src="https://placehold.co/128x128/374151/eab308?text=Select" alt="Avatar Preview" class="w-72 h-72 rounded-md border-2 border-gray-600">
-                        </div>
-                    </div>
-                    <input type="hidden" id="wrestlerAvatar" required>
-                </div>
-                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-3 px-4 rounded-md transition duration-300">Create Wrestler</button>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors">Begin Career</button>
             </form>
         </div>
-    </div>
     {% endif %}
+</div>
 
-    <!-- Main Game Interface -->
-    <div id="gameInterface" class="container mx-auto p-4" style="display: none;">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            <!-- Left Column: Wrestler Profile -->
-            <div class="md:col-span-1 bg-gray-800 p-6 rounded-lg shadow-lg">
-                <div class="text-center mb-4">
-                    <img id="playerAvatar" src="" alt="Player Avatar" class="w-64 h-64 rounded-full mx-auto border-4 border-amber-500">
-                    <h3 id="playerName" class="text-xl text-yellow-500 font-bold mt-4"></h3>
-                    <p id="playerPhysique" class="text-gray-200"></p>
-                    <p id="playerRecord" class="text-gray-200">Wins: 0 - Losses: 0</p>
-                </div>
-                <div>
-                    <p class="flex justify-between"><strong>Level:</strong> <span id="playerLevel">1</span></p>
-                    <p class="flex flex-start justify-between">
-                        <span><strong>XP:</strong></span> <span><span id="playerXP">0</span> / <span id="nextLevelXP">100</span></span>
-                    </p>
-                    <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4"><div id="xpBar" class="bg-amber-500 h-2.5 rounded-full" style="width: 0%"></div></div>
-                    <p class="flex justify-between"><strong>Gold:</strong> <span id="playerGold" class="text-yellow-400">5000</span></p>
-                    <p class="flex justify-between"><strong>Attribute Points:</strong> <span id="playerAP" class="text-green-400 font-bold">0</span></p>
-                </div>
-                 <div id="managerInfo" class="mt-4 text-center" style="display: none;">
-                    {# ... manager info ... #}
-                </div>
-            </div>
-
-            <!-- Center Column: Attributes & Actions -->
-            <div class="md:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-bold mb-4 text-center text-amber-400">Attributes & Actions</h2>
-                <div class="grid grid-cols-2 gap-10">
-                    <!-- Attributes -->
-                    <div>
-                        <h3 class="text-xl font-semibold mb-3">Skills</h3>
-                        <div id="attributesContainer" class="text-center"></div>
-                    </div>
-                    <!-- Actions -->
-                    <div>
-                        <h3 class="text-xl font-semibold mb-3">Actions</h3>
-                        <div class="space-y-3">
-                            <a href="{{ base_url }}train" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Train Move</a>
-                            <a href="{{ base_url }}manager/hire" class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Hire Manager</a>
-                            <a href="{{ base_url }}career/find_match" class="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Find Match</a>
-                        </div>
-                        <div class="mt-4 text-sm text-gray-300 space-y-1">
-                            <p>* Attributes affect your performance in matches. Upgrade them to improve your chances of winning!</p>
-                            <p>* Attribute points can be used to upgrade skills, and are earned when you level up.</p>
-                            <p>* Gold can also be used to upgrade skills if you are out of attribute points.</p>
-                            <p>* Each upgrade increases the skill by 1 point, up to a maximum of 100.</p>
-                            <p>* Upgrade costs increase as the skill level increases.</p>
-                            <p>* Winning matches earns you XP and Gold to help you progress.</p>
-                            <p>* Hiring a manager provides bonuses to XP and Gold earnings, as well as attribute boosts.</p>
-                            <p>* Find Matches allows you to challenge other wrestlers in the league.</p>
-                            <p>* Winning matches against higher-level opponents will earn you more rewards.</p>
-                            <p>* Losing matches may result in penalties or loss of attribute points.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    let player = {
-        attributeDisplayNames: {
-            strength: 'Strength',
-            technicalAbility: 'Technical',
-            brawlingAbility: 'Brawling',
-            aerialAbility: 'Aerial',
-            stamina: 'Stamina',
-            toughness: 'Toughness'
-        },
-        attributes: {}
-    };
-
+<script>
     document.addEventListener('DOMContentLoaded', () => {
         const prospectData = {{ prospect|json_encode|raw }};
-        const recordData = {{ record|json_encode|raw }};
+
+        const xpTiers = {
+            rookie: { maxLevel: 10, xpPerLevel: 100 },
+            midcard: { maxLevel: 30, xpPerLevel: 250 },
+            mainevent: { maxLevel: 60, xpPerLevel: 500 },
+            legend: { maxLevel: 100, xpPerLevel: 1000 }
+        };
+
+        function getXpForNextLevel(level) {
+            if (level <= xpTiers.rookie.maxLevel) return xpTiers.rookie.xpPerLevel;
+            if (level <= xpTiers.midcard.maxLevel) return xpTiers.midcard.xpPerLevel;
+            if (level <= xpTiers.mainevent.maxLevel) return xpTiers.mainevent.xpPerLevel;
+            return xpTiers.legend.xpPerLevel;
+        }
+
+        function getUpgradeCost(currentLevel) {
+            if (currentLevel >= 100) return 'MAX';
+            // This formula must match CareerModel.php:purchaseAttributePoint
+            return Math.ceil(50 * Math.pow(1.1, currentLevel - 50));
+        }
+
+        function updateAttributeCosts() {
+            if (!prospectData) return;
+
+            const apAvailable = parseInt(document.getElementById('prospect-ap').textContent, 10);
+
+            document.querySelectorAll('.upgrade-btn').forEach(button => {
+                const attribute = button.dataset.attribute;
+                const costSpan = document.getElementById(`cost-${attribute}`);
+                if (apAvailable > 0) {
+                    costSpan.textContent = '1 AP';
+                } else {
+                    const currentLevel = parseInt(document.getElementById(`attr-${attribute}`).textContent, 10);
+                    const cost = getUpgradeCost(currentLevel);
+                    costSpan.textContent = `${cost} Gold`;
+                }
+            });
+        }
 
         if (prospectData) {
-            initializePlayer(prospectData, recordData);
-            document.getElementById('gameInterface').style.display = 'block';
-            updateUI();
-        } else {
-            document.getElementById('createWrestlerModal').style.display = 'block';
+            const xpNeeded = getXpForNextLevel(parseInt(prospectData.lvl));
+            const xpPercentage = (parseInt(prospectData.current_xp) / xpNeeded) * 100;
+            document.getElementById('xp-bar').style.width = `${xpPercentage}%`;
+            document.getElementById('xp-display').textContent = `XP: ${prospectData.current_xp} / ${xpNeeded}`;
+            updateAttributeCosts();
         }
 
-        {% if not prospect %}
-        populateAvatarGallery();
-        
-        const createWrestlerForm = document.getElementById('createWrestlerForm');
-        createWrestlerForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const prospectPayload = {
-                wrestlerName: document.getElementById('wrestlerName').value,
-                wrestlerHeight: document.getElementById('wrestlerHeight').value,
-                wrestlerWeight: document.getElementById('wrestlerWeight').value,
-                wrestlerAvatar: document.getElementById('wrestlerAvatar').value
-            };
-            try {
-                const response = await fetch('{{ base_url }}user/create_prospect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(prospectPayload)
-                });
-                const result = await response.json();
+        document.querySelectorAll('.upgrade-btn').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const attribute = e.target.dataset.attribute;
+                
+                try {
+                    const response = await fetch(`{{ base_url }}career/upgrade_attribute/${attribute}`, {
+                        method: 'POST',
+                    });
+                    const result = await response.json();
 
-                if (response.ok && result.success) {
-                    initializePlayer(result.prospect, {wins: 0, losses: 0});
-                    document.getElementById('createWrestlerModal').style.display = 'none';
-                    document.getElementById('gameInterface').style.display = 'block';
-                    updateUI();
-                } else {
-                    alert('Error: ' + (result.error || 'Could not create wrestler.'));
+                    if (result.success) {
+                        const prospect = result.prospect;
+                        document.getElementById(`attr-${attribute}`).textContent = prospect[attribute];
+                        document.getElementById('prospect-gold').textContent = prospect.gold;
+                        document.getElementById('prospect-ap').textContent = prospect.attribute_points;
+                        updateAttributeCosts(); // Re-calculate costs after upgrade
+                    } else {
+                        alert('Upgrade failed: ' + result.error);
+                    }
+                } catch (error) {
+                    console.error('Upgrade error:', error);
+                    alert('An error occurred. Please try again.');
                 }
-            } catch (error) {
-                console.error('Failed to create prospect:', error);
-                alert('An error occurred. Please try again.');
-            }
-        });
-        {% endif %}
-    });
-
-    function initializePlayer(prospectData, recordData) {
-        player.name = prospectData.name;
-        player.avatar = prospectData.image;
-        player.height = prospectData.height;
-        player.weight = prospectData.weight;
-        player.level = parseInt(prospectData.lvl) || 1;
-        player.xp = parseInt(prospectData.current_xp) || 0;
-        player.gold = parseInt(prospectData.gold) || 0;
-        player.attributePoints = parseInt(prospectData.attribute_points) || 0;
-        player.wins = recordData ? (parseInt(recordData.wins) || 0) : 0;
-        player.losses = recordData ? (parseInt(recordData.losses) || 0) : 0;
-        
-        player.attributes.strength = parseInt(prospectData.strength) || 50;
-        player.attributes.technicalAbility = parseInt(prospectData.technicalAbility) || 50;
-        player.attributes.brawlingAbility = parseInt(prospectData.brawlingAbility) || 50;
-        player.attributes.aerialAbility = parseInt(prospectData.aerialAbility) || 50;
-        player.attributes.stamina = parseInt(prospectData.stamina) || 50;
-        player.attributes.toughness = parseInt(prospectData.toughness) || 50;
-    }
-
-    function populateAvatarGallery() {
-        const gallery = document.getElementById('avatarGallery');
-        const avatarPath = '{{ base_url }}public/media/images/avatars/';
-        for (let i = 1; i <= 17; i++) {
-            const img = document.createElement('img');
-            const fileName = `gen${i}.png`;
-            img.src = `${avatarPath}${fileName}`;
-            img.alt = `Avatar ${i}`;
-            img.classList.add('w-full', 'rounded-md', 'hover:opacity-75', 'cursor-pointer');
-            img.onclick = () => selectAvatar(img, `${avatarPath}${fileName}`);
-            gallery.appendChild(img);
-        }
-    }
-
-    function selectAvatar(imgElement, avatarUrl) {
-        const selected = document.querySelector('#avatarGallery img.selected');
-        if (selected) {
-            selected.classList.remove('selected');
-        }
-        imgElement.classList.add('selected');
-        document.getElementById('wrestlerAvatar').value = avatarUrl;
-        document.getElementById('avatarPreview').src = avatarUrl;
-    }
-
-    async function upgradeAttribute(attributeKey) {
-        try {
-            const response = await fetch(`{{ base_url }}career/upgrade_attribute/${attributeKey}`, {
-                method: 'POST'
             });
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                // Re-initialize player data with the updated prospect info from the server
-                initializePlayer(result.prospect, {wins: player.wins, losses: player.losses});
-                updateUI(); // Refresh the entire UI with the new data
-            } else {
-                alert('Error: ' + (result.error || 'Could not upgrade attribute.'));
-            }
-        } catch (error) {
-            console.error('Failed to upgrade attribute:', error);
-            alert('An error occurred. Please try again.');
-        }
-    }
-    
-    function getNextLevelXP() {
-        return Math.floor(100 * Math.pow(1.1, player.level - 1));
-    }
-
-    function getBarColor(value) {
-        if (value >= 90) return '#2F855A'; // Dark Green
-        if (value >= 80) return '#38A169'; // Green
-        if (value >= 70) return '#48BB78'; // Light Green
-        if (value >= 60) return '#F6E05E'; // Yellow
-        return '#ED8936'; // Orange
-    }
-
-    function updateUI() {
-        document.getElementById('playerName').textContent = player.name;
-        document.getElementById('playerAvatar').src = player.avatar;
-        document.getElementById('playerPhysique').textContent = `${player.height} / ${player.weight} lbs`;
-        document.getElementById('playerRecord').textContent = `Wins: ${player.wins} - Losses: ${player.losses}`;
-        document.getElementById('playerLevel').textContent = player.level;
-        document.getElementById('playerXP').textContent = player.xp;
-        const nextLevelXP = getNextLevelXP();
-        document.getElementById('nextLevelXP').textContent = nextLevelXP;
-        document.getElementById('xpBar').style.width = `${(player.xp / nextLevelXP) * 100}%`;
-        document.getElementById('playerGold').textContent = player.gold;
-        document.getElementById('playerAP').textContent = player.attributePoints;
-
-        const attributesContainer = document.getElementById('attributesContainer');
-        attributesContainer.innerHTML = '';
-        for (const key in player.attributeDisplayNames) {
-            const displayName = player.attributeDisplayNames[key];
-            const currentValue = player.attributes[key];
-            const barColor = getBarColor(currentValue);
-            
-            let buttonText = 'Max Level';
-            let buttonClass = 'bg-gray-600';
-            let isDisabled = true;
-
-            if (currentValue < 100) {
-                // **THE FIX:** Use the correct compounding cost formula.
-                const upgradeCost = Math.ceil(50 * Math.pow(1.1, currentValue - 50));
-
-                if (player.attributePoints > 0) {
-                    buttonText = `Free Upgrade (${player.attributePoints})`;
-                    buttonClass = 'bg-green-600 hover:bg-green-700';
-                    isDisabled = false;
-                } else if (player.gold >= upgradeCost) {
-                    buttonText = `Upgrade (${upgradeCost} Gold)`;
-                    buttonClass = 'bg-blue-500 hover:bg-blue-700';
-                    isDisabled = false;
-                } else {
-                    buttonText = `Needed: ${upgradeCost} Gold`;
-                    buttonClass = 'bg-red-800';
-                    isDisabled = true;
-                }
-            }
-
-            const attributeHTML = `
-                <div class="mb-3">
-                    <div class="flex justify-between items-center">
-                        <div class="capitalize font-semibold">${displayName}</div>
-                        <div class="font-bold text-lg">${currentValue}</div>
-                    </div>
-                    <div class="w-full bg-gray-700 rounded-full h-2.5">
-                        <div class="h-2.5 rounded-full" style="width: ${currentValue}%; background-color: ${barColor};"></div>
-                    </div>
-                    <button onclick="upgradeAttribute('${key}')" class="w-full mt-1 text-white text-xs py-1 px-2 rounded-md transition duration-300 upgrade-btn ${buttonClass}" ${isDisabled ? 'disabled' : ''}>
-                        ${buttonText}
-                    </button>
-                </div>
-            `;
-            attributesContainer.innerHTML += attributeHTML;
-        }
-    }
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const prospectData = {{ prospect|json_encode|raw }};
-    const recordData = {{ record|json_encode|raw }};
-    const createWrestlerModal = document.getElementById('createWrestlerModal');
-
-    if (prospectData) {
-        // This block runs if the user already has a prospect.
-        initializePlayer(prospectData, recordData);
-        document.getElementById('gameInterface').style.display = 'block';
-        updateUI();
-
-    } else if (createWrestlerModal) {
-        // This block runs ONLY if the user needs to create a prospect.
-        createWrestlerModal.style.display = 'block';
-        
-        populateAvatarGallery();
-        
-        // **THE FIX:** The form and its event listener are now safely inside this block.
-        const createWrestlerForm = document.getElementById('createWrestlerForm');
-        createWrestlerForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const prospectPayload = {
-                wrestlerName: document.getElementById('wrestlerName').value,
-                wrestlerHeight: document.getElementById('wrestlerHeight').value,
-                wrestlerWeight: document.getElementById('wrestlerWeight').value,
-                wrestlerAvatar: document.getElementById('wrestlerAvatar').value
-            };
-            try {
-                const response = await fetch('{{ base_url }}user/create_prospect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(prospectPayload)
-                });
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    initializePlayer(result.prospect, {wins: 0, losses: 0});
-                    createWrestlerModal.style.display = 'none';
-                    document.getElementById('gameInterface').style.display = 'block';
-                    updateUI();
-                } else {
-                    alert('Error: ' + (result.error || 'Could not create wrestler.'));
-                }
-            } catch (error) {
-                console.error('Failed to create prospect:', error);
-                alert('An error occurred. Please try again.');
-            }
         });
-    }
-});
+
+        const creationForm = document.getElementById('create-prospect-form');
+        if (creationForm) {
+             document.querySelectorAll('.avatar-selection').forEach(img => {
+                img.addEventListener('click', (e) => {
+                    document.querySelectorAll('.avatar-selection').forEach(el => el.classList.remove('border-yellow-500'));
+                    e.target.classList.add('border-yellow-500');
+                    document.getElementById('wrestler-avatar').value = e.target.dataset.avatar;
+                });
+            });
+
+            creationForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const prospectData = {
+                    wrestlerName: document.getElementById('wrestler-name').value,
+                    wrestlerHeight: document.getElementById('wrestler-height').value,
+                    wrestlerWeight: document.getElementById('wrestler-weight').value,
+                    wrestlerAvatar: document.getElementById('wrestler-avatar').value,
+                };
+
+                try {
+                    const response = await fetch('{{ base_url }}career/create_prospect', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(prospectData)
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (result.error || 'Could not create prospect.'));
+                    }
+                } catch (error) {
+                    alert('An unexpected error occurred.');
+                }
+            });
+        }
+    });
 </script>
 {% endblock %}

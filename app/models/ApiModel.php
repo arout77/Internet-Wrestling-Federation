@@ -468,4 +468,148 @@ class ApiModel extends System_Model
             return round( $finalOdds );
         }
     }
+
+    /**
+     * Fetches wrestlers based on a minimum weight.
+     * @param int $min_weight The minimum weight to qualify.
+     * @return array A list of wrestler objects.
+     */
+    public function get_wrestlers_by_weight( $min_weight )
+    {
+        $sql  = "SELECT * FROM roster WHERE weight >= :min_weight";
+        $stmt = $this->db->prepare( $sql );
+        $stmt->execute( [':min_weight' => $min_weight] );
+        return $this->process_wrestler_overalls( $stmt->fetchAll( \PDO::FETCH_OBJ ) );
+    }
+
+    /**
+     * Fetches wrestlers based on a minimum technical ability.
+     * @param int $min_technical The minimum technical ability to qualify.
+     * @return array A list of wrestler objects.
+     */
+    public function get_wrestlers_by_technical( $min_technical )
+    {
+        $sql  = "SELECT * FROM roster WHERE technicalAbility >= :min_technical";
+        $stmt = $this->db->prepare( $sql );
+        $stmt->execute( [':min_technical' => $min_technical] );
+        return $this->process_wrestler_overalls( $stmt->fetchAll( \PDO::FETCH_OBJ ) );
+    }
+
+    /**
+     * Fetches wrestlers based on a minimum brawling ability.
+     * @param int $min_brawling The minimum brawling ability to qualify.
+     * @return array A list of wrestler objects.
+     */
+    public function get_wrestlers_by_brawling( $min_brawling )
+    {
+        $sql  = "SELECT * FROM roster WHERE brawlingAbility >= :min_brawling";
+        $stmt = $this->db->prepare( $sql );
+        $stmt->execute( [':min_brawling' => $min_brawling] );
+        return $this->process_wrestler_overalls( $stmt->fetchAll( \PDO::FETCH_OBJ ) );
+    }
+
+    /**
+     * Fetches wrestlers based on a minimum aerial ability.
+     * @param int $min_aerial The minimum aerial ability to qualify.
+     * @return array A list of wrestler objects.
+     */
+    public function get_wrestlers_by_aerial( $min_aerial )
+    {
+        $sql  = "SELECT * FROM roster WHERE aerialAbility >= :min_aerial";
+        $stmt = $this->db->prepare( $sql );
+        $stmt->execute( [':min_aerial' => $min_aerial] );
+        return $this->process_wrestler_overalls( $stmt->fetchAll( \PDO::FETCH_OBJ ) );
+    }
+
+    /**
+     * Fetches wrestlers based on a minimum strength.
+     * @param int $min_strength The minimum strength to qualify.
+     * @return array A list of wrestler objects.
+     */
+    public function get_wrestlers_by_strength( $min_strength )
+    {
+        $sql  = "SELECT * FROM roster WHERE strength >= :min_strength";
+        $stmt = $this->db->prepare( $sql );
+        $stmt->execute( [':min_strength' => $min_strength] );
+        return $this->process_wrestler_overalls( $stmt->fetchAll( \PDO::FETCH_OBJ ) );
+    }
+
+    /**
+     * Helper function to process overalls for a list of wrestlers.
+     * This avoids duplicating the overall calculation logic.
+     * @param array $wrestlers An array of wrestler objects.
+     * @return array The array of wrestler objects with overalls calculated.
+     */
+    private function process_wrestler_overalls( $wrestlers )
+    {
+        foreach ( $wrestlers as $wrestler )
+        {
+            // Your existing overall calculation logic
+            $coreSkillSum =
+            ( $wrestler->strength * 1.01 ) +
+            ( $wrestler->technicalAbility * 1.2 ) +
+            $wrestler->brawlingAbility +
+                ( $wrestler->aerialAbility * 1.15 );
+            $coreSkillAvg       = $coreSkillSum / 4.36;
+            $durabilityAvg      = ( $wrestler->stamina + $wrestler->toughness ) / 2;
+            $preliminaryOverall = ( $coreSkillAvg * 0.7 ) + ( $durabilityAvg * 0.3 );
+            $num_stats_over_80  = 0;
+            $num_stats_over_95  = 0;
+            if ( $wrestler->strength >= 80 )
+            {
+                $num_stats_over_80++;
+            }
+
+            if ( $wrestler->technicalAbility >= 80 )
+            {
+                $num_stats_over_80++;
+            }
+
+            if ( $wrestler->brawlingAbility >= 80 )
+            {
+                $num_stats_over_80++;
+            }
+
+            if ( $wrestler->aerialAbility >= 80 )
+            {
+                $num_stats_over_80++;
+            }
+
+            if ( $wrestler->strength >= 95 )
+            {
+                $num_stats_over_95++;
+            }
+
+            if ( $wrestler->technicalAbility >= 95 )
+            {
+                $num_stats_over_95++;
+            }
+
+            if ( $wrestler->brawlingAbility >= 95 )
+            {
+                $num_stats_over_95++;
+            }
+
+            if ( $wrestler->aerialAbility >= 95 )
+            {
+                $num_stats_over_95++;
+            }
+
+            $bonus = 0;
+            if ( $num_stats_over_80 >= 4 && $durabilityAvg >= 90 )
+            {
+                $bonus = 5 + $num_stats_over_95; // Icon Bonus
+            }
+            elseif ( $num_stats_over_80 >= 3 )
+            {
+                $bonus = 3 + $num_stats_over_95; // Legend Bonus
+            }
+            elseif ( $num_stats_over_80 >= 2 )
+            {
+                $bonus = 1 + $num_stats_over_95; // Prime Bonus
+            }
+            $wrestler->overall = round( $preliminaryOverall + $bonus );
+        }
+        return $wrestlers;
+    }
 }

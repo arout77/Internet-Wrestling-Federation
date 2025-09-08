@@ -6,7 +6,7 @@
 
 {% block content %}
 <style>
-    body {font-family: 'Istok Web', sans-serif;background: url("https://images.unsplash.com/photo-1593341646782-e01604b15e35?q=80&w=2070&auto=format&fit=crop") no-repeat #000;background-size: cover;min-height: 100%;margin: 0;}
+    body {font-family: 'Istok Web', sans-serif;}
     .hero {position:relative; text-align: center; overflow: hidden; color: #fcfcfc; width: 100%;display: block;}
     .hero h1 {font-family: 'Holtwood One SC', serif;font-weight: normal;font-size: 5.4em;margin:0 0 20px; text-shadow:0 0 12px rgba(0, 0, 0, 0.5);text-transform: uppercase;letter-spacing:-1px;}
     .hero p {font-family: 'Abel', sans-serif;text-transform: uppercase; color: #5CCA87; letter-spacing: 6px;text-shadow:0 0 12px rgba(0, 0, 0, 0.5);font-size: 1.2em;}
@@ -15,149 +15,83 @@
     .hero p.year {color: #fff; letter-spacing: 20px; font-size: 34px; margin: -25px 0 25px;}
     .hero p.year i {font-size: 14px;vertical-align: middle;}
     #bracket {overflow:hidden;background-color:rgba(225,225,225,0.9);padding-top: 20px;font-size: 12px;padding: 40px 0;}
-    .container {max-width: 1100px;margin: 0 auto;display:block;display:flex;flex-direction:row;}
+    
+    /* ** START OF FIX ** */
+    #bracket .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: row;
+    }
+    /* ** END OF FIX ** */
+
     .split {display:flex;width: 42%;flex-direction:row;}
     .champion { display: flex; width: 16%; flex-direction: column; align-self: center; justify-content: center; text-align: center; }
-    .champion i {color: #a0a6a8; font-size: 45px;padding: 10px 0; }
-    .round {display:flex;flex-direction:column;width:30.8333%;}
+    .round {display:flex;flex-direction:column;width:30.8333%;justify-content: space-around;}
     .matchup { display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; width: 100%; transition: all 0.2s; padding: 5px 0; }
     .team { padding: 0 5px; height: 25px; line-height: 25px; white-space: nowrap; overflow: hidden; position: relative; color: #242424; width: 100%; border: 1px solid #333; }
     .round-1 .matchup { height: 70px; }
-    .round-2 .matchup { height: 140px; justify-content: space-around; }
-    .round-3 .matchup { height: 280px; justify-content: space-around; }
-    .round-4 .matchup { height: 560px; justify-content: space-around; }
+    .round-2 .matchup { height: 140px; }
+    .round-3 .matchup { height: 280px; }
+    .round-4 .matchup { height: 560px; }
     .round-details {font-family: 'Roboto Condensed', sans-serif; font-size: 13px; color: #2C7399;text-transform: uppercase;text-align: center;height: 40px;}
     .champion li, .round li {background-color: #fff;box-shadow: none; opacity: 0.45;}
     .current li.team {background-color: #fff;box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);opacity: 1;}
     .matchup .team { cursor: pointer; transition: background-color 0.2s, border-left 0.2s; }
     .matchup .team:hover { background-color: #d4edda; }
     .matchup .team.selected { background-color: #28a745; color: white; border-left: 5px solid #155724; }
-    .matchup .team.winner { font-weight: bold; background-color: #c3e6cb; }
+    .matchup .team.winner { font-weight: bold; }
     .matchup .team.eliminated { opacity: 0.5; text-decoration: line-through; }
     .bracket-container.locked .team { pointer-events: none; opacity: 0.7; }
-    .game-controls { background: rgba(0,0,0,0.4); padding: 20px; text-align: center; border-radius: 8px; margin-top: 2rem; border: 2px solid indigo; box-shadow: 1px 1px 12px blueviolet;display: inline-flex; }
-    
+    .game-controls { background: rgba(0,0,0,0.7); padding: 20px; text-align: center; border-radius: 8px; margin-top: 2rem; }
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
-    .modal-content { padding: 30px; border-radius: 5px; text-align: center; max-width: 400px; }
+    .modal-content { padding: 30px; border-radius: 5px; text-align: center; max-width: 600px; overflow-y: scroll; }
+
+    .bracket-16 .split-two { display: none; }
+    .bracket-16 .split-one { width: 70%; }
+    .bracket-16 .champion { width: 30%; }
 
     @media screen and (max-width: 980px) {
-      .container {flex-direction:column;}
+      #bracket .container {flex-direction:column;}
       .split, .champion {width: 90%;margin: 35px 5%;}
       .champion {order:3;}
       .split {border-bottom: 1px solid #b6b6b6; padding-bottom: 20px;}
     }
-    /* --- NEW Odds Table Styles --- */
-    .odds-container {
-        padding: 40px 0;
-        background-color: rgba(225, 225, 225, 0.9);
+    /* Styles for interactivity and game state */
+    .matchup .team {
+        cursor: pointer;
+        transition: background-color 0.2s, border-left 0.2s;
     }
-    .odds-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 0 auto;
-        background: white;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        color: #333;
+    .matchup .team:hover {
+        background-color: #d4edda; /* Light green hover */
     }
-    .odds-table th, .odds-table td {
-        padding: 12px 15px;
-        text-align: center;
-        border: 1px solid #ddd;
-    }
-    .odds-table th {
-        background-color: #2C7399;
+    .matchup .team.selected {
+        background-color: #28a745; /* Green for selected */
         color: white;
-        text-transform: uppercase;
-        font-size: 14px;
+        border-left: 5px solid #155724;
     }
-    .odds-table tbody tr:nth-of-type(even) {
-        background-color: #f3f3f3;
+    .matchup .team.winner {
+        font-weight: bold; /* Style for advancing winner */
     }
-    .favorite-name { font-weight: bold; color: #28a745; }
-    .underdog-name { color: #dc3545; }
-
-    /* --- Responsive Styles --- */
-    @media screen and (max-width: 980px) {
-      .container {flex-direction:column;}
-      .split, .champion {width: 90%;margin: 35px 5%;}
-      .champion {order:3;}
-      .split {border-bottom: 1px solid #b6b6b6; padding-bottom: 20px;}
+    .matchup .team.eliminated {
+        opacity: 0.5;
+        text-decoration: line-through;
     }
 
-    /* --- Mobile Table Styles --- */
-    @media screen and (max-width: 768px) {
-        .odds-table thead {
-            display: none;
-        }
-        .odds-table, .odds-table tbody, .odds-table tr, .odds-table td {
-            display: block;
-            width: 100%;
-        }
-        .odds-table tr {
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-        }
-        .odds-table td {
-            text-align: right;
-            padding-left: 50%;
-            position: relative;
-            border: none;
-            border-bottom: 1px solid #eee;
-        }
-        .odds-table td:last-child {
-            border-bottom: none;
-        }
-        .odds-table td::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 10px;
-            width: 45%;
-            padding-right: 10px;
-            white-space: nowrap;
-            text-align: left;
-            font-weight: bold;
-            color: #2C7399;
-        }
-        /* Styles for interactivity and game state */
-        .matchup .team {
-            cursor: pointer;
-            transition: background-color 0.2s, border-left 0.2s;
-        }
-        .matchup .team:hover {
-            background-color: #d4edda; /* Light green hover */
-        }
-        .matchup .team.selected {
-            background-color: #28a745; /* Green for selected */
-            color: white;
-            border-left: 5px solid #155724;
-        }
-        .matchup .team.winner {
-            font-weight: bold; /* Style for advancing winner */
-        }
-        .matchup .team.eliminated {
-            opacity: 0.5;
-            text-decoration: line-through;
-        }
+    .bracket-container.locked .team {
+        pointer-events: none; /* Disables clicking on wrestlers */
+        opacity: 0.7;
+    }
 
-        .bracket-container.locked .team {
-            pointer-events: none; /* Disables clicking on wrestlers */
-            opacity: 0.7;
-        }
-
-        .game-controls {
-            background: rgba(0,0,0,0.7);
-            padding: 20px;
-            text-align: center;
-            border-radius: 8px;
-            margin-top: 2rem;
-        }
-
-        /* Simple Modal for notifications */
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { padding: 30px; border-radius: 5px; text-align: center; max-width: 400px; }
-
-        /* --- NEW Odds Table Styles --- */
+    .game-controls {
+        background: rgba(0,0,0,0.7);
+        padding: 20px;
+        text-align: center;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+    
+    /* --- NEW Odds Table Styles --- */
     .odds-container {
         padding: 40px 0;
         background-color: rgba(225, 225, 225, 0.9);
@@ -232,6 +166,13 @@
     }
 </style>
 <div class="outer flex flex-col w-full">
+    <div class="bg-indigo-900 text-center py-4 lg:px-4">
+      <div class="p-2 bg-indigo-800 items-center text-indigo-100 leading-none lg:rounded-full flex lg:inline-flex" role="alert">
+        <span class="flex rounded-full bg-indigo-500 uppercase px-2 py-1 text-xs font-bold mr-3">Win Gold!</span>
+        <span class="font-semibold mr-2 text-left flex-auto">16 man tournament: <span class="text-yellow-500">50 Gold</span> / 32 man tournament: <span class="text-yellow-500">100 Gold</span></span>
+        <svg class="fill-current opacity-75 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M12.95 10.707l.707-.707L8 4.343 6.586 5.757 10.828 10l-4.242 4.243L8 15.657l4.95-4.95z"/></svg>
+      </div>
+    </div>
     <div class="hero w-full bg-gray-800">
         <div class="hero-wrap">
             <p class="intro" id="intro">32 Man</p>
@@ -240,99 +181,98 @@
             <p>{{ event_slogan }}</p>
         </div>
     </div>
-    <div id="bracket-container" class="bracket-container locked">
+    {% if matchups is not defined or matchups is empty %}
+    {# Themed Tournament Selection Buttons #}
+    <div id="trnSelect" class="text-center my-8">
+        <div class="text-center">
+            <h2 class="text-3xl font-bold text-gray-700 mb-4">Choose Your Tournament</h2>
+        </div>
+        <div class="flex flex-wrap justify-center gap-4">
+            <a href="{{ base_url }}tournament" class="btn-info btn-lg">Standard Tournament</a>
+            <a href="{{ base_url }}tournament/giants" class="btn-info btn-lg">Battle of the Giants</a>
+            <a href="{{ base_url }}tournament/technicians" class="btn-info btn-lg">Technical Masters</a>
+            <a href="{{ base_url }}tournament/brawlers" class="btn-info btn-lg">Bar Room Brawlers</a>
+            <a href="{{ base_url }}tournament/aerialists" class="btn-info btn-lg">Aerial Assault</a>
+            <a href="{{ base_url }}tournament/strongmen" class="btn-info btn-lg">Strongman Competition</a>
+        </div>
+    </div>
+    {# If matchups exist, show the bracket and hide the selection buttons #}
+    {% else %}
+    {# Render the bracket if matchups exist #}
+    <div id="bracket-container" class="bracket-container locked {{ bracket_class }}" data-wrestler-ids="{{ wrestlers|map(w => w.wrestler_id)|join(',') }}"> {# <-- CLASS ADDED HERE #}
         <section id="bracket">
             <div class="container mx-auto">
-                <div class="split split-one">
+                <div class="split split-one" {% if bracket_class == 'bracket-16' %}style="width: 75%;"{% endif %}>
                     <div class="round round-1 current">
                         <div class="round-details">Round 1<br/><span class="date"></span></div>
-                         {% if wrestlers|length >= 16 %}
-                            {% for i in 0..7 %}
+                        {% for i in 0..7 %}
+                            {% if matchups[i] is defined %}
                                 <ul class="matchup" data-match-id="{{ i }}">
-                                     <li class="team team-top" data-wrestler-id="{{ wrestlers[i * 2].wrestler_id }}">{{ wrestlers[i * 2].name }}<span class="score"></span></li>
-                                    <li class="team team-bottom" data-wrestler-id="{{ wrestlers[i * 2 + 1].wrestler_id }}">{{ wrestlers[i * 2 + 1].name }}<span class="score"></span></li>
-                                 </ul>
-                            {% endfor %}
-                        {% endif %}
+                                    <li class="team team-top" data-wrestler-id="{{ matchups[i].wrestler1.wrestler_id }}">{{ matchups[i].wrestler1.name }}<span class="score"></span></li>
+                                    <li class="team team-bottom" data-wrestler-id="{{ matchups[i].wrestler2.wrestler_id }}">{{ matchups[i].wrestler2.name }}<span class="score"></span></li>
+                                </ul>
+                            {% else %}
+                                {# This will only show for brackets smaller than 16 #}
+                                <ul class="matchup"><li class="team team-top">&nbsp;</li><li class="team team-bottom">&nbsp;</li></ul>
+                            {% endif %}
+                        {% endfor %}
                     </div>  
                     <div class="round round-2">
                         <div class="round-details">Round 2<br/><span class="date"></span></div>
-                        {% for i in 0..3 %}
-                         <ul class="matchup">
-                            <li class="team team-top">&nbsp;<span class="score">&nbsp;</span></li>
-                            <li class="team team-bottom">&nbsp;<span class="score">&nbsp;</span></li>
-                        </ul>
-                         {% endfor %}
+                        {% for i in 0..3 %}<ul class="matchup"><li class="team team-top">&nbsp;</li><li class="team team-bottom">&nbsp;</li></ul>{% endfor %}
                     </div>  
                     <div class="round round-3">
-                         <div class="round-details">Round 3<br/><span class="date"></span></div>
-                        {% for i in 0..1 %}
-                        <ul class="matchup">
-                            <li class="team team-top">&nbsp;<span class="score">&nbsp;</span></li>
-                            <li class="team team-bottom">&nbsp;<span class="score">&nbsp;</span></li>
-                        </ul>
-                        {% endfor %}
-                     </div>  
-                     <div class="round round-4">
+                        <div class="round-details">Round 3<br/><span class="date"></span></div>
+                        {% for i in 0..1 %}<ul class="matchup"><li class="team team-top">&nbsp;</li><li class="team team-bottom">&nbsp;</li></ul>{% endfor %}
+                    </div>  
+                    <div class="round round-4">
                         <div class="round-details">Semi-Finals<br/><span class="date"></span></div>
-                        <ul class="matchup">
-                            <li class="team team-top">&nbsp;<span class="score">&nbsp;</span></li>
-                            <li class="team team-bottom">&nbsp;<span class="score">&nbsp;</span></li>
-                        </ul>
-                     </div>  
-                 </div>
+                        <ul class="matchup"><li class="team team-top">&nbsp;</li><li class="team team-bottom">&nbsp;</li></ul>
+                    </div>  
+                </div>
 
                 <div class="champion">
                     <div class="final">
-                        <image src="{{ base_url }}public/media/images/trophy.png" class="h-32 m-auto">
-                         <div class="round-details">Championship</div>
+                        <img src="{{ base_url }}public/media/images/trophy.png" class="h-32 m-auto">
+                        <div class="round-details">Championship</div>
                         <ul class ="matchup championship">
-                            <li class="team team-top">&nbsp;<span class="vote-count">&nbsp;</span></li>
-                             <li class="team team-bottom">&nbsp;<span class="vote-count">&nbsp;</span></li>
+                            <li class="team team-top">&nbsp;</li>
+                            <li class="team team-bottom">&nbsp;</li>
                         </ul>
                     </div>
                 </div>
 
-                <div class="split split-two">
-                      <div class="round round-4">
+                <div class="split split-two" {% if bracket_class == 'bracket-16' %}style="display: none;"{% endif %}>
+                    <div class="round round-4">
                         <div class="round-details">Semi-Finals<br/><span class="date"></span></div>
-                        <ul class="matchup">
-                            <li class="team team-top">&nbsp;<span class="score">&nbsp;</span></li>
-                             <li class="team team-bottom">&nbsp;<span class="score">&nbsp;</span></li>
-                        </ul>
-                    </div>  <div class="round round-3">
-                         <div class="round-details">Round 3<br/><span class="date"></span></div>
-                        {% for i in 0..1 %}
-                        <ul class="matchup">
-                             <li class="team team-top">&nbsp;<span class="score">&nbsp;</span></li>
-                            <li class="team team-bottom">&nbsp;<span class="score">&nbsp;</span></li>
-                        </ul>
-                        {% endfor %}
-                     </div>  <div class="round round-2">
+                        <ul class="matchup"><li class="team team-top">&nbsp;</li><li class="team team-bottom">&nbsp;</li></ul>
+                    </div>
+                    <div class="round round-3">
+                        <div class="round-details">Round 3<br/><span class="date"></span></div>
+                        {% for i in 0..1 %}<ul class="matchup"><li class="team team-top">&nbsp;</li><li class="team team-bottom">&nbsp;</li></ul>{% endfor %}
+                    </div>
+                    <div class="round round-2">
                         <div class="round-details">Round 2<br/><span class="date"></span></div>
-                        {% for i in 0..3 %}
-                         <ul class="matchup">
-                            <li class="team team-top">&nbsp;<span class="score">&nbsp;</span></li>
-                            <li class="team team-bottom">&nbsp;<span class="score">&nbsp;</span></li>
-                        </ul>
-                        {% endfor %}
-                    </div>  <div class="round round-1 current">
+                        {% for i in 0..3 %}<ul class="matchup"><li class="team team-top">&nbsp;</li><li class="team team-bottom">&nbsp;</li></ul>{% endfor %}
+                    </div>
+                    <div class="round round-1 current">
                         <div class="round-details">Round 1<br/><span class="date"></span></div>
-                        {% if wrestlers|length >= 32 %}
-                            {% for i in 0..7 %}
-                                <ul class="matchup" data-match-id="{{ i + 8 }}">
-                                    <li class="team team-top" data-wrestler-id="{{ wrestlers[16 + (i * 2)].wrestler_id }}">{{ wrestlers[16 + (i * 2)].name }}<span class="score"></span></li>
-                                    <li class="team team-bottom" data-wrestler-id="{{ wrestlers[16 + (i * 2 + 1)].wrestler_id }}">{{ wrestlers[16 + (i * 2 + 1)].name }}<span class="score"></span></li>
+                        {% for i in 8..15 %}
+                            {% if matchups[i] is defined %}
+                                <ul class="matchup" data-match-id="{{ i }}">
+                                    <li class="team team-top" data-wrestler-id="{{ matchups[i].wrestler1.wrestler_id }}">{{ matchups[i].wrestler1.name }}<span class="score"></span></li>
+                                    <li class="team team-bottom" data-wrestler-id="{{ matchups[i].wrestler2.wrestler_id }}">{{ matchups[i].wrestler2.name }}<span class="score"></span></li>
                                 </ul>
-                            {% endfor %}
-                        {% endif %}
-                     </div>  
-                 </div>
+                            {% else %}
+                                <ul class="matchup"><li class="team team-top">&nbsp;</li><li class="team team-bottom">&nbsp;</li></ul>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </section>
     </div>
 
-    <!-- Game Control Center -->
     <div class="container mx-auto">
         <div id="game-controls" class="game-controls">
             <button id="start-tournament-btn" class="btn-success">Start Tournament (1 Gold)</button>
@@ -340,6 +280,7 @@
             <span id="buy-odds-container"><button id="buy-odds-btn" class="btn-generic bg-yellow-400 hover-yellow-500 text-gray-600 ml-4">Pay 1 Gold to See First Round Odds</button></span>
         </div>
     </div>
+    {% endif %}
 
     <!-- NEW MODAL STRUCTURE -->
     <div id="result-modal" class="modal-overlay">
@@ -349,7 +290,7 @@
             
             <div id="modal-round-summary">
                 <h2 id="winners-header">Round Winners</h2>
-                <div id="round-winners-gallery"></div>
+                <div id="round-winners-gallery" class="round-winners-gallery"></div>
                 
                 <div id="incorrect-picks-container" style="display: none;">
                     <h2>Your Incorrect Picks</h2>
@@ -413,7 +354,6 @@
             </table>
         </div>
     </div>
-    
 </div>
 
 <script src="{{ base_url }}public/template/default/assets/js/tournament.js"></script>

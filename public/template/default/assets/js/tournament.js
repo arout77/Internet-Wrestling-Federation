@@ -37,10 +37,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startBtn.addEventListener('click', async () => {
         try {
+            // ** START OF CHANGE **
+            const wrestlerIds = bracketContainer.dataset.wrestlerIds ? bracketContainer.dataset.wrestlerIds.split(',') : [];
+
             const response = await fetch(baseUrl + 'tournament/start', { 
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest' 
+                },
+                body: JSON.stringify({ wrestler_ids: wrestlerIds }) // Send the wrestler IDs
             });
+            // ** END OF CHANGE **
+
             const data = await response.json();
             if (response.status === 401 || response.status === 403) {
                 alert('You must be logged in to start a tournament. Redirecting to login...');
@@ -73,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         buyOddsBtn.disabled = true;
-        buyOddsBtn.textContent = 'Calculating...';
+        buyOddsBtn.textContent = 'Calculating...this may take a moment!';
 
         try {
             const response = await fetch(baseUrl + 'tournament/get_odds', {
@@ -173,26 +182,41 @@ document.addEventListener('DOMContentLoaded', () => {
         // Log the server response to help debug and add defensive checks.
         console.log("Server response received:", data);
 
+        // ** START OF CHANGE **
+        // Create a simple list of IDs for wrestlers that the user INCORRECTLY picked against
+        const incorrectWinnerIds = (data.incorrect_picks_data || []).map(pick => pick.actual_winner.wrestler_id);
+        // ** END OF CHANGE **
+
         winnersHeader.textContent = `Round ${currentRound} Winners`;
         roundWinnersGallery.innerHTML = '';
+
         if (data.winners_data && Array.isArray(data.winners_data)) {
             data.winners_data.forEach(winner => {
-                if (winner) { // Check if winner object is not null
+                if (winner) {
                     const card = document.createElement('div');
-                    card.className = 'winner-card';
+                    card.className = 'winner-card-container'; // Use a container for positioning
+
+                    // ** START OF CHANGE **
+                    // Check if the current winner was an incorrect pick
+                    const wasIncorrectPick = incorrectWinnerIds.includes(winner.wrestler_id);
+                    const incorrectOverlay = wasIncorrectPick ? '<div class="incorrect-overlay">✖</div>' : '';
+                    // ** END OF CHANGE **
+
                     card.innerHTML = `
-                        <img src="${baseUrl}assets/img/roster/${winner.image}.webp" alt="${winner.name}">
-                        <p>${winner.name}</p>
+                        <div class="winner-card">
+                            <img src="${baseUrl}public/media/images/${winner.image}.webp" alt="${winner.name}">
+                            <p>${winner.name}</p>
+                        </div>
+                        ${incorrectOverlay}
                     `;
                     roundWinnersGallery.appendChild(card);
                 }
             });
         }
 
-        if (data.incorrect_picks_data && Array.isArray(data.incorrect_picks_data) && data.incorrect_picks_data.length > 0) {
+        if (data.incorrect_picks_data && data.incorrect_picks_data.length > 0) {
             incorrectPicksList.innerHTML = '';
             data.incorrect_picks_data.forEach(pick => {
-                // Check that user_pick exists before trying to access its name
                 const userPickName = pick.user_pick ? pick.user_pick.name : 'your pick';
                 const actualWinnerName = pick.actual_winner ? pick.actual_winner.name : 'the winner';
                 const li = document.createElement('li');

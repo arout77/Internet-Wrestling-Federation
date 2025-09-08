@@ -1,0 +1,384 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Find a Match - Career Mode{% endblock %}
+
+{% block content %}
+<style>
+    .wrestler-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .wrestler-card.selected-opponent {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(234, 179, 8, 0.8);
+        border-color: #f59e0b;
+    }
+    .search-container .search-input {
+        width: 2.5rem;
+        height: 2.5rem;
+        padding-left: 2.5rem;
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: width 0.3s ease-in-out;
+    }
+    .search-container.expanded .search-input {
+        width: 100%;
+        cursor: text;
+    }
+    @media (min-width: 768px) {
+        .search-container.expanded .search-input {
+            width: 16rem;
+        }
+    }
+    .health-bar-container {
+        background-color: #4a5568;
+        border-radius: 9999px;
+        padding: 2px;
+        border: 1px solid #718096;
+    }
+    .health-bar {
+        height: 1.25rem;
+        background-color: #48bb78; /* Default to green */
+        border-radius: 9999px;
+        transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+        text-align: center;
+        color: white;
+        font-weight: bold;
+    }
+    .shake {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+        perspective: 1000px;
+    }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(4px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(8px, 0, 0); }
+    }
+    #match-log-feed p {
+        padding: 4px 8px;
+        border-bottom: 1px solid #4a5568;
+    }
+     #match-log-feed p:last-child {
+        border-bottom: none;
+    }
+    #match-log-feed .damage { color: #f56565; }
+    #match-log-feed .info { color: #a0aec0; }
+    #match-log-feed .action { color: #63b3ed; }
+    #match-log-feed .result { color: #f6e05e; font-weight: bold; }
+
+</style>
+<div class="container mx-auto px-4 py-8">
+    
+    <div id="matchSetup" class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 mb-8">
+        <div>
+            <h1 class="text-4xl font-bold text-center text-yellow-400 mb-2">Find a Match</h1>
+            <p class="text-center text-gray-300 mb-8">
+                Select an opponent from the roster below to challenge them to a match. Your prospect is already in the ring!<br>Level up to unlock new opponents.
+            </p>
+        </div>
+       
+        <div>
+            <input type="hidden" name="opponent_id" id="opponent_id_input" required>
+            <div id="singleMatchLayout">
+                <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8">
+                    <div id="player1DropZone" class="w-full md:w-1/2 h-72 bg-gray-900 border-2 border-dashed border-yellow-300 rounded-lg flex items-center justify-center text-white transition-colors">
+                        <!-- Prospect card is injected here -->
+                    </div>
+                    <div class="text-5xl font-bold text-yellow-500">VS</div>
+                    <div id="player2DropZone" class="w-full md:w-1/2 h-72 bg-gray-900 border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center text-gray-400 transition-colors">
+                        Select Your Opponent
+                    </div>
+                </div>
+            </div>
+            <div id="actionButtons" class="text-center mt-6 space-x-4">
+                <button type="button" id="startMatchBtn" class="bg-gray-500 text-white font-bold py-3 px-8 rounded-lg transition-colors cursor-not-allowed" disabled>Simulate Match</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-12 p-8 bg-gray-900 rounded-lg shadow-lg border border-gray-700">
+        <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4 md:mb-0">Choose Your Opponent</h2>
+            <div id="searchContainer" class="search-container relative flex items-center">
+                 <svg class="search-icon absolute left-4 top-4 -translate-y-1/2 h-6 w-6 text-gray-400 z-10 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+                <input type="text" id="searchInput" class="search-input bg-gray-700 text-white" placeholder="Search...">
+            </div>
+        </div>
+        <div id="opponentRoster" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-y-auto h-[600px] p-2 rounded-lg">
+            <!-- Opponent cards are injected here -->
+        </div>
+    </div>
+</div>
+
+<!-- Simulation Modal -->
+<div id="simulationModal" class="fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center z-50 hidden p-4">
+    <div class="bg-gray-900 p-6 rounded-lg shadow-2xl w-full max-w-6xl text-white border-2 border-yellow-500 flex flex-col h-[90vh]">
+        <h2 class="text-3xl font-bold mb-4 text-yellow-400 text-center flex-shrink-0">Match in Progress...</h2>
+        <div class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6 min-h-0">
+            <!-- Wrestler 1 -->
+            <div class="text-center flex flex-col justify-center">
+                <img id="wrestler1-sim-img" src="" alt="Wrestler 1" class="w-48 h-48 rounded-full mx-auto mb-4 border-4 border-yellow-500 object-cover object-top">
+                <h3 id="wrestler1-sim-name" class="text-2xl font-bold text-yellow-400"></h3>
+                <div class="health-bar-container mt-2">
+                    <div id="wrestler1-sim-hp-bar" class="health-bar">100%</div>
+                </div>
+            </div>
+            <!-- Match Log -->
+            <div id="match-log-container" class="bg-gray-800 rounded-lg p-2 h-full overflow-y-auto" style="height: 300px;">
+                <div id="match-log-feed" class="h-full overflow-y-auto"></div>
+            </div>
+            <!-- Wrestler 2 -->
+            <div class="text-center flex flex-col justify-center">
+                 <img id="wrestler2-sim-img" src="" alt="Wrestler 2" class="w-48 h-48 rounded-full mx-auto mb-4 border-4 border-blue-500 object-cover object-top">
+                <h3 id="wrestler2-sim-name" class="text-2xl font-bold text-blue-400"></h3>
+                <div class="health-bar-container mt-2">
+                    <div id="wrestler2-sim-hp-bar" class="health-bar">100%</div>
+                </div>
+            </div>
+        </div>
+         <div class="text-center mt-4 flex-shrink-0">
+             <form id="continueForm" method="post" action="{{ base_url }}career/complete_match" class="mt-8">
+                <button type="submit" id="continueBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-colors hidden">
+                    Continue Career
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const prospectData = {{ prospect_json|raw }};
+    const opponentsData = {{ opponents_json|raw }};
+    let selectedOpponentData = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const player1DropZone = document.getElementById('player1DropZone');
+        const player2DropZone = document.getElementById('player2DropZone');
+        const opponentRoster = document.getElementById('opponentRoster');
+        const startMatchBtn = document.getElementById('startMatchBtn');
+        const opponentIdInput = document.getElementById('opponent_id_input');
+        const searchInput = document.getElementById('searchInput');
+        const searchContainer = document.getElementById('searchContainer');
+        const simulationModal = document.getElementById('simulationModal');
+        const continueBtn = document.getElementById('continueBtn');
+        const continueForm = document.getElementById('continueForm');
+
+        searchContainer.addEventListener('click', (e) => {
+            if (!searchContainer.classList.contains('expanded')) {
+                e.stopPropagation();
+                searchContainer.classList.add('expanded');
+                searchInput.focus();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchContainer.contains(e.target)) {
+                searchContainer.classList.remove('expanded');
+            }
+        });
+
+        const getImageUrl = (wrestler) => {
+            if (wrestler.image && (wrestler.image.startsWith('http') || wrestler.image.startsWith('{{ base_url }}'))) {
+                return wrestler.image;
+            } else if (wrestler.image) {
+                return `{{ base_url }}public/media/images/${wrestler.image}.webp`;
+            }
+            return wrestler.avatar || '';
+        };
+
+        const createDropzoneCard = (wrestler) => {
+            const card = document.createElement('div');
+            card.className = 'p-3 text-center';
+            card.innerHTML = `
+                <img src="${getImageUrl(wrestler)}" alt="${wrestler.name}" class="w-48 h-48 rounded-full mx-auto mb-2 border-4 border-gray-600 object-cover object-top">
+                <h3 class="text-2xl font-bold text-yellow-400">${wrestler.name}</h3>
+                <p class="text-lg text-gray-300">Lvl: ${wrestler.lvl}</p>
+            `;
+            return card;
+        };
+        
+        const createOpponentCard = (wrestler) => {
+            const card = document.createElement('div');
+            card.className = 'wrestler-card bg-gray-800 rounded-lg p-3 text-center border-2 border-transparent cursor-pointer hover:border-yellow-400';
+            card.dataset.wrestlerId = wrestler.wrestler_id;
+            card.onclick = () => selectOpponent(wrestler);
+
+            card.innerHTML = `
+                <img src="${getImageUrl(wrestler)}" alt="${wrestler.name}" class="w-24 h-24 rounded-full mx-auto mb-2 border-2 border-gray-600 object-cover object-top">
+                <h3 class="text-md font-bold text-yellow-400">${wrestler.name}</h3>
+                <p class="text-sm text-gray-300">Lvl: ${wrestler.lvl}</p>
+            `;
+            return card;
+        };
+
+        player1DropZone.innerHTML = '';
+        player1DropZone.appendChild(createDropzoneCard(prospectData));
+
+        const renderOpponents = (opponents) => {
+            opponentRoster.innerHTML = '';
+            opponents.forEach(opponent => {
+                opponentRoster.appendChild(createOpponentCard(opponent));
+            });
+        };
+        
+        renderOpponents(opponentsData);
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredOpponents = opponentsData.filter(w => w.name.toLowerCase().includes(searchTerm));
+            renderOpponents(filteredOpponents);
+        });
+
+        window.selectOpponent = (opponent) => {
+            selectedOpponentData = opponent;
+            player2DropZone.innerHTML = '';
+            player2DropZone.appendChild(createDropzoneCard(opponent));
+            opponentIdInput.value = opponent.wrestler_id;
+            
+            startMatchBtn.disabled = false;
+            startMatchBtn.classList.remove('bg-gray-500', 'cursor-not-allowed');
+            startMatchBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+
+            document.querySelectorAll('#opponentRoster .wrestler-card').forEach(card => {
+                card.classList.remove('selected-opponent');
+            });
+            document.querySelector(`[data-wrestler-id='${opponent.wrestler_id}']`).classList.add('selected-opponent');
+        };
+
+        const getHealthBarColor = (percentage) => {
+            if (percentage > 75) return '#48bb78'; // Green
+            if (percentage > 50) return '#f6e05e'; // Yellow
+            if (percentage > 25) return '#ed8936'; // Orange
+            return '#f56565'; // Red
+        };
+
+        startMatchBtn.addEventListener('click', async () => {
+            if (!selectedOpponentData) return;
+
+            simulationModal.style.display = 'flex';
+            
+            const w1Img = document.getElementById('wrestler1-sim-img');
+            const w2Img = document.getElementById('wrestler2-sim-img');
+            document.getElementById('wrestler1-sim-name').textContent = prospectData.name;
+            document.getElementById('wrestler2-sim-name').textContent = selectedOpponentData.name;
+            w1Img.src = getImageUrl(prospectData);
+            w2Img.src = getImageUrl(selectedOpponentData);
+            const w1HP = document.getElementById('wrestler1-sim-hp-bar');
+            const w2HP = document.getElementById('wrestler2-sim-hp-bar');
+            w1HP.style.width = '100%';
+            w2HP.style.width = '100%';
+            w1HP.textContent = '100%';
+            w2HP.textContent = '100%';
+            w1HP.style.backgroundColor = '#48bb78';
+            w2HP.style.backgroundColor = '#48bb78';
+
+            const formData = new FormData();
+            formData.append('opponent_id', selectedOpponentData.wrestler_id);
+
+            try {
+                const response = await fetch('{{ base_url }}career/run_simulation_api', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    playMatch(result.log, result.initial_hp);
+                } else {
+                    alert('Error starting simulation: ' + result.error);
+                    simulationModal.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Simulation API error:', error);
+                alert('An error occurred while starting the match.');
+                simulationModal.style.display = 'none';
+            }
+        });
+
+        function playMatch(log, initialHP) {
+            const logFeed = document.getElementById('match-log-feed');
+            const logContainer = document.getElementById('match-log-container');
+            logFeed.innerHTML = '';
+
+            let i = 0;
+            function processLogEntry() {
+                if (i >= log.length) return;
+
+                const entry = log[i];
+                let isDamageSequence = false;
+                
+                if (entry.includes(' hits a ') && entry.includes(' for ') && entry.includes(' damage!')) {
+                    const nextEntry = (i + 1 < log.length) ? log[i+1] : null;
+                    if (nextEntry && nextEntry.includes(' HP remaining.')) {
+                        isDamageSequence = true;
+                        
+                        const p1 = document.createElement('p');
+                        p1.className = 'action';
+                        p1.innerHTML = entry;
+                        logFeed.appendChild(p1);
+
+                        const p2 = document.createElement('p');
+                        p2.className = 'damage';
+                        p2.innerHTML = nextEntry;
+                        logFeed.appendChild(p2);
+
+                        const defenderName = nextEntry.split(' has ')[0];
+                        const hpMatch = nextEntry.match(/(-?\d+) HP remaining/);
+
+                        if (hpMatch && hpMatch[1]) {
+                            const hp = Math.max(0, parseInt(hpMatch[1], 10));
+                            if (defenderName === prospectData.name) {
+                                const hpBar = document.getElementById('wrestler1-sim-hp-bar');
+                                const hpPercent = (hp / initialHP.prospect) * 100;
+                                hpBar.style.width = `${hpPercent}%`;
+                                hpBar.textContent = `${Math.round(hpPercent)}%`;
+                                hpBar.style.backgroundColor = getHealthBarColor(hpPercent);
+                                document.getElementById('wrestler1-sim-img').classList.add('shake');
+                            } else {
+                                const hpBar = document.getElementById('wrestler2-sim-hp-bar');
+                                const hpPercent = (hp / initialHP.opponent) * 100;
+                                hpBar.style.width = `${hpPercent}%`;
+                                hpBar.textContent = `${Math.round(hpPercent)}%`;
+                                hpBar.style.backgroundColor = getHealthBarColor(hpPercent);
+                                document.getElementById('wrestler2-sim-img').classList.add('shake');
+                            }
+                        }
+                        i++; // Skip next entry
+                    }
+                }
+                
+                if (!isDamageSequence) {
+                    const p = document.createElement('p');
+                    if (entry.startsWith('--- The winner')) {
+                        p.className = 'result';
+                        p.innerHTML = entry;
+                        continueBtn.classList.remove('hidden');
+                        continueForm.action = "{{ base_url }}career/match_result";
+                    } else if (entry.startsWith('---')) {
+                        p.className = 'info';
+                        p.innerHTML = `<b>${entry}</b>`;
+                    } else {
+                        p.className = 'action';
+                        p.innerHTML = entry;
+                    }
+                    logFeed.appendChild(p);
+                }
+                
+                logContainer.scrollTop = logContainer.scrollHeight;
+
+                setTimeout(() => {
+                   document.getElementById('wrestler1-sim-img').classList.remove('shake');
+                   document.getElementById('wrestler2-sim-img').classList.remove('shake');
+                }, 500);
+
+                i++;
+                setTimeout(processLogEntry, 400); // Speed up playback a little
+            }
+            processLogEntry();
+        }
+    });
+</script>
+{% endblock %}

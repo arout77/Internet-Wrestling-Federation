@@ -59,15 +59,15 @@ class UserModel extends System_Model
 
     /**
      * Verify user credentials for login
-     * @param string $email
+     * @param string $credential
      * @param string $password
      * @return array|false
      */
-    public function verifyUser( $email, $password )
+    public function verifyUser( $credential, $password )
     {
         try {
-            $stmt = $this->db->prepare( "SELECT * FROM users WHERE email = :email" );
-            $stmt->execute( [':email' => $email] );
+            $stmt = $this->db->prepare( "SELECT * FROM users WHERE email = :credential OR name = :credential" );
+            $stmt->execute( [':credential' => $credential] );
             $user = $stmt->fetch( PDO::FETCH_ASSOC );
 
             if ( $user && password_verify( $password, $user['password'] ) )

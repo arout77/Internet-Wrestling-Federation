@@ -1,0 +1,83 @@
+{% extends "base.html.twig" %}
+
+{% block title %}My Moveset{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Your Moves & Traits</h1>
+        <p class="text-xl text-gray-300">Review your learned abilities and passive traits.</p>
+        <a href="{{ base_url }}app/career" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Career</a>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Moves Section (takes 2/3 of space on large screens) -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Known Moveset Section -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-bold text-yellow-400 mb-4">Known Moveset</h2>
+                <p class="text-gray-400 mb-4">These are the default moves your wrestler started with.</p>
+                {% if knownMoves is not empty %}
+                    <div class="space-y-4 max-h-[600px] overflow-y-auto pr-4">
+                        {% for move in knownMoves %}
+                            <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                                <h3 class="text-xl font-bold text-white">{{ move.move_name }}</h3>
+                                <p class="text-gray-400 text-sm mb-2">{{ move.move_description|default('No description available.') }}</p>
+                                <div class="grid grid-cols-2 gap-x-4 text-sm mt-3 pt-3 border-t border-gray-700">
+                                    <p>Type: <span class="font-semibold text-gray-300">{{ move.type|capitalize }}</span></p>
+                                    <p>Damage: <span class="font-semibold text-red-400">{{ move.min_damage }}-{{ move.max_damage }}</span></p>
+                                    <p>Stamina Cost: <span class="font-semibold text-blue-400">{{ move.stamina_cost }}</span></p>
+                                    <p>Level Req: <span class="font-semibold text-gray-300">{{ move.level_requirement }}</span></p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-400">No default moves found for this wrestler.</p>
+                {% endif %}
+            </div>
+
+            <!-- Learned Moves Section -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-bold text-yellow-400 mb-4">Learned Moves</h2>
+                 <p class="text-gray-400 mb-4">These are moves you have purchased from the Training Center.</p>
+                {% if learnedMoves is not empty %}
+                    <div class="space-y-4 max-h-[600px] overflow-y-auto pr-4">
+                        {% for move in learnedMoves %}
+                            <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                                <h3 class="text-xl font-bold text-white">{{ move.move_name }}</h3>
+                                <p class="text-gray-400 text-sm mb-2">{{ move.move_description|default('No description available.') }}</p>
+                                <div class="grid grid-cols-2 gap-x-4 text-sm mt-3 pt-3 border-t border-gray-700">
+                                    <p>Type: <span class="font-semibold text-gray-300">{{ move.type|capitalize }}</span></p>
+                                    <p>Damage: <span class="font-semibold text-red-400">{{ move.min_damage }}-{{ move.max_damage }}</span></p>
+                                    <p>Stamina Cost: <span class="font-semibold text-blue-400">{{ move.stamina_cost }}</span></p>
+                                    <p>Level Req: <span class="font-semibold text-gray-300">{{ move.level_requirement }}</span></p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-400">You haven't learned any special moves yet. Visit the <a href="{{ base_url }}train" class="text-blue-400 hover:underline">Training Center</a> to expand your arsenal!</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Active Traits Section (takes 1/3 of space on large screens) -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Active Traits</h2>
+             {% if traits is not empty %}
+                <div class="space-y-4">
+                    {% for trait in traits %}
+                        <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                            <h3 class="text-xl font-bold text-white">{{ trait.name }}</h3>
+                            <p class="text-gray-400">{{ trait.description }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-400">Your wrestler currently has no special traits.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

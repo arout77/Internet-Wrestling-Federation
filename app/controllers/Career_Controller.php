@@ -6,131 +6,164 @@ use Src\Controller\Base_Controller;
 class Career_Controller extends Base_Controller
 {
     /**
-     * Finds a suitable opponent for the player's prospect and initiates a match simulation.
+     * Ensures the user is logged in for all career-related actions.
      */
-    public function find_match()
+    public function __construct( $app )
     {
-        if (!isset($_SESSION['user_id'])) {
-            $this->redirect('user/login');
+        parent::__construct( $app );
+        if ( !isset( $_SESSION['user_id'] ) )
+        {
+            $this->redirect( 'user/login' );
             exit;
         }
-
-        $userModel = $this->model('User');
-        $prospect = $userModel->getProspectByUserId($_SESSION['user_id']);
-
-        if (!$prospect) {
-            // Handle case where prospect doesn't exist
-            $this->redirect('app/career');
-            exit;
-        }
-
-        $careerModel = $this->model('Career');
-        $opponent = $careerModel->findOpponentForProspect($prospect['lvl']);
-
-        if (!$opponent) {
-            // Handle case where no suitable opponent is found
-            // For now, redirect back to career page with a message (future enhancement)
-            $this->redirect('app/career');
-            exit;
-        }
-
-        // Simulate the match
-        $result = $this->simulate_match($prospect, $opponent);
-
-        // Store result in session to be displayed on the result page
-        $_SESSION['match_result'] = $result;
-
-        $this->redirect('career/match_result');
     }
 
     /**
-     * Simulates a match between the prospect and an opponent.
-     * @param array $prospect
-     * @param array $opponent
-     * @return array
+     * Displays the main career dashboard. If no prospect exists, it shows the creation modal.
      */
-    private function simulate_match($prospect, $opponent)
+    public function index()
     {
-        // This is a simplified simulation logic. In a real scenario,
-        // you would use your detailed turn-by-turn simulation engine.
-        $prospect_power = $prospect['lvl'] * 10 + ($prospect['strength'] + $prospect['technicalAbility'] + $prospect['brawlingAbility']) / 3;
-        $opponent_power = $opponent['lvl'] * 10 + ($opponent['strength'] + $opponent['technicalAbility'] + $opponent['brawlingAbility']) / 3;
+        $userModel = $this->model( 'User' );
+        $prospect  = $userModel->getProspectByUserId( $_SESSION['user_id'] );
 
-        $winner = ($prospect_power >= $opponent_power) ? $prospect['name'] : $opponent['name'];
-
-        $xp_earned = ($winner === $prospect['name']) ? 100 : 25;
-        $gold_earned = ($winner === $prospect['name']) ? 500 : 100;
-
-        // Apply manager bonuses if a manager is hired
-        if ($prospect['manager_id']) {
-            $managerModel = $this->model('Manager');
-            $manager = $managerModel->getManagerById($prospect['manager_id']);
-            if ($manager) {
-                $xp_earned += $xp_earned * $manager['xp_bonus'];
-                $gold_earned += $gold_earned * $manager['gold_bonus'];
-            }
+        $manager = null;
+        if ( $prospect && !empty( $prospect['manager_id'] ) )
+        {
+            $managerModel = $this->model( 'Manager' );
+            $manager      = $managerModel->getManagerById( $prospect['manager_id'] );
         }
 
-        return [
-            'winner' => $winner,
-            'prospect_name' => $prospect['name'],
-            'opponent_name' => $opponent['name'],
-            'xp_earned' => round($xp_earned),
-            'gold_earned' => round($gold_earned)
-        ];
+        $this->template->render( 'app/career.html.twig', [
+            'prospect' => $prospect,
+            'manager'  => $manager,
+        ] );
     }
 
-    public function train()
+    /**
+     * Handles the creation of a new wrestler prospect.
+     */
+    public function create_prospect()
     {
-        $careerModel = $this->model('Career');
-        $wrestler = $careerModel->getWrestlerByUserId($_SESSION['user_id']);
-
-        if ($wrestler) {
-            // Pass the wrestler data to the view here as well.
-            $data = [
-                'wrestler' => $wrestler
-            ];
-            $this->view('career/train', $data);
-        } else {
-            // If a user without a wrestler lands here, redirect them to the creation page.
-            header('location:' . $this->config->setting('site_url') . '/managers/hire');
-        }
-    }
-
-    public function upgrade_attribute($attribute)
-    {
-        // Set the content type to JSON for the response
-        header('Content-Type: application/json');
-
-        if (!isset($_SESSION['user_id'])) {
-            http_response_code(401); // Unauthorized
-            echo json_encode(['success' => false, 'error' => 'You must be logged in.']);
+        header( 'Content-Type: application/json' );
+        if ( $_SERVER['REQUEST_METHOD'] !== 'POST' )
+        {
+            http_response_code( 405 );
+            echo json_encode( ['success' => false, 'error' => 'Invalid request method.'] );
             exit;
         }
-        
-        // Load the Career model
-        $careerModel = $this->model('Career');
-        
-        // Attempt to purchase the attribute point upgrade
-        $result = $careerModel->purchaseAttributePoint($_SESSION['user_id'], $attribute);
 
-        if ($result === true) {
-            // If successful, fetch the updated prospect data to send back
-            $userModel = $this->model('User');
-            $updatedProspect = $userModel->getProspectByUserId($_SESSION['user_id']);
+        $data      = json_decode( file_get_contents( 'php://input' ), true );
+        $userModel = $this->model( 'User' );
+        $result    = $userModel->createProspectForUser( $_SESSION['user_id'], $data );
 
-            http_response_code(200); // OK
-            echo json_encode([
-                'success' => true,
-                'message' => 'Attribute upgraded successfully!',
-                'prospect' => $updatedProspect // Send the updated data back to the frontend
-            ]);
-        } else {
-            // If there was an error, send the error message from the model
-            http_response_code(400); // Bad Request
-            echo json_encode(['success' => false, 'error' => $result]);
+        if ( isset( $result['success'] ) && $result['success'] )
+        {
+            http_response_code( 200 );
+            echo json_encode( $result );
         }
-        
+        else
+        {
+            http_response_code( 400 );
+            echo json_encode( $result );
+        }
+        exit;
+    }
+
+    /**
+     * Renders the match selection screen for career mode.
+     */
+    public function find_match()
+    {
+        $userModel = $this->model( 'User' );
+        $prospect  = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+
+        if ( !$prospect )
+        {
+            $this->redirect( 'career' );
+            exit;
+        }
+
+        $careerModel             = $this->model( 'Career' );
+        $prospect['traits']      = $careerModel->getProspectTraits( $prospect['id'] );
+        $prospect['wrestler_id'] = $prospect['pid'];
+
+        $opponents = $careerModel->findOpponentForProspect( $prospect['lvl'] );
+
+        $this->template->render( 'career/find_match.html.twig', [
+            'prospect_json'  => json_encode( $prospect ),
+            'opponents_json' => json_encode( $opponents ),
+        ] );
+    }
+
+    /**
+     * API endpoint to run a career match simulation and return the log.
+     */
+    public function run_simulation_api()
+    {
+        header( 'Content-Type: application/json' );
+        if ( $_SERVER['REQUEST_METHOD'] !== 'POST' )
+        {
+            http_response_code( 403 );
+            echo json_encode( ['success' => false, 'error' => 'Invalid request method'] );
+            exit;
+        }
+
+        $opponent_id = $_POST['opponent_id'] ?? null;
+        if ( !$opponent_id )
+        {
+            http_response_code( 400 );
+            echo json_encode( ['success' => false, 'error' => 'Opponent ID missing.'] );
+            exit;
+        }
+
+        $userModel              = $this->model( 'User' );
+        $prospectData           = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+        $careerModel            = $this->model( 'Career' );
+        $prospectData['traits'] = $careerModel->getProspectTraits( $prospectData['id'] );
+        $prospect               = (object) $prospectData;
+        $prospect->wrestler_id  = $prospect->pid;
+
+        $apiModel = $this->model( 'Api' );
+        $opponent = $apiModel->getWrestlerById( $opponent_id );
+
+        if ( !$prospect || !$opponent )
+        {
+            http_response_code( 404 );
+            echo json_encode( ['success' => false, 'error' => 'Wrestler data not found.'] );
+            exit;
+        }
+
+        $initial_hp_prospect = $prospect->baseHp + ( $prospect->toughness * 10 );
+        $initial_hp_opponent = $opponent->baseHp + ( $opponent->toughness * 10 );
+
+        $simulatorModel = $this->model( 'Simulator' );
+        $simResult      = $simulatorModel->simulateMatch( $prospect, $opponent );
+
+        $winnerName = is_object( $simResult['winner'] ) ? $simResult['winner']->name : 'Draw';
+        $isWin      = ( $winnerName === $prospect->name );
+        $rewards    = $careerModel->calculateRewards( $prospect, $opponent, $isWin );
+
+        $updateResult = $careerModel->updateProspectAfterMatch( $_SESSION['user_id'], $rewards['xp'], $rewards['gold'], $isWin );
+
+        $_SESSION['last_match_for_log'] = [
+            'winner'           => $winnerName,
+            'prospect_name'    => $prospect->name,
+            'opponent_name'    => $opponent->name,
+            'xp_earned'        => $rewards['xp'],
+            'gold_earned'      => $rewards['gold'],
+            'log'              => $simResult['log'],
+            'leveled_up'       => $updateResult['leveled_up'],
+            'bonus_ap_awarded' => $updateResult['bonus_ap'], // **NEW:** Pass bonus info
+        ];
+
+        echo json_encode( [
+            'success'    => true,
+            'log'        => $simResult['log'],
+            'initial_hp' => [
+                'prospect' => $initial_hp_prospect,
+                'opponent' => $initial_hp_opponent,
+            ],
+        ] );
         exit;
     }
 
@@ -139,35 +172,197 @@ class Career_Controller extends Base_Controller
      */
     public function match_result()
     {
-        if (!isset($_SESSION['match_result'])) {
-            $this->redirect('app/career');
+        if ( !isset( $_SESSION['last_match_for_log'] ) )
+        {
+            $this->redirect( 'career' );
             exit;
         }
 
-        $result = $_SESSION['match_result'];
-        unset($_SESSION['match_result']); // Clear the result from session
+        $result = $_SESSION['last_match_for_log'];
+        unset( $_SESSION['last_match_for_log'] );
 
-        $this->template->render('career/match_result.html.twig', [
-            'result' => $result
-        ]);
+        $this->template->render( 'career/match_result.html.twig', [
+            'result' => $result,
+        ] );
     }
 
     /**
-     * Completes the match, updating the prospect's stats.
+     * Finalizes the match process and returns to the career dashboard.
      */
     public function complete_match()
     {
-        if (!isset($_SESSION['user_id'])) {
-            $this->redirect('user/login');
+        $this->redirect( 'career' );
+    }
+
+    /**
+     * Handles upgrading a prospect's attribute.
+     */
+    public function upgrade_attribute( $attribute )
+    {
+        header( 'Content-Type: application/json' );
+
+        $careerModel = $this->model( 'Career' );
+        $result      = $careerModel->purchaseAttributePoint( $_SESSION['user_id'], $attribute );
+
+        if ( $result === true )
+        {
+            $userModel       = $this->model( 'User' );
+            $updatedProspect = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+
+            http_response_code( 200 );
+            echo json_encode( [
+                'success'  => true,
+                'message'  => 'Attribute upgraded successfully!',
+                'prospect' => $updatedProspect,
+            ] );
+        }
+        else
+        {
+            http_response_code( 400 );
+            echo json_encode( ['success' => false, 'error' => $result] );
+        }
+
+        exit;
+    }
+
+    /**
+     * Displays the moveset for the current prospect.
+     */
+    public function moveset()
+    {
+        $userModel = $this->model( 'User' );
+        $prospect  = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+
+        if ( !$prospect )
+        {
+            $this->redirect( 'career' );
             exit;
         }
-        
-        $xp_earned = $_POST['xp_earned'] ?? 0;
-        $gold_earned = $_POST['gold_earned'] ?? 0;
 
-        $careerModel = $this->model('Career');
-        $careerModel->updateProspectAfterMatch($_SESSION['user_id'], $xp_earned, $gold_earned);
+        $careerModel  = $this->model( 'Career' );
+        $learnedMoves = $careerModel->getProspectLearnedMoves( $prospect['pid'] );
+        $knownMoves   = $careerModel->getMovesByNames( $prospect['moves'] );
+        $traits       = $careerModel->getProspectTraits( $prospect['id'] );
 
-        $this->redirect('app/career');
+        $this->template->render( 'career/moveset.html.twig', [
+            'prospect'     => $prospect,
+            'learnedMoves' => $learnedMoves,
+            'knownMoves'   => $knownMoves,
+            'traits'       => $traits,
+        ] );
+    }
+
+    /**
+     * Displays the training center.
+     */
+    public function train()
+    {
+        $userModel = $this->model( 'User' );
+        $prospect  = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+
+        if ( !$prospect )
+        {
+            $this->redirect( 'career' );
+            exit;
+        }
+
+        $filterType = $_GET['type'] ?? 'all';
+        $sortBy     = $_GET['sort_by'] ?? 'level_requirement';
+        $sortOrder  = $_GET['sort_order'] ?? 'ASC';
+
+        $trainModel     = $this->model( 'Train' );
+        $availableMoves = $trainModel->getAvailableMoves( $prospect['pid'], $prospect['lvl'], $filterType, $sortBy, $sortOrder );
+
+        $this->template->render( 'career/train.html.twig', [
+            'prospect'         => $prospect,
+            'availableMoves'   => $availableMoves,
+            'currentFilter'    => $filterType,
+            'currentSortBy'    => $sortBy,
+            'currentSortOrder' => $sortOrder,
+        ] );
+    }
+
+    /**
+     * Handles learning a new move.
+     */
+    public function learn_move( $moveId )
+    {
+        header( 'Content-Type: application/json' );
+        if ( $_SERVER['REQUEST_METHOD'] !== 'POST' )
+        {
+            http_response_code( 403 );
+            echo json_encode( ['error' => 'Unauthorized'] );
+            exit;
+        }
+
+        $userModel = $this->model( 'User' );
+        $prospect  = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+
+        $trainModel = $this->model( 'Train' );
+        $result     = $trainModel->learnMove( $prospect, $moveId );
+
+        if ( $result === true )
+        {
+            echo json_encode( ['success' => true, 'message' => 'Move learned successfully!'] );
+        }
+        else
+        {
+            http_response_code( 400 );
+            echo json_encode( ['error' => $result] );
+        }
+    }
+
+    /**
+     * Displays the manager hiring page.
+     */
+    public function hire_manager()
+    {
+        $managerModel = $this->model( 'Manager' );
+        $managers     = $managerModel->getAllManagers();
+
+        $userModel = $this->model( 'User' );
+        $prospect  = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+
+        $this->template->render( 'managers/hire.html.twig', [
+            'managers' => $managers,
+            'prospect' => $prospect,
+        ] );
+    }
+
+    /**
+     * Handles purchasing a manager.
+     */
+    public function purchase_manager( $managerId )
+    {
+        header( 'Content-Type: application/json' );
+        if ( $_SERVER['REQUEST_METHOD'] !== 'POST' )
+        {
+            http_response_code( 403 );
+            echo json_encode( ['error' => 'Unauthorized'] );
+            exit;
+        }
+
+        $userModel = $this->model( 'User' );
+        $prospect  = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+
+        if ( !$prospect )
+        {
+            http_response_code( 404 );
+            echo json_encode( ['error' => 'Prospect not found.'] );
+            exit;
+        }
+
+        $managerModel = $this->model( 'Manager' );
+        $result       = $managerModel->hireManagerForProspect( $prospect, $managerId );
+
+        if ( $result === true )
+        {
+            echo json_encode( ['success' => true, 'message' => 'Manager hired successfully!'] );
+        }
+        else
+        {
+            http_response_code( 400 );
+            echo json_encode( ['error' => $result] );
+        }
     }
 }

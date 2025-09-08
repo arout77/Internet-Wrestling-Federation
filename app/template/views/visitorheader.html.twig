@@ -1,4 +1,4 @@
-<header class="w-full max-w-6xl mx-auto py-6 px-4 flex justify-between items-center bg-transparent z-10">
+<header class="w-full max-w-6xl mx-auto py-6 px-4 flex justify-between items-center bg-transparent z-50 relative">
     <div class="flex-shrink-0">
         <a href="{{ base_url }}">
             <img src="{{ base_url }}public/media/images/logo-10.png" alt="IWF Logo" class="h-16 md:h-24 object-contain animate-fade-in-up">
@@ -16,21 +16,37 @@
 
     <!-- Desktop Navigation links -->
     <nav class="hidden md:flex space-x-6 items-center">
-        <a href="{{ base_url }}app/career" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-500 {% if route_action == 'career' %}text-yellow-400{% else %}text-gray-300{% endif %}">Career Mode</a>
-        <a href="{{ base_url }}app/booking" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-500 {% if route_action == 'booking' %}text-yellow-400{% else %}text-gray-300{% endif %}">Booker Mode</a>
-        <a href="{{ base_url }}app/match" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-400 {% if route_action == 'match' %}text-yellow-400{% else %}text-gray-300{% endif %}">Simulator</a>
-        <a href="{{ base_url }}tournament" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-600 {% if route_action == 'wrestlers' %}text-yellow-400{% else %}text-gray-300{% endif %}">Tournament</a>
+        <!-- Game Modes Dropdown -->
+        <div class="relative" id="game-modes-dropdown-container">
+            <button id="game-modes-btn" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-500 text-gray-300 flex items-center">
+                Game Modes
+                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            <div id="game-modes-menu" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-700">
+                <a href="{{ base_url }}app/career" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Career Mode</a>
+                <a href="{{ base_url }}app/booking" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Booker Mode</a>
+                <a href="{{ base_url }}app/match" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Simulator</a>
+                <a href="{{ base_url }}tournament" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Tournament</a>
+            </div>
+        </div>
+        
+        <a href="{{ base_url }}app/wrestlers" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-600 {% if route_action == 'wrestlers' %}text-yellow-400{% else %}text-gray-300{% endif %}">Roster</a>
         
         {% if session.user_id %}
             <div class="flex items-center gap-4">
                 {% if prospect and prospect.gold is defined %}
-                    <div class="text-yellow-400 font-bold text-lg animate-fade-in-up animation-delay-700 bg-gray-900 px-4 py-2 rounded-lg">
-                        💰 {{ prospect.gold }} Gold
+                    <div class="flex items-center gap-2 bg-yellow-500 bg-opacity-25 border border-yellow-500 rounded-full px-4 py-1 text-yellow-300 font-bold text-lg animate-fade-in-up animation-delay-700" title="Gold">
+                        <svg class="h-6 w-6 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2ZM12,20a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"/>
+                            <path d="M12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/>
+                        </svg>
+                        <span>{{ prospect.gold }}</span>
                     </div>
                 {% endif %}
                 {% if prospect and prospect.attribute_points > 0 %}
-                    <div class="text-green-400 font-bold text-lg animate-fade-in-up animation-delay-700 bg-gray-900 px-4 py-2 rounded-lg">
-                        ✨ {{ prospect.attribute_points }} AP
+                    <div class="ap-display inline-block px-4 py-2 rounded-full text-lg font-bold bg-green-400 bg-opacity-20 border border-green-500 text-green-300" title="Attribute Points">
+                        <svg class="w-5 h-5 inline-block mr-1 fill-current" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        {{ prospect.attribute_points }} AP
                     </div>
                 {% endif %}
             </div>
@@ -40,18 +56,75 @@
             <a href="{{ base_url }}user/register" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg transition-colors animate-fade-in-up animation-delay-800">Register</a>
         {% endif %}
     </nav>
-</header>
 
-<!-- Mobile Menu -->
-<div id="mobile-menu" class="hidden md:hidden bg-gray-800 p-4">
-    <a href="{{ base_url }}app/career" class="block text-white py-2">Career Mode</a>
-    <a href="{{ base_url }}app/booking" class="block text-white py-2">Booker Mode</a>
-    <a href="{{ base_url }}app/match" class="block text-white py-2">Simulator</a>
-    <a href="{{ base_url }}app/wrestlers" class="block text-white py-2">Roster</a>
-    {% if session.user_id %}
-        <a href="{{ base_url }}user/logout" class="block text-white py-2">Logout</a>
-    {% else %}
-        <a href="{{ base_url }}user/login" class="block text-white py-2">Login</a>
-        <a href="{{ base_url }}user/register" class="block text-white py-2">Register</a>
-    {% endif %}
-</div>
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-gray-800 p-4 absolute top-full left-0 w-full">
+        <button id="mobile-game-modes-toggle" class="w-full text-left text-white py-2 flex justify-between items-center font-semibold">
+            <span>Game Modes</span>
+            <svg class="w-4 h-4 transform transition-transform" id="mobile-dropdown-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+        <div id="mobile-game-modes-menu" class="hidden pl-4 border-l-2 border-gray-700">
+            <a href="{{ base_url }}app/career" class="block text-white py-2">Career Mode</a>
+            <a href="{{ base_url }}app/booking" class="block text-white py-2">Booker Mode</a>
+            <a href="{{ base_url }}app/match" class="block text-white py-2">Simulator</a>
+            <a href="{{ base_url }}tournament" class="block text-white py-2">Tournament</a>
+        </div>
+        <a href="{{ base_url }}app/wrestlers" class="block text-white py-2 font-semibold">Roster</a>
+         <div class="border-t border-gray-700 mt-2 pt-2">
+            {% if session.user_id %}
+                <a href="{{ base_url }}user/logout" class="block text-white py-2">Logout</a>
+            {% else %}
+                <a href="{{ base_url }}user/login" class="block text-white py-2">Login</a>
+                <a href="{{ base_url }}user/register" class="block text-white py-2">Register</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const gameModesBtn = document.getElementById('game-modes-btn');
+    const gameModesMenu = document.getElementById('game-modes-menu');
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileGameModesToggle = document.getElementById('mobile-game-modes-toggle');
+    const mobileGameModesMenu = document.getElementById('mobile-game-modes-menu');
+    const mobileDropdownIcon = document.getElementById('mobile-dropdown-icon');
+
+    // Desktop Dropdown
+    if (gameModesBtn && gameModesMenu) {
+        gameModesBtn.addEventListener('click', function(event) {
+            event.stopPropagation();
+            gameModesMenu.classList.toggle('hidden');
+        });
+    }
+
+    // Mobile Collapsible Section
+    if (mobileGameModesToggle && mobileGameModesMenu && mobileDropdownIcon) {
+        mobileGameModesToggle.addEventListener('click', function() {
+            mobileGameModesMenu.classList.toggle('hidden');
+            mobileDropdownIcon.classList.toggle('rotate-180');
+        });
+    }
+
+    // Global click listener to close menus
+    document.addEventListener('click', function(event) {
+        // Close desktop dropdown if clicking outside
+        if (gameModesMenu && !gameModesMenu.classList.contains('hidden') && gameModesBtn && !gameModesBtn.contains(event.target)) {
+            gameModesMenu.classList.add('hidden');
+        }
+        
+        // Close mobile menu if clicking outside of it and its toggle button
+        if (mobileMenu && !mobileMenu.classList.contains('hidden') && menuToggle && !menuToggle.contains(event.target) && !mobileMenu.contains(event.target)) {
+            mobileMenu.classList.add('hidden');
+        }
+    });
+    
+    // Hamburger menu toggle
+    if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener('click', function(event) {
+            event.stopPropagation();
+            mobileMenu.classList.toggle('hidden');
+        });
+    }
+});
+</script>

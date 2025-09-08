@@ -21,9 +21,14 @@
 
             <!-- Template Main CSS File -->
             <link href="{{ template_url }}assets/css/main.css" rel="stylesheet">
+            <style>
+                .rotate-180 {
+                    transform: rotate(180deg);
+                }
+            </style>
         {% endblock %}
     </head>
-    <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col overflow-y-auto">
+    <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col overflow-y-auto overflow-x-hidden">
         {{ include('visitorheader.html.twig') }}
         <!-- Animated Background Container -->
         <div class="fixed inset-0 -z-1">
@@ -41,12 +46,7 @@
                 {{ include('footer.html.twig') }}
             {% endblock %}
         </div>
-        <script>
-            document.getElementById('menu-toggle').addEventListener('click', function() {
-                var mobileMenu = document.getElementById('mobile-menu');
-                mobileMenu.classList.toggle('hidden');
-            });
-        </script>
+
         {% block scripts %}{% endblock %}
         <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="andrewrout" data-description="Support me on Buy me a coffee!" data-message="" data-color="#BD5FFF" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
     </body>

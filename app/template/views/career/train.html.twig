@@ -15,13 +15,14 @@
     </header>
 
     <!-- Filter and Sort Controls -->
-    <form id="filterSortForm" method="get" action="{{ base_url }}train" class="bg-gray-800 p-4 rounded-lg shadow-md mb-8 flex flex-wrap items-center justify-center gap-4">
+    <form id="filterSortForm" method="get" action="{{ base_url }}train/" class="bg-gray-800 p-4 rounded-lg shadow-md mb-8 flex flex-wrap items-center justify-center gap-4">
         <div>
             <label for="type" class="font-semibold text-gray-300 mr-2">Filter by Type:</label>
             <select name="type" id="type" class="bg-gray-700 border border-gray-600 text-white rounded-md p-2">
                 <option value="all" {% if currentFilter == 'all' %}selected{% endif %}>All</option>
                 <option value="strike" {% if currentFilter == 'strike' %}selected{% endif %}>Strike</option>
                 <option value="grapple" {% if currentFilter == 'grapple' %}selected{% endif %}>Grapple</option>
+                <option value="submission" {% if currentFilter == 'submission' %}selected{% endif %}>Submission</option>
                 <option value="highFlying" {% if currentFilter == 'highFlying' %}selected{% endif %}>High Flying</option>
             </select>
         </div>

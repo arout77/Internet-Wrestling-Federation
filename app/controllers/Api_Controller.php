@@ -520,7 +520,7 @@ class Api_Controller extends Base_Controller
             $damage += round( ( $attacker['stats']['strength'] ?? 0 ) * 0.25 );
             if ( ( $move['type'] ?? '' ) === 'strike' )
             {
-                $damage += round( ( $attacker['stats']['offense'] ?? 0 ) * 0.1 );
+                $damage += round( ( $attacker['stats']['offense'] ?? 0 ) * 0.2 );
             }
             else if ( ( $move['type'] ?? '' ) === 'grapple' )
             {

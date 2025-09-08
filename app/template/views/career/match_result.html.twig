@@ -3,13 +3,42 @@
 {% block title %}Match Result{% endblock %}
 
 {% block content %}
+<style>
+    #matchLog p {
+        padding: 4px 8px;
+        border-bottom: 1px solid #4a5568;
+    }
+     #matchLog p:last-child {
+        border-bottom: none;
+    }
+    #matchLog .damage { color: #f56565; }
+    #matchLog .info { color: #a0aec0; }
+    #matchLog .action { color: #63b3ed; }
+    #matchLog .result { color: #f6e05e; font-weight: bold; }
+</style>
 <div class="container mx-auto p-4 text-center">
     <header class="my-8">
         <h1 class="text-5xl font-bold text-yellow-400">Match Result</h1>
     </header>
 
-    <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-        {% if result.winner == result.prospect_name %}
+    <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
+        {% if result.leveled_up %}
+            <div class="bg-green-500 text-white p-4 rounded-lg mb-6 text-2xl font-bold animate-pulse">
+                LEVEL UP!
+            </div>
+        {% endif %}
+        
+        {# **NEW:** Bonus AP Notification #}
+        {% if result.bonus_ap_awarded %}
+            <div class="bg-blue-500 text-white p-4 rounded-lg mb-6 text-2xl font-bold animate-pulse">
+                BONUS! +1 Attribute Point!
+            </div>
+        {% endif %}
+
+        {% if result.winner == 'Draw' %}
+            <h2 class="text-4xl font-bold text-gray-400 mb-4">The Match is a Draw!</h2>
+            <p class="text-xl text-gray-300">An incredible battle against {{ result.opponent_name }} ends with no winner!</p>
+        {% elseif result.winner == result.prospect_name %}
             <h2 class="text-4xl font-bold text-green-400 mb-4">You Won!</h2>
             <p class="text-xl text-gray-300">Congratulations on your victory over {{ result.opponent_name }}!</p>
         {% else %}
@@ -17,20 +46,33 @@
             <p class="text-xl text-gray-300">A tough loss against {{ result.opponent_name }}. Time to train harder!</p>
         {% endif %}
 
-        <div class="mt-8 text-left">
-            <h3 class="text-2xl font-semibold text-white mb-4">Rewards</h3>
-            <div class="bg-gray-700 p-4 rounded-md">
-                <p class="text-lg">XP Earned: <span class="font-bold text-green-400">{{ result.xp_earned }}</span></p>
-                <p class="text-lg">Gold Earned: <span class="font-bold text-yellow-400">{{ result.gold_earned }}</span></p>
+        <div class="mt-8 text-left grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+                <h3 class="text-2xl font-semibold text-white mb-4">Rewards</h3>
+                <div class="bg-gray-700 p-4 rounded-md">
+                    <p class="text-lg">XP Earned: <span class="font-bold text-green-400">{{ result.xp_earned }}</span></p>
+                    <p class="text-lg">Gold Earned: <span class="font-bold text-yellow-400">{{ result.gold_earned }}</span></p>
+                </div>
+            </div>
+             <div>
+                <h3 class="text-2xl font-semibold text-white mb-4">Full Match Log</h3>
+                <div id="matchLog" class="bg-gray-900 rounded-lg p-2 h-64 overflow-y-auto border border-gray-700">
+                    {% for entry in result.log %}
+                         {% if 'takes' in entry and 'damage' in entry %}
+                            <p class="damage">{{ entry|raw }}</p>
+                        {% elseif entry starts with '--- The winner' %}
+                            <p class="result">{{ entry|raw }}</p>
+                        {% elseif entry starts with '---' %}
+                             <p class="info"><b>{{ entry|raw }}</b></p>
+                        {% else %}
+                            <p class="action">{{ entry|raw }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
         <form method="post" action="{{ base_url }}career/complete_match" class="mt-8">
-            <input type="hidden" name="xp_earned" value="{{ result.xp_earned }}">
-            <input type="hidden" name="gold_earned" value="{{ result.gold_earned }}">
-            <input type="hidden" name="prospect_id" value="{{ result.prospect_id }}">
-            <input type="hidden" name="opponent_id" value="{{ result.opponent_id }}">
-            <input type="hidden" name="winner_name" value="{{ result.winner }}">
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition duration-300">
                 Continue Career
             </button>

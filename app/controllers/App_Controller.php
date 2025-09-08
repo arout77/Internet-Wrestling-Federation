@@ -14,7 +14,7 @@ class App_Controller extends Base_Controller
     {
         parent::__construct( $app );
 
-        if ( !$_SESSION['user_id'] )
+        if ( !isset( $_SESSION['user_id'] ) )
         {
             // A more reliable way to detect an API request is to check the 'Accept' header.
             $is_api_request = isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'application/json' ) !== false;
@@ -47,19 +47,6 @@ class App_Controller extends Base_Controller
         );
     }
 
-    public function career()
-    {
-        $user = $this->model( 'User' )->getProspectByUserId( $_SESSION['user_id'] );
-
-        // The 'prospect' and 'record' variables are now globally available from the Base_Controller.
-        // We just need to render the view.
-        $this->template->render( 'app/career.html.twig', [
-            'isLoggedIn' => true,
-            'user'       => $user,
-            'prospect'   => $user,
-        ] );
-    }
-
     public function match()
     {
         $apiModel  = $this->model( 'Api' );
@@ -73,13 +60,8 @@ class App_Controller extends Base_Controller
 
     public function index()
     {
-        $this->template->render(
-            'home/index.html.twig',
-            [
-                'message'   => 'Page Not Found',
-                'site_name' => 'Rhapsody Framework',
-            ]
-        );
+        // Default action for App_Controller can redirect to career or a dashboard
+        $this->redirect( 'career' );
     }
 
     public function wrestlers()
