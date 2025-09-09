@@ -16,6 +16,75 @@ class CareerModel extends System_Model
     }
 
     /**
+     * Sets the archetype for a prospect and applies the initial attribute bonuses.
+     * @param string $userId The ID of the user.
+     * @param string $archetype The chosen archetype.
+     * @return bool|string True on success, error message on failure.
+     */
+    public function setProspectArchetype( $userId, $archetype )
+    {
+        $this->db->beginTransaction();
+        try {
+            $prospect = $this->getWrestlerByUserId( $userId );
+
+            if ( !$prospect )
+            {
+                $this->db->rollBack();
+                return "Prospect not found.";
+            }
+
+            if ( $prospect['lvl'] < 5 )
+            {
+                $this->db->rollBack();
+                return "You must be at least level 5 to choose an archetype.";
+            }
+
+            if ( !empty( $prospect['archetype'] ) )
+            {
+                $this->db->rollBack();
+                return "An archetype has already been chosen for this prospect.";
+            }
+
+            $validArchetypes = ['brawler', 'technician', 'high-flyer', 'powerhouse'];
+            if ( !in_array( $archetype, $validArchetypes ) )
+            {
+                $this->db->rollBack();
+                return "Invalid archetype selected.";
+            }
+
+            $bonusQueryPart = "";
+            switch ( $archetype )
+            {
+                case 'brawler':
+                    $bonusQueryPart = "brawlingAbility = brawlingAbility + 5, toughness = toughness + 5";
+                    break;
+                case 'technician':
+                    $bonusQueryPart = "technicalAbility = technicalAbility + 5, submissionDefense = submissionDefense + 5";
+                    break;
+                case 'high-flyer':
+                    $bonusQueryPart = "aerialAbility = aerialAbility + 5, stamina = stamina + 5";
+                    break;
+                case 'powerhouse':
+                    $bonusQueryPart = "strength = strength + 5, baseHp = baseHp + 50";
+                    break;
+            }
+
+            $sql  = "UPDATE prospects SET archetype = :archetype, {$bonusQueryPart} WHERE pid = :pid";
+            $stmt = $this->db->prepare( $sql );
+            $stmt->execute( [':archetype' => $archetype, ':pid' => $prospect['pid']] );
+
+            $this->db->commit();
+            return true;
+
+        }
+        catch ( \PDOException $e )
+        {
+            $this->db->rollBack();
+            return "Database error: " . $e->getMessage();
+        }
+    }
+
+    /**
      * Fetches a prospect's data from the database by their user ID.
      * This now correctly uses PDO.
      * @param string $userId The ID of the user.
@@ -173,18 +242,15 @@ class CareerModel extends System_Model
         {
             return 1000;
         }
-        // Legend Tier
         if ( $currentLevel >= 31 )
         {
             return 500;
         }
-        // Main Eventer Tier
         if ( $currentLevel >= 11 )
         {
             return 250;
         }
-        // Mid-Carder Tier
-        return 100; // Rookie Tier
+        return 100;
     }
 
     /**
@@ -217,7 +283,7 @@ class CareerModel extends System_Model
             if ( !$prospect )
             {
                 $this->db->rollBack();
-                return ['success' => false, 'leveled_up' => false, 'bonus_ap' => false];
+                return ['success' => false, 'leveled_up' => false, 'bonus_ap' => 0, 'leveled_up_rewards' => []];
             }
 
             $new_xp    = $prospect['current_xp'] + $xp_earned;
@@ -225,29 +291,32 @@ class CareerModel extends System_Model
             $new_level = $prospect['lvl'];
             $new_ap    = $prospect['attribute_points'];
 
-            $leveled_up       = false;
-            $bonus_ap_awarded = false;
+            $leveled_up         = false;
+            $bonus_ap_awarded   = 0;
+            $leveled_up_rewards = [];
 
             $xp_needed = $this->getXpForNextLevel( $new_level );
             while ( $new_xp >= $xp_needed )
             {
                 $new_level++;
                 $new_xp -= $xp_needed;
-                $new_ap += 5;
                 $leveled_up = true;
+
+                $level_up_reward = $this->getRewardsForLevel( $new_level );
+                $new_ap += $level_up_reward['ap'];
+                $new_gold += $level_up_reward['gold'];
+
+                $leveled_up_rewards[] = $level_up_reward;
 
                 if ( rand( 1, 3 ) === 1 )
                 {
                     $new_ap++;
-                    $bonus_ap_awarded = true;
+                    $bonus_ap_awarded++;
                 }
 
                 $xp_needed = $this->getXpForNextLevel( $new_level );
             }
 
-            // **FIX START:** Update prospect stats and win/loss records in separate, correct queries.
-
-            // Step 4: Update the prospect's main stats in the `prospects` table.
             $sqlProspect = "UPDATE prospects SET
                         current_xp = :xp,
                         gold = :gold,
@@ -263,7 +332,6 @@ class CareerModel extends System_Model
                 ':pid'   => $prospect['pid'],
             ] );
 
-            // Step 5: Update the win/loss record in the `wrestler_records` table.
             $sqlRecord = "INSERT INTO wrestler_records (wrestler_id, wins, losses, draws)
                           VALUES (:pid, :wins, :losses, 0)
                           ON DUPLICATE KEY UPDATE
@@ -278,18 +346,48 @@ class CareerModel extends System_Model
                 ':losses_update' => ( $won ? 0 : 1 ),
             ] );
 
-            // **FIX END**
-
             $this->db->commit();
-            return ['success' => true, 'leveled_up' => $leveled_up, 'bonus_ap' => $bonus_ap_awarded];
+            return ['success' => true, 'leveled_up' => $leveled_up, 'bonus_ap' => $bonus_ap_awarded, 'leveled_up_rewards' => $leveled_up_rewards];
 
         }
         catch ( \PDOException $e )
         {
             $this->db->rollBack();
-            // Optionally log the error: error_log($e->getMessage());
-            return ['success' => false, 'leveled_up' => false, 'bonus_ap' => false];
+            return ['success' => false, 'leveled_up' => false, 'bonus_ap' => 0, 'leveled_up_rewards' => []];
         }
+    }
+
+    /**
+     * Determines the AP and Gold rewards for leveling up to a specific level.
+     * @param int $newLevel The level the prospect has just reached.
+     * @return array An array containing 'ap' and 'gold' rewards.
+     */
+    private function getRewardsForLevel( $newLevel )
+    {
+        $ap   = 0;
+        $gold = 0;
+
+        if ( $newLevel <= 10 )
+        { // Rookie
+            $ap   = 1;
+            $gold = 1000;
+        }
+        elseif ( $newLevel <= 30 )
+        { // Mid-Carder
+            $ap   = 1;
+            $gold = 1500;
+        }
+        elseif ( $newLevel <= 60 )
+        { // Main Eventer
+            $ap   = 2;
+            $gold = 2000;
+        }
+        else
+        { // Legend
+            $ap   = 3;
+            $gold = 3000;
+        }
+        return ['ap' => $ap, 'gold' => $gold];
     }
 
     /**
@@ -375,8 +473,8 @@ class CareerModel extends System_Model
     {
         $levelDifference = $opponent->lvl - $prospect->lvl;
 
-        $baseXp   = $isWin ? 100 : 25;
-        $baseGold = $isWin ? 500 : 100;
+        $baseXp   = $isWin ? rand( 15, 25 ) : rand( 5, 10 );
+        $baseGold = $isWin ? rand( 25, 50 ) : rand( 5, 15 );
 
         // Bonus for fighting a tougher opponent
         $levelBonusFactor = max( 0, $levelDifference * 0.1 ); // 10% bonus per level higher

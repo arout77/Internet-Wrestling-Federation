@@ -31,15 +31,47 @@
                  {% if manager %}
                     <div class="mt-6 pt-6 border-t border-gray-700 text-center">
                         <h3 class="text-xl font-semibold text-white mb-2">Your Manager</h3>
-                        <img src="{{ base_url }}public/media/images/managers/{{ manager.image }}.webp" alt="{{ manager.name }}" class="w-48 h-48 rounded-full mx-auto mb-2 border-2 border-gray-600 object-cover object-top">
-                        <p class="font-bold text-lg text-yellow-400">{{ manager.name }}</p>
+                        <img src="{{ base_url }}public/media/images/managers/{{ manager.image }}.webp" alt="{{ manager.name }}" class="w-24 h-24 rounded-full mx-auto mb-2 border-2 border-gray-600 object-cover object-top">
+                        <p class="font-bold text-yellow-400">{{ manager.name }}</p>
                     </div>
                 {% endif %}
             </div>
 
             <!-- Right Column: Attributes & Actions -->
             <div class="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Attributes</h2>
+                
+                {% if prospect.lvl >= 5 and prospect.archetype is null %}
+                <div id="archetype-selection" class="mb-8">
+                    <h2 class="text-3xl font-bold text-yellow-400 mb-4">Choose Your Archetype!</h2>
+                    <p class="text-gray-300 mb-6">You've reached Level 5! It's time to define your wrestling style. This choice is permanent and will grant you a one-time attribute bonus.</p>
+                    <form action="{{ base_url }}career/select_archetype" method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
+                        <button type="submit" name="archetype" value="brawler" class="archetype-card text-left bg-gray-700 p-4 rounded-lg border-2 border-transparent hover:border-red-500 transition-all">
+                            <h3 class="text-xl font-bold text-red-400">Brawler</h3>
+                            <p class="text-sm text-gray-400">Bonus: +5 Brawling, +5 Toughness. Gains 10% more XP from matches won by knockout.</p>
+                        </button>
+                        
+                        <button type="submit" name="archetype" value="technician" class="archetype-card text-left bg-gray-700 p-4 rounded-lg border-2 border-transparent hover:border-blue-500 transition-all">
+                            <h3 class="text-xl font-bold text-blue-400">Technician</h3>
+                            <p class="text-sm text-gray-400">Bonus: +5 Technical, +5 Submission Defense. Slightly higher chance to reverse grapple moves.</p>
+                        </button>
+                        
+                        <button type="submit" name="archetype" value="high-flyer" class="archetype-card text-left bg-gray-700 p-4 rounded-lg border-2 border-transparent hover:border-purple-500 transition-all">
+                            <h3 class="text-xl font-bold text-purple-400">High-Flyer</h3>
+                            <p class="text-sm text-gray-400">Bonus: +5 Aerial, +5 Stamina. Gains more momentum from successful top-rope moves.</p>
+                        </button>
+                        
+                        <button type="submit" name="archetype" value="powerhouse" class="archetype-card text-left bg-gray-700 p-4 rounded-lg border-2 border-transparent hover:border-green-500 transition-all">
+                            <h3 class="text-xl font-bold text-green-400">Powerhouse</h3>
+                            <p class="text-sm text-gray-400">Bonus: +5 Strength, +50 HP. Grapple moves are slightly more effective against lighter opponents.</p>
+                        </button>
+
+                    </form>
+                </div>
+                {% endif %}
+
+
+                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Attributes & Actions</h2>
                 
                 <!-- Attributes -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -62,24 +94,11 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Actions</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <a href="{{ base_url }}career/find_match" class="bg-red-600 hover:bg-red-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">Find a Match</a>
                     <a href="{{ base_url }}career/train" class="bg-blue-600 hover:bg-blue-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">Training Center</a>
                     <a href="{{ base_url }}career/moveset" class="bg-purple-600 hover:bg-purple-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">View Moveset</a>
                     <a href="{{ base_url }}career/hire_manager" class="bg-yellow-600 hover:bg-yellow-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">Hire a Manager</a>
-                </div>
-                <div class="mt-4 text-sm text-gray-300 bg-gray-900 p-4 space-y-1">
-                    <p>* Attributes affect your performance in matches. Upgrade them to improve your chances of winning!</p>
-                    <p>* Attribute points can be used to upgrade skills, and are earned when you level up.</p>
-                    <p>* Gold can also be used to upgrade skills if you are out of attribute points.</p>
-                    <p>* Each upgrade increases the skill by 1 point, up to a maximum of 100.</p>
-                    <p>* Upgrade costs increase as the skill level increases.</p>
-                    <p>* Winning matches earns you XP and Gold to help you progress.</p>
-                    <p>* Hiring a manager provides bonuses to XP and Gold earnings, as well as attribute boosts.</p>
-                    <p>* Find Matches allows you to challenge other wrestlers in the league.</p>
-                    <p>* Winning matches against higher-level opponents will earn you more rewards.</p>
-                    <p>* Losing matches may result in penalties or loss of attribute points.</p>
                 </div>
             </div>
         </div>

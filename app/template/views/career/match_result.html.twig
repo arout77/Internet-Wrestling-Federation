@@ -25,16 +25,25 @@
         {% if result.leveled_up %}
             <div class="bg-green-500 text-white p-4 rounded-lg mb-6 text-2xl font-bold animate-pulse">
                 LEVEL UP!
+                {% if result.leveled_up_rewards %}
+                    <div class="text-lg font-normal mt-2">
+                        {% set total_ap = 0 %}
+                        {% set total_gold = 0 %}
+                        {% for reward in result.leveled_up_rewards %}
+                            {% set total_ap = total_ap + reward.ap %}
+                            {% set total_gold = total_gold + reward.gold %}
+                        {% endfor %}
+                        <p>+{{ total_ap }} Attribute Points, +{{ total_gold }} Gold!</p>
+                    </div>
+                {% endif %}
+                {% if result.bonus_ap > 0 %}
+                     <div class="text-base font-normal mt-1 text-yellow-200">
+                        +{{ result.bonus_ap }} BONUS Attribute Point{% if result.bonus_ap > 1 %}s{% endif %}!
+                    </div>
+                {% endif %}
             </div>
         {% endif %}
         
-        {# **NEW:** Bonus AP Notification #}
-        {% if result.bonus_ap_awarded %}
-            <div class="bg-blue-500 text-white p-4 rounded-lg mb-6 text-2xl font-bold animate-pulse">
-                BONUS! +1 Attribute Point!
-            </div>
-        {% endif %}
-
         {% if result.winner == 'Draw' %}
             <h2 class="text-4xl font-bold text-gray-400 mb-4">The Match is a Draw!</h2>
             <p class="text-xl text-gray-300">An incredible battle against {{ result.opponent_name }} ends with no winner!</p>
@@ -48,7 +57,7 @@
 
         <div class="mt-8 text-left grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-                <h3 class="text-2xl font-semibold text-white mb-4">Rewards</h3>
+                <h3 class="text-2xl font-semibold text-white mb-4">Match Rewards</h3>
                 <div class="bg-gray-700 p-4 rounded-md">
                     <p class="text-lg">XP Earned: <span class="font-bold text-green-400">{{ result.xp_earned }}</span></p>
                     <p class="text-lg">Gold Earned: <span class="font-bold text-yellow-400">{{ result.gold_earned }}</span></p>
@@ -80,3 +89,4 @@
     </div>
 </div>
 {% endblock %}
+
