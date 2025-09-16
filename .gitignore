@@ -1,3 +1,4 @@
 .env
 var/logs/system.log
 tournament_debug.log
+vendor/
