@@ -10,7 +10,9 @@
             <!-- Left Column: Wrestler Info & Stats -->
             <div class="lg:col-span-1 bg-gray-800 p-6 rounded-lg shadow-lg">
                 <div class="text-center mb-6">
-                    <img id="prospect-avatar" src="{{ prospect.image }}" alt="{{ prospect.name }}" class="w-48 h-48 rounded-full mx-auto mb-4 border-4 border-yellow-500 object-cover object-top">
+                    <div class="relative w-48 h-48 mx-auto">
+                        <img id="prospect-avatar-preview" src="{{ prospect.image }}" alt="{{ prospect.name }}" class="w-48 h-48 rounded-full mb-4 border-4 border-yellow-500 object-cover object-top">
+                    </div>
                     <h1 id="prospect-name" class="text-4xl font-bold text-yellow-400">{{ prospect.name }}</h1>
                     <p class="text-lg text-gray-400">{{ prospect.height }} / {{ prospect.weight }} lbs</p>
                 </div>
@@ -48,7 +50,7 @@
                         
                         <button type="submit" name="archetype" value="brawler" class="archetype-card text-left bg-gray-700 p-4 rounded-lg border-2 border-transparent hover:border-red-500 transition-all">
                             <h3 class="text-xl font-bold text-red-400">Brawler</h3>
-                            <p class="text-sm text-gray-400">Bonus: +5 Brawling, +5 Toughness. Gains 10% more XP from matches won by knockout.</p>
+                            <p class="text-sm text-gray-400">Bonus: +5 Brawling, +5 Toughness. Gains 10% more XP from matches.</p>
                         </button>
                         
                         <button type="submit" name="archetype" value="technician" class="archetype-card text-left bg-gray-700 p-4 rounded-lg border-2 border-transparent hover:border-blue-500 transition-all">
@@ -71,7 +73,7 @@
                 {% endif %}
 
 
-                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Attributes & Actions</h2>
+                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Attributes</h2>
                 
                 <!-- Attributes -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -93,6 +95,8 @@
                     {% endfor %}
                 </div>
 
+                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Actions</h2>
+
                 <!-- Action Buttons -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <a href="{{ base_url }}career/find_match" class="bg-red-600 hover:bg-red-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">Find a Match</a>
@@ -100,35 +104,73 @@
                     <a href="{{ base_url }}career/moveset" class="bg-purple-600 hover:bg-purple-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">View Moveset</a>
                     <a href="{{ base_url }}career/hire_manager" class="bg-yellow-600 hover:bg-yellow-700 text-white text-center font-bold py-4 px-6 rounded-lg transition-colors">Hire a Manager</a>
                 </div>
+
+                <div class="mt-4 text-sm text-gray-300 bg-gray-900 p-4 space-y-2">
+                    <p>* Attributes affect your performance in matches. Upgrade them to improve your chances of winning!</p>
+                    <p>* Attribute points can be used to upgrade skills, and are earned when you level up.</p>
+                    <p>* Gold can also be used to upgrade skills if you are out of attribute points.</p>
+                    <p>* Each upgrade increases the skill by 1 point, up to a maximum of 100.</p>
+                    <p>* Upgrade costs increase as the skill level increases.</p>
+                    <p>* Winning matches earns you XP and Gold to help you progress.</p>
+                    <p>* Hiring a manager provides bonuses to XP and Gold earnings, as well as attribute boosts.</p>
+                    <p>* Find Matches allows you to challenge other wrestlers in the league.</p>
+                    <p>* Winning matches against higher-level opponents will earn you more rewards.</p>
+                    <p>* Losing matches may result in penalties or loss of attribute points.</p>
+                </div>
+                
+                 {% if prospect.lvl >= 100 %}
+                    <div class="mt-8 pt-8 border-t border-gray-700">
+                        <h2 class="text-3xl font-bold text-center text-yellow-400 mb-4">Hall of Fame</h2>
+                        <p class="text-gray-300 text-center mb-6">You have reached the pinnacle of your career! You can now retire this prospect. They will be added to the main game roster as a legendary opponent for other players to face in their own careers. This action is permanent and will allow you to start a new career.</p>
+                        <form action="{{ base_url }}career/retire" method="post">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors" onclick="return confirm('Are you sure you want to retire this prospect? This action cannot be undone.')">
+                                Retire to Hall of Fame
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+
             </div>
         </div>
     {% else %}
         <!-- Prospect Creation Modal -->
-        <div id="creation-modal" class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-lg mx-auto">
+        <div id="creation-modal" class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
             <h2 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Create Your Wrestler</h2>
             <form id="create-prospect-form">
-                <div class="grid grid-cols-4 gap-4 mb-4">
-                    {% for i in 1..8 %}
-                        <img src="{{ base_url }}public/media/images/avatars/gen{{ i }}.png" class="w-24 h-24 rounded-full cursor-pointer border-4 border-transparent hover:border-yellow-500 transition-all duration-200 avatar-selection" data-avatar="{{ base_url }}public/media/images/avatars/gen{{ i }}.png">
-                    {% endfor %}
-                </div>
-                <input type="hidden" id="wrestler-avatar" required>
-
-                <div class="mb-4">
-                    <label for="wrestler-name" class="block text-gray-300 mb-2">Name</label>
-                    <input type="text" id="wrestler-name" class="w-full bg-gray-700 p-2 rounded text-white" required>
-                </div>
-                <div class="flex gap-4 mb-6">
-                    <div class="w-1/2">
-                        <label for="wrestler-height" class="block text-gray-300 mb-2">Height</label>
-                        <input type="text" id="wrestler-height" class="w-full bg-gray-700 p-2 rounded text-white" placeholder="e.g., 6'2&quot;" required>
+                <div class="flex flex-col md:flex-row gap-8 items-start">
+                    <!-- Left Side: Avatar Selection -->
+                    <div class="w-full md:w-1/2">
+                         <h3 class="text-xl text-white mb-4 text-center">Select Your Avatar</h3>
+                        <div class="grid grid-cols-4 gap-4 mb-4">
+                            {% for i in 1..16 %}
+                                <img src="{{ base_url }}public/media/images/avatars/gen{{ i }}.png" class="w-24 h-24 rounded-full cursor-pointer border-4 border-transparent hover:border-yellow-500 transition-all duration-200 avatar-selection" data-avatar="{{ base_url }}public/media/images/avatars/gen{{ i }}.png">
+                            {% endfor %}
+                        </div>
                     </div>
-                    <div class="w-1/2">
-                        <label for="wrestler-weight" class="block text-gray-300 mb-2">Weight (lbs)</label>
-                        <input type="number" id="wrestler-weight" class="w-full bg-gray-700 p-2 rounded text-white" placeholder="e.g., 250" required>
+                     <!-- Right Side: Preview and Details -->
+                    <div class="w-full md:w-1/2">
+                        <div class="relative w-48 h-48 mx-auto mb-6">
+                            <img id="prospect-avatar-preview" src="https://placehold.co/192x192/1F2937/4B5563?text=Select" alt="Selected Avatar" class="w-48 h-48 rounded-full border-4 border-gray-600 object-cover">
+                        </div>
+                        <input type="hidden" id="wrestler-avatar" required>
+                        <div class="mb-4">
+                            <label for="wrestler-name" class="block text-gray-300 mb-2">Name</label>
+                            <input type="text" id="wrestler-name" class="w-full bg-gray-700 p-2 rounded text-white" required>
+                        </div>
+                        <div class="flex gap-4 mb-6">
+                            <div class="w-1/2">
+                                <label for="wrestler-height" class="block text-gray-300 mb-2">Height</label>
+                                <input type="text" id="wrestler-height" class="w-full bg-gray-700 p-2 rounded text-white" placeholder="e.g., 6'2&quot;" required pattern="\d+'\d{1,2}&quot;">
+                                <small class="text-gray-400">Format: 5'11"</small>
+                            </div>
+                            <div class="w-1/2">
+                                <label for="wrestler-weight" class="block text-gray-300 mb-2">Weight (lbs)</label>
+                                <input type="number" id="wrestler-weight" class="w-full bg-gray-700 p-2 rounded text-white" placeholder="e.g., 250" required>
+                            </div>
+                        </div>
+                         <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors">Begin Career</button>
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors">Begin Career</button>
             </form>
         </div>
     {% endif %}
@@ -196,27 +238,42 @@
 
                     if (result.success) {
                         const prospect = result.prospect;
+                        // Update local dashboard values
                         document.getElementById(`attr-${attribute}`).textContent = prospect[attribute];
                         document.getElementById('prospect-gold').textContent = prospect.gold;
                         document.getElementById('prospect-ap').textContent = prospect.attribute_points;
-                        updateAttributeCosts(); // Re-calculate costs after upgrade
+                        
+                        // Update navbar values
+                        updateNavbarGold(prospect.gold);
+                        updateNavbarAP(prospect.attribute_points);
+
+                        // Recalculate costs
+                        updateAttributeCosts(); 
+
+                        // Show success notification
+                        showNotification(result.message || 'Attribute upgraded!', 'success');
                     } else {
-                        alert('Upgrade failed: ' + result.error);
+                        showNotification('Upgrade failed: ' + result.error, 'error');
                     }
                 } catch (error) {
                     console.error('Upgrade error:', error);
-                    alert('An error occurred. Please try again.');
+                    showNotification('An error occurred. Please try again.', 'error');
                 }
             });
         });
 
         const creationForm = document.getElementById('create-prospect-form');
         if (creationForm) {
+            const avatarPreview = document.getElementById('prospect-avatar-preview');
+            const avatarInput = document.getElementById('wrestler-avatar');
+
              document.querySelectorAll('.avatar-selection').forEach(img => {
                 img.addEventListener('click', (e) => {
                     document.querySelectorAll('.avatar-selection').forEach(el => el.classList.remove('border-yellow-500'));
                     e.target.classList.add('border-yellow-500');
-                    document.getElementById('wrestler-avatar').value = e.target.dataset.avatar;
+                    const avatarUrl = e.target.dataset.avatar;
+                    avatarInput.value = avatarUrl;
+                    avatarPreview.src = avatarUrl;
                 });
             });
 
@@ -226,8 +283,13 @@
                     wrestlerName: document.getElementById('wrestler-name').value,
                     wrestlerHeight: document.getElementById('wrestler-height').value,
                     wrestlerWeight: document.getElementById('wrestler-weight').value,
-                    wrestlerAvatar: document.getElementById('wrestler-avatar').value,
+                    wrestlerAvatar: avatarInput.value,
                 };
+
+                if (!prospectData.wrestlerAvatar) {
+                    alert('Please select an avatar.');
+                    return;
+                }
 
                 try {
                     const response = await fetch('{{ base_url }}career/create_prospect', {
@@ -249,3 +311,4 @@
     });
 </script>
 {% endblock %}
+

@@ -10,7 +10,7 @@ const matchLog = document.getElementById('matchLog'); // Ensure matchLog is acce
 const spinner = document.getElementById('spinner'); // Corrected: Moved declaration to a safe place.
 
 // Base URL for wrestler images
-const IMAGE_BASE_URL = 'http://localhost/iwf-betting/public/media/images/';
+const IMAGE_BASE_URL = baseUrl + '/public/media/images/';
 
 /**
  * Shows the animated spinner.

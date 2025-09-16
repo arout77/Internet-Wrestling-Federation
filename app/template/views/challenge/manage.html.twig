@@ -1,0 +1,213 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Manage Challenges{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Manage Challenges</h1>
+        <p class="text-xl text-gray-300 mt-4">Review your incoming and outgoing challenges.</p>
+        <a href="{{ base_url }}challenge/index" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Challenge Zone</a>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <!-- Incoming Challenges -->
+        <div>
+            <h2 class="text-3xl font-bold text-green-400 mb-4">Incoming Challenges</h2>
+            <div class="space-y-4">
+                {% for challenge in incoming_challenges %}
+                    <div class="bg-gray-800 p-4 rounded-lg shadow-md flex justify-between items-center">
+                        <div>
+                            <p class="text-lg text-white">
+                                <span class="font-bold">{{ challenge.challenger_name }}</span> (Lvl {{ challenge.challenger_level }}) has challenged you!
+                            </p>
+                            <p class="text-yellow-400">Wager: {{ challenge.wager_amount }} Gold</p>
+                        </div>
+                        <button class="view-challenge-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md" data-challenge-id="{{ challenge.id }}" data-challenger-pid="{{ challenge.challenger_pid }}" data-wager="{{ challenge.wager_amount }}">
+                            View Challenge
+                        </button>
+                    </div>
+                {% else %}
+                    <p class="text-gray-400">You have no incoming challenges.</p>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Outgoing Challenges -->
+        <div>
+            <h2 class="text-3xl font-bold text-yellow-500 mb-4">Outgoing Challenges</h2>
+            <div class="space-y-4">
+                {% for challenge in outgoing_challenges %}
+                     <div class="bg-gray-800 p-4 rounded-lg shadow-md flex justify-between items-center">
+                        <div>
+                            <p class="text-lg text-white">
+                                Challenge sent to <span class="font-bold">{{ challenge.defender_name }}</span> (Lvl {{ challenge.defender_level }})
+                            </p>
+                            <p class="text-yellow-400">Wager: {{ challenge.wager_amount }} Gold</p>
+                        </div>
+                        <span class="text-gray-500">Pending...</span>
+                    </div>
+                {% else %}
+                     <p class="text-gray-400">You have no outgoing challenges.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Challenge Modal -->
+<div id="viewChallengeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-gray-900 p-6 rounded-lg shadow-2xl w-full max-w-4xl text-white border-2 border-yellow-500 flex flex-col max-h-[90vh]">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-3xl font-bold text-yellow-400">Challenge Received!</h2>
+            <button id="closeViewModal" class="text-3xl font-bold hover:text-gray-400">&times;</button>
+        </div>
+        
+        <div id="view-modal-content" class="flex-grow overflow-y-auto">
+            <!-- Content will be injected by JS -->
+        </div>
+
+        <div id="view-modal-loader" class="text-center py-16 hidden">
+             <p class="text-xl text-gray-300">Loading Challenger Details...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const myProspectData = {{ myProspect|json_encode|raw }};
+
+    document.querySelectorAll('.view-challenge-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const challengeId = button.dataset.challengeId;
+            const challengerPid = button.dataset.challengerPid;
+            const wager = button.dataset.wager;
+            openViewModal(challengeId, challengerPid, wager);
+        });
+    });
+
+    document.getElementById('closeViewModal').addEventListener('click', () => {
+        document.getElementById('viewChallengeModal').classList.add('hidden');
+    });
+
+    async function openViewModal(challengeId, challengerPid, wager) {
+        const modal = document.getElementById('viewChallengeModal');
+        const contentContainer = document.getElementById('view-modal-content');
+        const loader = document.getElementById('view-modal-loader');
+        
+        contentContainer.innerHTML = '';
+        loader.classList.remove('hidden');
+        modal.classList.remove('hidden');
+
+        try {
+            // We use the opponent's PID, which is the challenger's PID in this context
+            const response = await fetch(`{{ base_url }}challenge/ajax_get_challenge_details/${challengerPid}`);
+            const data = await response.json();
+
+            if (!data.success) throw new Error(data.error);
+            
+            // Note: In this context, opponent_prospect is the challenger
+            populateViewModalContent(contentContainer, challengeId, data.opponent_prospect, wager, data.odds);
+            loader.classList.add('hidden');
+
+        } catch (error) {
+            contentContainer.innerHTML = `<p class="text-red-500 text-center">Error: ${error.message}</p>`;
+            loader.classList.add('hidden');
+        }
+    }
+
+    function populateViewModalContent(container, challengeId, challenger, wager, oddsData) {
+        const myOdds = oddsData.probabilities[myProspectData.name];
+        const opponentOdds = oddsData.probabilities[challenger.name];
+        const myMoneyline = oddsData.moneyline[myProspectData.name];
+        const opponentMoneyline = oddsData.moneyline[challenger.name];
+        const potentialPayout = parseInt(wager) + (parseInt(wager) * (1 / myOdds) - parseInt(wager));
+
+        let traitsHtml = challenger.traits.length > 0 
+            ? challenger.traits.map(t => `<span class="bg-gray-700 px-2 py-1 rounded text-sm">${t.name}</span>`).join(' ')
+            : '<span class="text-gray-500">None</span>';
+        
+        container.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Challenger Details -->
+                <div class="text-center">
+                    <img src="${challenger.image}" alt="${challenger.name}" class="w-40 h-40 rounded-full mx-auto mb-4 border-4 border-red-500 object-cover object-top">
+                    <h3 class="text-3xl font-bold text-red-400">${challenger.name}</h3>
+                    <p class="text-xl text-gray-300">Level: ${challenger.lvl}</p>
+                    <p class="text-lg text-gray-400">${challenger.height} / ${challenger.weight} lbs</p>
+                    <p class="text-md text-gray-400 mt-2">Manager: <span class="font-semibold">${challenger.manager_name || 'None'}</span></p>
+                    <div class="mt-4">
+                        <h4 class="font-bold text-lg mb-2">Traits</h4>
+                        <div class="flex flex-wrap justify-center gap-2">${traitsHtml}</div>
+                    </div>
+                </div>
+                <!-- Your Details & Wager -->
+                <div>
+                    <h4 class="text-xl font-bold text-center mb-4">Your Prospect: ${myProspectData.name} (Lvl ${myProspectData.lvl})</h4>
+                    <div class="grid grid-cols-2 gap-4 text-lg bg-gray-800 p-4 rounded-md">
+                        <p>Strength: <span class="font-bold text-white float-right">${myProspectData.strength}</span></p>
+                        <p>Technical: <span class="font-bold text-white float-right">${myProspectData.technicalAbility}</span></p>
+                        <p>Brawling: <span class="font-bold text-white float-right">${myProspectData.brawlingAbility}</span></p>
+                        <p>Stamina: <span class="font-bold text-white float-right">${myProspectData.stamina}</span></p>
+                        <p>Aerial: <span class="font-bold text-white float-right">${myProspectData.aerialAbility}</span></p>
+                        <p>Toughness: <span class="font-bold text-white float-right">${myProspectData.toughness}</span></p>
+                    </div>
+
+                    <div class="mt-6 bg-gray-800 p-4 rounded-md">
+                        <h4 class="text-xl font-bold text-center mb-4">The Wager</h4>
+                        <p class="text-center text-3xl font-bold text-yellow-400">${wager} Gold</p>
+                        <div class="text-center text-lg mt-4">
+                            <p>Your Win Chance: <span class="font-bold text-green-400">${(myOdds * 100).toFixed(0)}% (${myMoneyline})</span></p>
+                            <p class="text-sm text-gray-400">Winning this match would pay out ~${potentialPayout.toFixed(0)} Gold</p>
+                        </div>
+                    </div>
+
+                    <div id="modal-actions" class="mt-6 flex gap-4">
+                        <button id="acceptChallengeBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Accept</button>
+                        <button id="declineChallengeBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Decline</button>
+                    </div>
+                </div>
+            </div>`;
+
+        document.getElementById('acceptChallengeBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`{{ base_url }}challenge/accept`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ challenge_id: challengeId })
+                });
+                const result = await response.json();
+                if(result.success) {
+                    const winnerName = result.result.winner ? result.result.winner.name : "a Draw";
+                    alert(`Challenge accepted! The winner is... ${winnerName}! Check your notifications for the result.`);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch(err) {
+                 alert('An error occurred.');
+            }
+        });
+        
+        document.getElementById('declineChallengeBtn').addEventListener('click', async () => {
+             try {
+                const response = await fetch(`{{ base_url }}challenge/decline`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ challenge_id: challengeId })
+                });
+                const result = await response.json();
+                if(result.success) {
+                    alert(result.message);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch(err) {
+                 alert('An error occurred.');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

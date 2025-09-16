@@ -138,10 +138,28 @@ body {
 .btn-info:hover {
     background-color: $lt-blue;
 }
+
+.btn-caution {
+    background-color: $yellow;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: #242424;
+}
+.btn-caution:hover {
+    background-color: goldenrod;
+}
+
+.btn-generic {
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.btn-generic:hover {
+    background-blend-mode: lighten;
+}
 #matchSetup {
     box-shadow: inset -3px 9px 108px 61px rgb(12 4 108 / 46%);
     border: 0px solid var(--matchsetup-border);
-    background-image: url(/iwf-betting/public/media/images/bg/arena2.jpg);
+    background-image: url(https://iwf-wrestling.com/public/media/images/bg/arena2.jpg);
     background-repeat: no-repeat;
     background-size: cover;
 }
@@ -1022,4 +1040,37 @@ html {
 
 .help-button:hover {
     background-color: #2D3748; /* gray-800 */
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+}
+.flash-message {
+    position: fixed;
+    top: 8rem; /* Adjust to be below header */
+    right: 1.5rem;
+    z-index: 1050;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    opacity: 0;
+    transform: translateX(100%);
+    animation: slideInAndOut 5s forwards;
+}
+@keyframes slideInAndOut {
+    10% { opacity: 1; transform: translateX(0); }
+    90% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(100%); }
+}
+
+/* Glassmorphism effect */
+.glass {
+    background-color: var(--roster-bg);
+    backdrop-filter: blur(10px); /* Frosted glass effect */
+    -webkit-backdrop-filter: blur(10px); /* Safari support */
+    border: 1px solid var(--roster-border); /* Subtle light border */
+    box-shadow: inset -3px 9px 32px 20px rgba(0, 0, 0, 0.37); /* Shadow for depth */
+    width: -webkit-fill-available;
 }

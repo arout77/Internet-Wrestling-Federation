@@ -1,0 +1,81 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Career Mode Guide - IWF Guide{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Career Mode Guide</h1>
+        <p class="text-xl text-gray-300 mt-4">From Rookie to Hall of Famer.</p>
+        <a href="{{ base_url }}docs" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Main Guide</a>
+    </header>
+
+    <div class="space-y-12 max-w-4xl mx-auto">
+        <!-- Creating Your Prospect -->
+        <section id="creation" class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">1. Creating Your Prospect</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                Your journey begins by creating a unique wrestler. On the Career Mode screen, you'll be prompted to provide a name, height, weight, and select one of 16 distinct avatars. This initial setup establishes your identity in the IWF.
+            </p>
+            <p class="text-gray-300">
+                Once created, your prospect starts at Level 1 with balanced base attributes and a fundamental set of moves. This is the blank canvas for you to build your legend upon.
+            </p>
+        </section>
+
+        <!-- Leveling and Attributes -->
+        <section id="leveling" class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">2. Leveling Up & Attributes</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                The primary way to improve your prospect is by competing in matches to earn Experience Points (XP). Winning matches and defeating higher-level opponents will yield more XP. When your XP bar is full, you'll level up!
+            </p>
+            <h3 class="text-2xl font-semibold text-white mb-3">Rewards for Leveling Up:</h3>
+            <ul class="list-disc list-inside text-gray-300 space-y-2 mb-6">
+                <li><strong>Attribute Points (AP):</strong> You receive AP each time you level up. These can be spent to increase your core attributes. You also have a chance to earn bonus AP!</li>
+                <li><strong>Gold:</strong> You are awarded a sum of gold, which increases as you reach higher level tiers.</li>
+            </ul>
+            <h3 class="text-2xl font-semibold text-white mb-3">Spending Attribute Points:</h3>
+            <p class="text-gray-300">
+                On the Career dashboard, you can spend your AP to increase any of the six core attributes. Once you run out of AP, you can still upgrade attributes using gold, but the cost increases with each point purchased for a specific stat.
+            </p>
+        </section>
+
+        <!-- Archetypes -->
+        <section id="archetypes" class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">3. Choosing Your Archetype (Level 5)</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                At Level 5, you'll make a crucial, permanent decision that defines your wrestler's style. Choosing an Archetype grants a significant one-time stat bonus and unlocks unique passive abilities that affect gameplay.
+            </p>
+            <div class="space-y-4">
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h4 class="text-xl font-bold text-red-400">Brawler</h4>
+                    <p class="text-gray-300"><strong>Bonus:</strong> +5 Brawling, +5 Toughness.<br><strong>Perk:</strong> Gains 10% more XP from matches.</p>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h4 class="text-xl font-bold text-blue-400">Technician</h4>
+                    <p class="text-gray-300"><strong>Bonus:</strong> +5 Technical, +5 Submission Defense.<br><strong>Perk:</strong> Slightly higher chance to reverse grapple moves.</p>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h4 class="text-xl font-bold text-purple-400">High-Flyer</h4>
+                    <p class="text-gray-300"><strong>Bonus:</strong> +5 Aerial, +5 Stamina.<br><strong>Perk:</strong> Gains more momentum from successful top-rope moves.</p>
+                </div>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h4 class="text-xl font-bold text-green-400">Powerhouse</h4>
+                    <p class="text-gray-300"><strong>Bonus:</strong> +5 Strength, +50 HP.<br><strong>Perk:</strong> Grapple moves are slightly more effective against lighter opponents.</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Retirement / Prestige System -->
+        <section id="retirement" class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">4. Retirement & The Hall of Fame (Level 100)</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                Reaching Level 100 is the pinnacle of a prospect's career, but it's not the end of their story. Once you hit the max level, you gain the option to "Retire" your wrestler.
+            </p>
+            <h3 class="text-2xl font-semibold text-white mb-3">The Ultimate Reward:</h3>
+            <p class="text-gray-300">
+                When you retire a prospect, they are immortalized. A copy of your wrestler, with all their final stats, moves, and traits, is permanently added to the main roster. They will now appear as a formidable, high-level opponent for other players—and even for you—in future Career Mode playthroughs. After retiring your legend, your career slate is wiped clean, allowing you to create a new prospect and begin the journey all over again, now in a world populated by your own creations.
+            </p>
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Game Modes - IWF Guide{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Game Modes</h1>
+        <p class="text-xl text-gray-300 mt-4">Discover the different ways to experience the IWF.</p>
+        <a href="{{ base_url }}docs" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Main Guide</a>
+    </header>
+
+    <div class="space-y-8 max-w-4xl mx-auto">
+        <!-- Career Mode -->
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Career Mode</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                This is the heart of the IWF experience. In Career Mode, you create your own custom wrestler, known as a "prospect," from scratch. You'll guide them from a Level 1 rookie to a Level 100 Hall of Famer.
+            </p>
+            <ul class="list-disc list-inside text-gray-300 space-y-2">
+                <li>Compete in matches against the IWF roster to earn experience points (XP) and gold.</li>
+                <li>Level up to increase your attributes and unlock new opportunities.</li>
+                <li>Spend gold to learn new moves at the Training Center or hire legendary managers for powerful bonuses.</li>
+                <li>At Level 5, define your wrestler's future by choosing a permanent <a href="{{ base_url }}docs/career_guide#archetypes" class="text-blue-400 hover:underline">Archetype</a>.</li>
+                <li>Challenge other users' prospects in the <a href="{{ base_url }}docs/features_rewards#challenge-zone" class="text-blue-400 hover:underline">Challenge Zone</a> and wager gold on the outcome.</li>
+            </ul>
+        </div>
+
+        <!-- Match Simulator -->
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Match Simulator</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                Ever wondered who would win between Hulk Hogan in his prime and "Stone Cold" Steve Austin? The Match Simulator is your sandbox for booking any dream match you can imagine.
+            </p>
+            <ul class="list-disc list-inside text-gray-300 space-y-2">
+                <li>Select any two wrestlers from the extensive IWF roster for a one-on-one showdown.</li>
+                <li>Create legendary tag teams and pit them against each other in tag team matches.</li>
+                <li>Run a single simulation to see a detailed, turn-by-turn log of the action.</li>
+                <li>Use the bulk simulation tool to run a match 100 or 1,000 times to see who wins most often and calculate betting odds.</li>
+            </ul>
+        </div>
+
+        <!-- Tournament Mode -->
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Tournament Mode</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                Test your wrestling knowledge in this prediction-based game mode. Enter a 16 or 32-wrestler tournament and pick the winners for each round. The more correct picks you make, the bigger your gold prize!
+            </p>
+             <ul class="list-disc list-inside text-gray-300 space-y-2">
+                <li>Enter standard tournaments or special themed tournaments like "Battle of the Giants."</li>
+                <li>Spend a small amount of gold to see the simulation engine's win probabilities for the first round.</li>
+                <li>If you get a pick wrong in the first round, you can pay a small fee to continue.</li>
+                <li>Make it through the entire tournament to win a massive gold payout!</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

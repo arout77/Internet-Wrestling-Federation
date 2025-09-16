@@ -75,7 +75,7 @@ function findWrestlerById(id) {
  */
 async function recordMatchResult(resultData) {
     try {
-        const response = await fetch('http://localhost/iwf-betting/api/record_match_result', {
+        const response = await fetch(baseUrl + '/api/record_match_result', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -296,7 +296,7 @@ async function advanceTurn(isBulkSimulation = false) {
     };
 
     try {
-        const response = await fetch('http://localhost/iwf-betting/api/simulate_turn', {
+        const response = await fetch(baseUrl + '/api/simulate_turn', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -458,7 +458,7 @@ async function runMultipleSimulations() {
             };
 
             try {
-                const response = await fetch('http://localhost/iwf-betting/api/simulate_turn', {
+                const response = await fetch(baseUrl + '/api/simulate_turn', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),

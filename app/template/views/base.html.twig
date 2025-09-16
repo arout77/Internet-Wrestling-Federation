@@ -4,28 +4,109 @@
         {% block head %}
             <meta charset="utf-8">
             <meta content="width=device-width, initial-scale=1.0" name="viewport">
+            
+            <!-- Core SEO Meta Tags -->
             <title>{% block title %}{% endblock %} - Internet Wrestling Federation</title>
             <meta name="description" content="Step into the ring with IWF! Create your dream wrestling matches and simulate epic battles using historical wrestlers from the Golden Age to present in this ultimate online wrestling simulator.">
-            <meta name="keywords" content="">
-
+            <meta name="keywords" content="wrestling simulator, online wrestling game, career mode wrestling, booking simulator, custom wrestler, dream match generator">
+            <meta name="author" content="Internet Wrestling Federation">
             <link rel="canonical" href="{{ base_url }}">
+
+            <!-- Open Graph / Facebook Meta Tags -->
+            <meta property="og:type" content="website">
+            <meta property="og:url" content="{{ base_url }}">
+            <meta property="og:title" content="IWF - The Ultimate Online Wrestling Simulator">
+            <meta property="og:description" content="Create dream matches, play through a career mode, and book your own shows with a roster of wrestling legends.">
+            <meta property="og:image" content="{{ base_url }}public/media/images/iwf-social-banner.jpg">
+
+            <!-- Twitter Card Meta Tags -->
+            <meta name="twitter:card" content="summary_large_image">
+            <meta property="twitter:url" content="{{ base_url }}">
+            <meta name="twitter:title" content="IWF - The Ultimate Online Wrestling Simulator">
+            <meta name="twitter:description" content="Create dream matches, play through a career mode, and book your own shows with a roster of wrestling legends.">
+            <meta name="twitter:image" content="{{ base_url }}public/media/images/iwf-social-banner.jpg">
             
             <!-- Favicons -->
             <link href="{{ base_url }}assets/img/favicon.png" rel="icon">
             <link href="{{ base_url }}assets/img/apple-touch-icon.png" rel="apple-touch-icon">
 
+            <!-- Stylesheets -->
             <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
-            <!-- Template Main CSS File -->
             <link href="{{ template_url }}assets/css/main.css" rel="stylesheet">
-            <style>
-                .rotate-180 {
-                    transform: rotate(180deg);
+
+            <!-- Scripts -->
+            <script src="https://www.paypal.com/sdk/js?client-id=test&components=buttons&enable-funding=venmo&currency=USD"></script>
+            
+            <script>
+                // Placed in head to ensure functions are available globally before other scripts run
+                function showNotification(message, type = 'info') {
+                    const container = document.body;
+                    const notification = document.createElement('div');
+                    
+                    let bgColor, textColor, icon;
+                    switch(type) {
+                        case 'success': bgColor = 'bg-green-500'; textColor = 'text-white'; icon = '✅'; break;
+                        case 'error': bgColor = 'bg-red-500'; textColor = 'text-white'; icon = '❌'; break;
+                        case 'warning': bgColor = 'bg-yellow-500'; textColor = 'text-black'; icon = '⚠️'; break;
+                        default: bgColor = 'bg-blue-500'; textColor = 'text-white'; icon = 'ℹ️'; break;
+                    }
+
+                    notification.className = `fixed bottom-5 right-5 ${bgColor} ${textColor} p-4 rounded-lg shadow-lg flex items-center z-50 animate-fade-in-up`;
+                    notification.innerHTML = `<span class="text-2xl mr-3">${icon}</span><span>${message}</span>`;
+                    container.appendChild(notification);
+
+                    setTimeout(() => {
+                        notification.style.animation = 'fade-out 0.5s forwards';
+                        setTimeout(() => notification.remove(), 500);
+                    }, 5000);
                 }
-            </style>
+
+                function updateNavbarGold(newGoldAmount) {
+                    const goldDisplay = document.getElementById('navbar-gold-display');
+                    if (goldDisplay) goldDisplay.textContent = newGoldAmount;
+                }
+                
+                function updateNavbarAP(newAPAmount) {
+                    const apDisplay = document.getElementById('navbar-ap-display');
+                    const apContainer = document.getElementById('navbar-ap-container');
+                    if (apDisplay && apContainer) {
+                        apDisplay.textContent = newAPAmount;
+                        apContainer.classList.toggle('hidden', parseInt(newAPAmount, 10) <= 0);
+                    }
+                }
+            </script>
+
+            <!-- JSON-LD Schema Markup for SEO -->
+            <script type="application/ld+json">
+            {
+              "@context": "https://schema.org",
+              "@type": "VideoGame",
+              "name": "Internet Wrestling Federation (IWF)",
+              "url": "{{ base_url }}",
+              "image": "{{ base_url }}public/media/images/logo-10.png",
+              "description": "An online wrestling simulator where users can create dream matches, play through a career mode with a custom wrestler, and book their own shows using a roster of legends.",
+              "applicationCategory": "Game",
+              "operatingSystem": "Web",
+              "genre": ["Simulation", "Sports", "Wrestling"],
+              "playMode": "SinglePlayer",
+              "author": {
+                "@type": "Organization",
+                "name": "IWF"
+              },
+              "publisher": {
+                "@type": "Organization",
+                "name": "IWF"
+              },
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+              }
+            }
+            </script>
         {% endblock %}
     </head>
     <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col overflow-y-auto overflow-x-hidden">
@@ -46,8 +127,7 @@
                 {{ include('footer.html.twig') }}
             {% endblock %}
         </div>
-
-        {% block scripts %}{% endblock %}
         <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="andrewrout" data-description="Support me on Buy me a coffee!" data-message="" data-color="#BD5FFF" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
     </body>
 </html>
+

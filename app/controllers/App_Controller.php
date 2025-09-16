@@ -14,7 +14,7 @@ class App_Controller extends Base_Controller
     {
         parent::__construct( $app );
 
-        if ( !isset( $_SESSION['user_id'] ) )
+        if ( !isset( $_SESSION['user_id'] ) && $this->route->action != 'wrestlers' )
         {
             // A more reliable way to detect an API request is to check the 'Accept' header.
             $is_api_request = isset( $_SERVER['HTTP_ACCEPT'] ) && strpos( $_SERVER['HTTP_ACCEPT'], 'application/json' ) !== false;

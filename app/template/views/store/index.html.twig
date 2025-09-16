@@ -1,0 +1,182 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Store - Purchase Gold & AP{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">IWF Store</h1>
+        <p class="text-xl text-gray-300 mt-4">Boost your career by purchasing Gold or Attribute Points.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+        <!-- Purchase Options -->
+        <div>
+            <!-- Gold Packages -->
+            <section id="gold-packages">
+                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Buy Gold</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% set gold_packages = {
+                        'gold-100': {'amount': '100 Gold', 'price': '0.99'},
+                        'gold-1000': {'amount': '1,000 Gold', 'price': '9.99'},
+                        'gold-2500': {'amount': '2,500 Gold', 'price': '19.99'},
+                        'gold-5000': {'amount': '5,000 Gold', 'price': '29.99'},
+                        'gold-10000': {'amount': '10,000 Gold', 'price': '59.99'}
+                    } %}
+                    {% for id, package in gold_packages %}
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center">
+                            <span class="text-5xl mb-4">💰</span>
+                            <h3 class="text-2xl font-bold text-white">{{ package.amount }}</h3>
+                            <p class="text-3xl font-bold text-green-400 my-4">${{ package.price }}</p>
+                            <button class="select-item-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" data-item-id="{{ id }}" data-item-name="{{ package.amount }}" data-item-price="{{ package.price }}">Select</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Attribute Point Packages -->
+            <section id="ap-packages" class="mt-12">
+                <h2 class="text-3xl font-bold text-yellow-400 mb-6">Buy Attribute Points</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     {% set ap_packages = {
+                        'ap-1': {'amount': '1 Attribute Point', 'price': '1.99'},
+                        'ap-3': {'amount': '3 Attribute Points', 'price': '5.99'},
+                        'ap-5': {'amount': '5 Attribute Points', 'price': '8.99'},
+                        'ap-10': {'amount': '10 Attribute Points', 'price': '14.99'}
+                    } %}
+                    {% for id, package in ap_packages %}
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center">
+                            <span class="text-5xl mb-4">⭐</span>
+                            <h3 class="text-2xl font-bold text-white">{{ package.amount }}</h3>
+                            <p class="text-3xl font-bold text-green-400 my-4">${{ package.price }}</p>
+                            <button class="select-item-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" data-item-id="{{ id }}" data-item-name="{{ package.amount }}" data-item-price="{{ package.price }}">Select</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <!-- Payment Section -->
+        <div class="bg-gray-800 p-8 rounded-lg shadow-lg sticky top-8">
+             <h2 class="text-3xl font-bold text-yellow-400 mb-6 text-center">Complete Your Purchase</h2>
+             <div id="order-summary" class="text-center mb-8 h-24 flex items-center justify-center">
+                 <p class="text-gray-400 text-lg">Please select an item to purchase.</p>
+             </div>
+             <div id="paypal-button-container" class="min-h-[50px]">
+                 <!-- PayPal button will render here -->
+             </div>
+             <p class="text-xs text-gray-500 text-center mt-4">All transactions are securely processed by PayPal. Your financial details are never stored on our servers.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let selectedItem = null;
+
+    function renderPayPalButton() {
+        const container = document.getElementById('paypal-button-container');
+        container.innerHTML = ''; // Clear previous button
+
+        if (!selectedItem) {
+            return; // Don't render if nothing is selected
+        }
+        
+        paypal.Buttons({
+            style: {
+                layout: 'vertical',
+                color:  'blue',
+                shape:  'rect',
+                label:  'paypal'
+            },
+            createOrder: function(data, actions) {
+                return actions.order.create({
+                    purchase_units: [{
+                        description: selectedItem.name,
+                        amount: {
+                            value: selectedItem.price
+                        }
+                    }]
+                });
+            },
+            onApprove: function(data, actions) {
+                return actions.order.capture().then(function(details) {
+                    showNotification(`Transaction completed by ${details.payer.name.given_name}. Processing your purchase...`, 'success');
+                    
+                    fetch('{{ base_url }}store/process_purchase', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            orderID: data.orderID,
+                            itemId: selectedItem.id
+                        })
+                    })
+                    .then(response => response.text())
+                    .then(text => {
+                        let result;
+                        try {
+                            const jsonStart = text.indexOf('{');
+                            if (jsonStart === -1) throw new Error("Invalid JSON response from server.");
+                            const jsonString = text.substring(jsonStart);
+                            result = JSON.parse(jsonString);
+                        } catch (e) {
+                            console.error("Failed to parse server response:", text);
+                            showNotification('An error occurred while reading the server response.', 'error');
+                            return; 
+                        }
+
+                        if (result.success) {
+                            try {
+                                showNotification(result.message, 'success');
+                                updateNavbarGold(result.newGold);
+                                updateNavbarAP(result.newAP);
+                            } catch (uiError) {
+                                console.error("UI update failed after successful purchase:", uiError);
+                                // showNotification("Purchase credited! Refresh page to see updated values.", 'warning');
+                            }
+                        } else {
+                            showNotification(`Error: ${result.error || 'Unknown error during processing.'}`, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch Error:', error);
+                        showNotification('A network error occurred while processing your purchase.', 'error');
+                    });
+                });
+            },
+            onError: function(err) {
+                console.error('PayPal button error:', err);
+                showNotification('An error occurred with the PayPal transaction. Please try again.', 'error');
+            }
+        }).render('#paypal-button-container');
+    }
+
+
+    document.querySelectorAll('.select-item-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            selectedItem = {
+                id: e.target.dataset.itemId,
+                name: e.target.dataset.itemName,
+                price: e.target.dataset.itemPrice
+            };
+            
+            document.querySelectorAll('.select-item-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-yellow-400'));
+            e.target.classList.add('ring-2', 'ring-yellow-400');
+            
+            const summaryDiv = document.getElementById('order-summary');
+            summaryDiv.innerHTML = `
+                <p class="w-full text-gray-300 text-lg">You have selected:</p>
+                <p class="w-full text-2xl font-bold text-white">${selectedItem.name}</p>
+                <p class="w-full text-xl font-semibold text-green-400">Total: $${selectedItem.price}</p>
+            `;
+            
+            renderPayPalButton();
+        });
+    });
+});
+</script>
+{% endblock %}
+

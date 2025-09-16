@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use RedBeanPHP\R as R;
+use \PDO;
 use \Src\Controller\Base_Controller;
 
 class Api_Controller extends Base_Controller
@@ -84,7 +85,7 @@ class Api_Controller extends Base_Controller
             echo json_encode( ['success' => true, 'teams' => $teams] );
 
         }
-        catch ( PDOException $e )
+        catch ( \PDOException $e )
         {
             // Handle potential database errors
             http_response_code( 500 ); // Internal Server Error
@@ -1122,44 +1123,66 @@ class Api_Controller extends Base_Controller
     public function run_simulation()
     {
         header( 'Content-Type: application/json' );
-
-        // --- THIS IS THE FIX ---
-        // Read the raw POST data and decode it from JSON
         $data = json_decode( file_get_contents( 'php://input' ), true );
 
-        $wrestler1_id = $data['wrestler1_id'] ?? null;
-        $wrestler2_id = $data['wrestler2_id'] ?? null;
-        $match_type   = $data['type'] ?? 'single';
-        // --- END FIX ---
-
-        if ( empty( $wrestler1_id ) || empty( $wrestler2_id ) )
-        {
-            echo json_encode( ['error' => 'Please provide IDs for both wrestlers.'] );
-            return;
-        }
-
-        // Load the necessary models
         $apiModel       = $this->model( 'Api' );
         $simulatorModel = $this->model( 'Simulator' );
 
-        // Fetch the full data for both wrestlers
-        $wrestler1 = $apiModel->getWrestlerById( $wrestler1_id );
-        $wrestler2 = $apiModel->getWrestlerById( $wrestler2_id );
+        $match_type = $data['type'] ?? 'single';
 
-        if ( !$wrestler1 || !$wrestler2 )
+        if ( $match_type === 'tag' )
         {
-            http_response_code( 404 );
-            echo json_encode( ['error' => 'One or both wrestlers could not be found.'] );
-            exit;
+            $team1_ids = $data['team1'] ?? null;
+            $team2_ids = $data['team2'] ?? null;
+
+            if ( !$team1_ids || !$team2_ids || count( $team1_ids ) !== 2 || count( $team2_ids ) !== 2 )
+            {
+                $this->json( ['error' => 'Invalid tag team data provided.'], 400 );
+                return;
+            }
+
+            $w1_t1 = $apiModel->getWrestlerById( $team1_ids[0] );
+            $w2_t1 = $apiModel->getWrestlerById( $team1_ids[1] );
+            $w1_t2 = $apiModel->getWrestlerById( $team2_ids[0] );
+            $w2_t2 = $apiModel->getWrestlerById( $team2_ids[1] );
+
+            if ( !( $w1_t1 && $w2_t1 && $w1_t2 && $w2_t2 ) )
+            {
+                $this->json( ['error' => 'One or more wrestlers in the tag teams could not be found.'], 404 );
+                return;
+            }
+
+            $team1 = [$w1_t1, $w2_t1];
+            $team2 = [$w1_t2, $w2_t2];
+
+            $result = $simulatorModel->start_tag_simulation( $team1, $team2 );
+
+        }
+        else
+        {
+            // Handle Single Match
+            $wrestler1_id = $data['wrestler1_id'] ?? null;
+            $wrestler2_id = $data['wrestler2_id'] ?? null;
+
+            if ( empty( $wrestler1_id ) || empty( $wrestler2_id ) )
+            {
+                $this->json( ['error' => 'Please provide IDs for both wrestlers.'], 400 );
+                return;
+            }
+
+            $wrestler1 = $apiModel->getWrestlerById( $wrestler1_id );
+            $wrestler2 = $apiModel->getWrestlerById( $wrestler2_id );
+
+            if ( !$wrestler1 || !$wrestler2 )
+            {
+                $this->json( ['error' => 'One or both wrestlers could not be found.'], 404 );
+                return;
+            }
+
+            $result = $simulatorModel->simulateMatch( $wrestler1, $wrestler2 );
         }
 
-        // Run the simulation
-        $result = $simulatorModel->simulateMatch( $wrestler1, $wrestler2 );
-
-        // Return the result as JSON
-        http_response_code( 200 );
-        echo json_encode( $result );
-        exit;
+        $this->json( $result, 200 );
     }
 
     /**
@@ -1168,42 +1191,66 @@ class Api_Controller extends Base_Controller
     public function run_bulk_simulation()
     {
         header( 'Content-Type: application/json' );
-
-        // --- THIS IS THE FIX ---
-        // Read the raw POST data and decode it from JSON
         $data = json_decode( file_get_contents( 'php://input' ), true );
-
-        $wrestler1_id = $data['wrestler1_id'] ?? null;
-        $wrestler2_id = $data['wrestler2_id'] ?? null;
-        $match_type   = $data['type'] ?? 'single';
-        $sim_count    = $data['sim_count'] ?? 100;
-        // --- END FIX ---
-
-        if ( empty( $wrestler1_id ) || empty( $wrestler2_id ) )
-        {
-            echo json_encode( ['error' => 'Please provide IDs for both wrestlers.'] );
-            return;
-        }
 
         $apiModel       = $this->model( 'Api' );
         $simulatorModel = $this->model( 'Simulator' );
 
-        $wrestler1 = $apiModel->getWrestlerById( $wrestler1_id );
-        $wrestler2 = $apiModel->getWrestlerById( $wrestler2_id );
+        $match_type = $data['type'] ?? 'single';
+        $sim_count  = (int) ( $data['sim_count'] ?? 100 );
 
-        if ( !$wrestler1 || !$wrestler2 )
+        if ( $match_type === 'tag' )
         {
-            http_response_code( 404 );
-            echo json_encode( ['error' => 'One or both wrestlers could not be found.'] );
-            exit;
+            $team1_ids = $data['team1_ids'] ?? null;
+            $team2_ids = $data['team2_ids'] ?? null;
+
+            if ( !$team1_ids || !$team2_ids || count( $team1_ids ) !== 2 || count( $team2_ids ) !== 2 )
+            {
+                $this->json( ['error' => 'Invalid tag team data provided.'], 400 );
+                return;
+            }
+
+            $w1_t1 = $apiModel->getWrestlerById( $team1_ids[0] );
+            $w2_t1 = $apiModel->getWrestlerById( $team1_ids[1] );
+            $w1_t2 = $apiModel->getWrestlerById( $team2_ids[0] );
+            $w2_t2 = $apiModel->getWrestlerById( $team2_ids[1] );
+
+            if ( !( $w1_t1 && $w2_t1 && $w1_t2 && $w2_t2 ) )
+            {
+                $this->json( ['error' => 'One or more wrestlers in the tag teams could not be found.'], 404 );
+                return;
+            }
+
+            $team1 = [$w1_t1, $w2_t1];
+            $team2 = [$w1_t2, $w2_t2];
+
+            $result = $simulatorModel->runBulkSimulations( $team1, $team2, $sim_count );
+
+        }
+        else
+        {
+            $wrestler1_id = $data['wrestler1_id'] ?? null;
+            $wrestler2_id = $data['wrestler2_id'] ?? null;
+
+            if ( !$wrestler1_id || !$wrestler2_id )
+            {
+                $this->json( ['error' => 'Missing wrestler IDs for single match.'], 400 );
+                return;
+            }
+
+            $wrestler1 = $apiModel->getWrestlerById( $wrestler1_id );
+            $wrestler2 = $apiModel->getWrestlerById( $wrestler2_id );
+
+            if ( !$wrestler1 || !$wrestler2 )
+            {
+                $this->json( ['error' => 'One or both wrestlers could not be found.'], 404 );
+                return;
+            }
+
+            $result = $simulatorModel->runBulkSimulations( $wrestler1, $wrestler2, $sim_count );
         }
 
-        // Call the new bulk simulation method in the model
-        $result = $simulatorModel->runBulkSimulations( $wrestler1, $wrestler2, $sim_count );
-
-        http_response_code( 200 );
-        echo json_encode( $result );
-        exit;
+        $this->json( $result, 200 );
     }
 
     /**
@@ -1254,7 +1301,7 @@ class Api_Controller extends Base_Controller
             echo json_encode( ['success' => true, 'teams' => $teams] );
 
         }
-        catch ( PDOException $e )
+        catch ( \PDOException $e )
         {
             // Handle potential database errors
             http_response_code( 500 ); // Internal Server Error

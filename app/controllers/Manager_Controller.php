@@ -30,6 +30,7 @@ class Manager_Controller extends Base_Controller
 
     /**
      * Handles the hiring of a manager by a user's prospect.
+     * UPDATED to return the new gold amount on success.
      */
     public function purchase( $managerId )
     {
@@ -52,12 +53,19 @@ class Manager_Controller extends Base_Controller
         }
 
         $managerModel = $this->model( 'Manager' );
-        // Pass the entire prospect object to the model method
-        $result = $managerModel->hireManagerForProspect( $prospect, $managerId );
+        $result       = $managerModel->hireManagerForProspect( $prospect, $managerId );
 
         if ( $result === true )
         {
-            echo json_encode( ['success' => true, 'message' => 'Manager hired successfully!'] );
+            // After a successful purchase, fetch the updated gold balance
+            $updatedProspect = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+            $newGold         = $updatedProspect['gold'];
+
+            echo json_encode( [
+                'success' => true,
+                'message' => 'Manager hired successfully!',
+                'newGold' => $newGold, // Send the new gold amount back to the client
+            ] );
         }
         else
         {

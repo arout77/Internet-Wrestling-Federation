@@ -34,7 +34,10 @@
                     </div>
 
                     {% if prospect.lvl >= manager.level_requirement %}
-                        <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" onclick="hireManager({{ manager.id }})">
+                        <button 
+                            class="hire-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" 
+                            data-manager-id="{{ manager.id }}"
+                            data-cost="{{ manager.cost }}">
                             Hire for ${{ manager.cost }}
                         </button>
                     {% else %}
@@ -49,31 +52,45 @@
 </div>
 
 <script>
-    async function hireManager(managerId) {
-        if (!confirm('Are you sure you want to hire this manager? The cost will be deducted from your gold.')) {
-            return;
-        }
+    // This script is now more robust. It updates the UI without a page reload.
+    document.querySelectorAll('.hire-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const managerId = e.target.dataset.managerId;
+            const cost = parseInt(e.target.dataset.cost, 10);
 
-        try {
-            const response = await fetch(`{{ base_url }}manager/purchase/${managerId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                alert(result.message);
-                window.location.href = '{{ base_url }}app/career';
-            } else {
-                alert('Error: ' + (result.error || 'Could not hire manager.'));
+            // Using a custom modal instead of confirm() for better UX
+            if (!await showConfirmation(`Are you sure you want to hire this manager for ${cost} Gold?`)) {
+                return;
             }
-        } catch (error) {
-            console.error('Failed to hire manager:', error);
-            alert('An error occurred. Please try again.');
-        }
-    }
+
+            try {
+                const response = await fetch(`{{ base_url }}manager/purchase/${managerId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showNotification(result.message, 'success');
+                    
+                    // Update the navbar gold display directly!
+                    updateGoldDisplay(result.newGold);
+
+                    // Optionally, disable the button after purchase
+                    e.target.textContent = 'Hired!';
+                    e.target.disabled = true;
+                    e.target.classList.add('bg-gray-500', 'cursor-not-allowed');
+                    e.target.classList.remove('bg-green-600', 'hover:bg-green-700');
+
+                } else {
+                    showNotification('Error: ' + (result.error || 'Could not hire manager.'), 'error');
+                }
+            } catch (error) {
+                console.error('Failed to hire manager:', error);
+                showNotification('An error occurred. Please try again.', 'error');
+            }
+        });
+    });
 </script>
 {% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Features & Rewards - IWF Guide{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Features & Rewards</h1>
+        <p class="text-xl text-gray-300 mt-4">Master the tools that will lead you to glory and gold.</p>
+        <a href="{{ base_url }}docs" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Main Guide</a>
+    </header>
+
+    <div class="space-y-12 max-w-4xl mx-auto">
+        <!-- Challenge Zone -->
+        <section id="challenge-zone" class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">The Challenge Zone</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                Ready to prove you have the best prospect in the IWF? The Challenge Zone is where you can go head-to-head with prospects created by other players.
+            </p>
+            <h3 class="text-2xl font-semibold text-white mb-3">How it Works:</h3>
+            <ul class="list-disc list-inside text-gray-300 space-y-2">
+                <li><strong>Browse Prospects:</strong> View a list of all other user-created prospects in the game. You can see their level, record, and stats.</li>
+                <li><strong>Issue a Challenge:</strong> Select a prospect and set a wager amount in gold. The challenge is then sent to that player.</li>
+                <li><strong>Manage Challenges:</strong> On your "Manage Challenges" page, you can view challenges you've sent (pending) and challenges you've received.</li>
+                <li><strong>Accept or Decline:</strong> When you receive a challenge, you can view a "Tale of the Tape," which shows your opponent's stats, the wager, and the calculated betting odds. From there, you can accept or decline.</li>
+                <li><strong>The Simulation:</strong> Once a challenge is accepted, the gold is wagered and a match is simulated on the server. The winner takes the entire pot! You will be notified of the result.</li>
+            </ul>
+        </section>
+
+        <!-- Managers -->
+        <section id="managers" class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Hiring a Manager</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                Behind every great champion is a brilliant mind. In the IWF, you can hire legendary managers to guide your career. Each manager costs gold and provides a unique set of permanent, passive bonuses to your prospect.
+            </p>
+             <h3 class="text-2xl font-semibold text-white mb-3">Manager Bonuses Can Include:</h3>
+            <ul class="list-disc list-inside text-gray-300 space-y-2">
+                <li><strong>Increased Gold Earnings:</strong> Earn a percentage bonus of gold from every match.</li>
+                <li><strong>Increased XP Gain:</strong> Level up faster with an XP boost from every match.</li>
+                <li><strong>Attribute Boosts:</strong> Receive direct, permanent increases to one or more of your core attributes.</li>
+            </ul>
+            <p class="text-gray-300 mt-4">
+                Choose a manager whose bonuses best complement your wrestler's Archetype and play style to maximize your potential.
+            </p>
+        </section>
+
+        <!-- Training Center -->
+        <section id="training-center" class="bg-gray-800 p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-yellow-400 mb-4">Training Center</h2>
+            <p class="text-lg text-gray-300 mb-4">
+                A deep moveset is key to victory. The Training Center is where you can spend your hard-earned gold to learn new moves.
+            </p>
+            <ul class="list-disc list-inside text-gray-300 space-y-2">
+                <li>The list of available moves expands as you level up.</li>
+                <li>You can filter moves by type (Strike, Grapple, etc.) and sort them by level requirement, cost, or damage.</li>
+                <li>Strategically learning moves that align with your highest attributes will make them more effective in the ring.</li>
+            </ul>
+        </section>
+    </div>
+</div>
+{% endblock %}

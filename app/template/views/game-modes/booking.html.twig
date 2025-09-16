@@ -1,0 +1,33 @@
+{% extends "base.html.twig" %}
+
+{% block title %}IWF Booker Mode - Run Your Own Wrestling Promotion{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <!-- Hero Section -->
+    <section class="text-center py-16">
+        <h1 class="text-5xl md:text-7xl font-extrabold text-white mb-6">Become the Booker: Run Your Own Promotion</h1>
+        <p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-8">Step behind the curtain and take control. In IWF Booker Mode, you sign the talent, manage the budget, and book the pay-per-view card that will captivate the world.</p>
+        <a href="{{ base_url }}app/booking" class="shiny-cta inline-block font-bold py-4 px-10 rounded-full text-xl uppercase tracking-wide"><span>Start Booking Now</span></a>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-16">
+         <h2 class="text-4xl font-bold text-center text-white mb-12">Your Wrestling Empire Awaits</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-700">
+                <h3 class="text-2xl font-semibold text-yellow-400 mb-4">Sign Your Roster</h3>
+                <p class="text-gray-300">Start with a limited budget and a core group of wrestlers. Scout the free agent market to sign legends and rising stars. Every wrestler has a salary—manage your finances wisely to build a roster that can sell tickets.</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-700">
+                <h3 class="text-2xl font-semibold text-yellow-400 mb-4">Book the Perfect Card</h3>
+                <p class="text-gray-300">Drag and drop your contracted wrestlers into match slots to create your dream pay-per-view. Will you book a technical masterpiece in the opener or a chaotic brawl for the main event? The choice is yours.</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-700">
+                <h3 class="text-2xl font-semibold text-yellow-400 mb-4">Manage the Event</h3>
+                <p class="text-gray-300">Choose your venue, from a high school gym to a major city stadium. Set your advertising budget to attract more fans. The success of your show—and your promotion's finances—depends on your decisions.</p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

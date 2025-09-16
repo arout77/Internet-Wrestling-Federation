@@ -13,6 +13,40 @@
             wrestler has a higher technical ability rating, then moves of the type "Grapple" will deal more damage.</p>
         <a href="{{ base_url }}app/career" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Career</a>
     </header>
+    
+    <!-- Special Training Opportunities -->
+    {% if opportunities is not empty %}
+    <div class="mb-12">
+        <h2 class="text-4xl font-bold text-center text-green-400 mb-4 animate-pulse">Special Training Opportunity!</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for move in opportunities %}
+                <div class="bg-gray-900 border-2 border-green-500 rounded-lg shadow-lg p-6 flex flex-col ring-4 ring-green-500/50">
+                    <h2 class="text-2xl font-bold text-yellow-400 mb-2">{{ move.move_name }}</h2>
+                    <p class="text-gray-400 text-sm mb-4 flex-grow">{{ move.move_description }}</p>
+                    
+                    <div class="bg-gray-700 p-4 rounded-md mb-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">Move Stats</h3>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <p>Type: <span class="font-bold text-gray-300">{{ move.type|capitalize }}</span></p>
+                            <p>Damage: <span class="font-bold text-red-400">{{ move.min_damage }}-{{ move.max_damage }}</span></p>
+                            <p>Stamina Cost: <span class="font-bold text-blue-400">{{ move.stamina_cost }}</span></p>
+                            <p>Level Req: <span class="font-bold text-gray-300">{{ move.level_requirement }}</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center text-orange-400 font-semibold mb-4">
+                        Expires in {{ move.expires_after_matches }} matches!
+                    </div>
+
+                    <button class="learn-move-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" data-move-id="{{ move.move_id }}" data-cost="{{ move.cost }}">
+                        Learn for {{ move.cost }} Gold
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
 
     <!-- Filter and Sort Controls -->
     <form id="filterSortForm" method="get" action="{{ base_url }}train/" class="bg-gray-800 p-4 rounded-lg shadow-md mb-8 flex flex-wrap items-center justify-center gap-4">
@@ -60,7 +94,7 @@
                     </div>
                 </div>
 
-                <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" onclick="learnMove({{ move.move_id }})">
+                <button class="learn-move-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-md transition duration-300 mt-auto" data-move-id="{{ move.move_id }}" data-cost="{{ move.cost }}">
                     Learn for {{ move.cost }} Gold
                 </button>
             </div>
@@ -75,31 +109,35 @@
         this.submit();
     });
 
-    async function learnMove(moveId) {
-        if (!confirm('Are you sure you want to learn this move? The cost will be deducted from your gold.')) {
-            return;
-        }
+    document.querySelectorAll('.learn-move-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const moveId = e.target.dataset.moveId;
+            const cost = parseInt(e.target.dataset.cost, 10);
 
-        try {
-            const response = await fetch(`{{ base_url }}train/learn_move/${moveId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                alert(result.message);
-                location.reload();
-            } else {
-                alert('Error: ' + (result.error || 'Could not learn move.'));
+            if (!await showConfirmation(`Are you sure you want to learn this move for ${cost} Gold?`)) {
+                return;
             }
-        } catch (error) {
-            console.error('Failed to learn move:', error);
-            alert('An error occurred. Please try again.');
-        }
-    }
+
+            try {
+                const response = await fetch(`{{ base_url }}train/learn_move/${moveId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showNotification(result.message, 'success');
+                    updateGoldDisplay(result.newGold);
+                    // Remove the purchased move from the view without a full reload
+                    e.target.closest('.bg-gray-800').remove();
+                } else {
+                    showNotification('Error: ' + (result.error || 'Could not learn move.'), 'error');
+                }
+            } catch (error) {
+                console.error('Failed to learn move:', error);
+                showNotification('An error occurred. Please try again.', 'error');
+            }
+        });
+    });
 </script>
 {% endblock %}

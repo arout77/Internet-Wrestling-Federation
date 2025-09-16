@@ -153,6 +153,27 @@ class CareerModel extends System_Model
     }
 
     /**
+     * Updates the moveset for a given prospect.
+     * @param string $prospectPid The PID of the prospect.
+     * @param string $movesetJson The new moveset as a JSON string.
+     * @return bool True on success, false on failure.
+     */
+    public function updateProspectMoveset( $prospectPid, $movesetJson )
+    {
+        try {
+            $sql  = "UPDATE prospects SET moves = :moves WHERE pid = :pid";
+            $stmt = $this->db->prepare( $sql );
+            $stmt->execute( [':moves' => $movesetJson, ':pid' => $prospectPid] );
+            return $stmt->rowCount() > 0;
+        }
+        catch ( \PDOException $e )
+        {
+            // In a real app, you'd log this error
+            return false;
+        }
+    }
+
+    /**
      * Upgrades a prospect's attribute, using a free point if available, otherwise costing gold with a compounding formula.
      *
      * @param string $userId The ID of the user.
@@ -161,6 +182,7 @@ class CareerModel extends System_Model
      */
     public function purchaseAttributePoint( $userId, $attribute )
     {
+        $this->db->beginTransaction();
         try {
             $sqlUser  = "SELECT prospect_id FROM users WHERE user_id = :user_id";
             $stmtUser = $this->db->prepare( $sqlUser );
@@ -171,7 +193,15 @@ class CareerModel extends System_Model
             {
                 return "Could not find a prospect for the current user.";
             }
-            $prospectId = $user['prospect_id'];
+            $prospectPid = $user['prospect_id'];
+
+            // Get prospect details by PID to ensure we have the internal ID
+            $prospectData = $this->getProspectByPid( $prospectPid );
+            if ( !$prospectData )
+            {
+                return "Prospect data could not be found.";
+            }
+            $prospectId = $prospectData['id'];
 
             $validAttributes = ['strength', 'technicalAbility', 'brawlingAbility', 'stamina', 'aerialAbility', 'toughness'];
             if ( !in_array( $attribute, $validAttributes ) )
@@ -181,7 +211,7 @@ class CareerModel extends System_Model
 
             $sqlProspect  = "SELECT attribute_points, gold, {$attribute} FROM prospects WHERE pid = :pid";
             $stmtProspect = $this->db->prepare( $sqlProspect );
-            $stmtProspect->execute( [':pid' => $prospectId] );
+            $stmtProspect->execute( [':pid' => $prospectPid] );
             $prospect = $stmtProspect->fetch( PDO::FETCH_ASSOC );
 
             if ( !$prospect )
@@ -195,7 +225,7 @@ class CareerModel extends System_Model
                             SET {$attribute} = {$attribute} + 1,
                                 attribute_points = attribute_points - 1
                             WHERE pid = :pid";
-                $params = [':pid' => $prospectId];
+                $params = [':pid' => $prospectPid];
             }
             else
             {
@@ -216,17 +246,22 @@ class CareerModel extends System_Model
                             SET {$attribute} = {$attribute} + 1,
                                 gold = gold - :cost
                             WHERE pid = :pid";
-                $params = [':pid' => $prospectId, ':cost' => $upgradeCost];
+                $params = [':pid' => $prospectPid, ':cost' => $upgradeCost];
             }
 
             $stmtUpdate = $this->db->prepare( $sqlUpdate );
             $stmtUpdate->execute( $params );
 
-            return $stmtUpdate->rowCount() > 0;
+            // After upgrading, sync traits
+            $this->syncProspectTraits( $prospectId );
+
+            $this->db->commit();
+            return true;
 
         }
         catch ( \PDOException $e )
         {
+            $this->db->rollBack();
             return "A database error occurred during the upgrade process.";
         }
     }
@@ -332,6 +367,9 @@ class CareerModel extends System_Model
                 ':pid'   => $prospect['pid'],
             ] );
 
+            // Sync traits after potential level up and stat changes from AP might happen
+            $this->syncProspectTraits( $prospect['id'] );
+
             $sqlRecord = "INSERT INTO wrestler_records (wrestler_id, wins, losses, draws)
                           VALUES (:pid, :wins, :losses, 0)
                           ON DUPLICATE KEY UPDATE
@@ -354,6 +392,36 @@ class CareerModel extends System_Model
         {
             $this->db->rollBack();
             return ['success' => false, 'leveled_up' => false, 'bonus_ap' => 0, 'leveled_up_rewards' => []];
+        }
+    }
+
+    /**
+     * Records a win for one prospect and a loss for another.
+     * @param string $winnerPid
+     * @param string $loserPid
+     * @return bool
+     */
+    public function recordWinLoss( $winnerPid, $loserPid )
+    {
+        try {
+            // Record win for the winner
+            $sqlWin = "INSERT INTO wrestler_records (wrestler_id, wins, losses) VALUES (:pid, 1, 0)
+                       ON DUPLICATE KEY UPDATE wins = wins + 1";
+            $stmtWin = $this->db->prepare( $sqlWin );
+            $stmtWin->execute( [':pid' => $winnerPid] );
+
+            // Record loss for the loser
+            $sqlLoss = "INSERT INTO wrestler_records (wrestler_id, wins, losses) VALUES (:pid, 0, 1)
+                        ON DUPLICATE KEY UPDATE losses = losses + 1";
+            $stmtLoss = $this->db->prepare( $sqlLoss );
+            $stmtLoss->execute( [':pid' => $loserPid] );
+
+            return true;
+        }
+        catch ( \PDOException $e )
+        {
+            // In a real app, you'd log this error
+            return false;
         }
     }
 
@@ -415,12 +483,12 @@ class CareerModel extends System_Model
      */
     public function getProspectTraits( $prospectId )
     {
-        $sql = 'SELECT t.name FROM traits t
+        $sql = 'SELECT t.* FROM traits t
                 JOIN prospect_traits pt ON t.trait_id = pt.trait_id
                 WHERE pt.prospect_id = :prospect_id';
         $stmt = $this->db->prepare( $sql );
         $stmt->execute( [':prospect_id' => $prospectId] );
-        return $stmt->fetchAll( PDO::FETCH_COLUMN );
+        return $stmt->fetchAll( PDO::FETCH_ASSOC );
     }
 
     /**
@@ -481,6 +549,12 @@ class CareerModel extends System_Model
         $xp_earned        = $baseXp * ( 1 + $levelBonusFactor );
         $gold_earned      = $baseGold * ( 1 + $levelBonusFactor );
 
+        // Apply Brawler Archetype bonus
+        if ( $prospect->archetype === 'brawler' && $isWin )
+        {
+            $xp_earned *= 1.10; // 10% XP bonus for winning
+        }
+
         // Apply manager bonuses if a manager is hired
         if ( !empty( $prospect->manager_id ) )
         {
@@ -497,5 +571,195 @@ class CareerModel extends System_Model
             'xp'   => round( $xp_earned ),
             'gold' => round( $gold_earned ),
         ];
+    }
+
+    /**
+     * @param $pid
+     * @return mixed
+     */
+    public function getProspectByPid( $pid )
+    {
+        $stmt = $this->db->prepare( "SELECT * FROM prospects WHERE pid = :pid" );
+        $stmt->execute( [':pid' => $pid] );
+        return $stmt->fetch( PDO::FETCH_ASSOC );
+    }
+
+    /**
+     * Checks a prospect's stats and updates their traits accordingly.
+     * @param int $prospectId The internal integer ID of the prospect.
+     */
+    public function syncProspectTraits( $prospectId )
+    {
+        $stmt = $this->db->prepare( "SELECT * FROM prospects WHERE id = :id" );
+        $stmt->execute( [':id' => $prospectId] );
+        $prospect = $stmt->fetch( PDO::FETCH_ASSOC );
+
+        if ( !$prospect )
+        {
+            return;
+        }
+
+        $qualifiedTraitIds = [];
+
+        // Define trait qualifications based on stats
+        if ( $prospect['aerialAbility'] >= 85 )
+        {
+            $qualifiedTraitIds[] = 2;
+        }
+        // High-Flyer
+        if ( $this->isGiant( $prospect['height'], $prospect['weight'] ) )
+        {
+            $qualifiedTraitIds[] = 3;
+        }
+        // Giant
+        if ( $prospect['toughness'] >= 90 && $prospect['weight'] >= 350 )
+        {
+            $qualifiedTraitIds[] = 4;
+        }
+        // Brick Wall
+        if ( $prospect['technicalAbility'] >= 95 )
+        {
+            $qualifiedTraitIds[] = 5;
+        }
+        // Submission Specialist
+        if ( $prospect['brawlingAbility'] >= 95 )
+        {
+            $qualifiedTraitIds[] = 6;
+        }
+        // Brawler
+        if ( $prospect['strength'] >= 95 )
+        {
+            $qualifiedTraitIds[] = 7;
+        }
+        // Powerhouse
+        if ( $prospect['stamina'] >= 90 )
+        {
+            $qualifiedTraitIds[] = 10;
+        }
+        // Workhorse
+        if ( $prospect['technicalAbility'] >= 92 )
+        {
+            $qualifiedTraitIds[] = 13;
+        }
+        // Technician
+
+        // Get current traits from the database
+        $stmt = $this->db->prepare( "SELECT trait_id FROM prospect_traits WHERE prospect_id = :id" );
+        $stmt->execute( [':id' => $prospectId] );
+        $currentTraitIds = $stmt->fetchAll( PDO::FETCH_COLUMN );
+
+        // Determine which traits to add and remove
+        $traitsToAdd    = array_diff( $qualifiedTraitIds, $currentTraitIds );
+        $traitsToRemove = array_diff( $currentTraitIds, $qualifiedTraitIds );
+
+        // Add new traits
+        if ( !empty( $traitsToAdd ) )
+        {
+            $sqlAdd    = "INSERT INTO prospect_traits (prospect_id, trait_id) VALUES ";
+            $paramsAdd = [];
+            foreach ( $traitsToAdd as $traitId )
+            {
+                $sqlAdd .= "(?, ?),";
+                array_push( $paramsAdd, $prospectId, $traitId );
+            }
+            $sqlAdd  = rtrim( $sqlAdd, ',' );
+            $stmtAdd = $this->db->prepare( $sqlAdd );
+            $stmtAdd->execute( $paramsAdd );
+        }
+
+        // Remove old traits
+        if ( !empty( $traitsToRemove ) )
+        {
+            $placeholders = implode( ',', array_fill( 0, count( $traitsToRemove ), '?' ) );
+            $sqlRemove    = "DELETE FROM prospect_traits WHERE prospect_id = ? AND trait_id IN ($placeholders)";
+            $paramsRemove = array_merge( [$prospectId], $traitsToRemove );
+            $stmtRemove   = $this->db->prepare( $sqlRemove );
+            $stmtRemove->execute( $paramsRemove );
+        }
+    }
+
+    /**
+     * Helper to check if a wrestler qualifies as a Giant.
+     * @param string $heightStr
+     * @param int $weight
+     * @return bool
+     */
+    private function isGiant( $heightStr, $weight )
+    {
+        preg_match( '/(\d+)\'(\d+)"?/', $heightStr, $matches );
+        if ( count( $matches ) === 3 )
+        {
+            $feet        = (int) $matches[1];
+            $inches      = (int) $matches[2];
+            $totalInches = ( $feet * 12 ) + $inches;
+            return $totalInches >= 82 && $weight >= 300; // 6'10" = 82 inches
+        }
+        return false;
+    }
+
+    /**
+     * Retires a prospect by adding them to the main roster, then deleting their prospect entry.
+     * @param string $userId The user ID of the retiring prospect's owner.
+     * @return bool|string True on success, error message on failure.
+     */
+    public function retireProspectToRoster( $userId )
+    {
+        $this->db->beginTransaction();
+        try {
+            $prospect = $this->getWrestlerByUserId( $userId );
+
+            if ( !$prospect )
+            {
+                $this->db->rollBack();
+                return "Prospect not found.";
+            }
+
+            if ( $prospect['lvl'] < 100 )
+            {
+                $this->db->rollBack();
+                return "Only prospects at Level 100 can be retired.";
+            }
+
+            $sql = "INSERT INTO roster (name, height, weight, description, lvl, baseHp, strength, technicalAbility, brawlingAbility, stamina, aerialAbility, toughness, reversalAbility, submissionDefense, staminaRecoveryRate, moves, image)
+                    VALUES (:name, :height, :weight, :description, :lvl, :baseHp, :strength, :technicalAbility, :brawlingAbility, :stamina, :aerialAbility, :toughness, :reversalAbility, :submissionDefense, :staminaRecoveryRate, :moves, :image)";
+
+            $stmt = $this->db->prepare( $sql );
+
+            $stmt->execute( [
+                ':name'                => $prospect['name'] . ' (Retired)',
+                ':height'              => $prospect['height'],
+                ':weight'              => $prospect['weight'],
+                ':description'         => $prospect['description'] ?? 'A legendary prospect who has entered the Hall of Fame.',
+                ':lvl'                 => $prospect['lvl'],
+                ':baseHp'              => $prospect['baseHp'],
+                ':strength'            => $prospect['strength'],
+                ':technicalAbility'    => $prospect['technicalAbility'],
+                ':brawlingAbility'     => $prospect['brawlingAbility'],
+                ':stamina'             => $prospect['stamina'],
+                ':aerialAbility'       => $prospect['aerialAbility'],
+                ':toughness'           => $prospect['toughness'],
+                ':reversalAbility'     => $prospect['reversalAbility'],
+                ':submissionDefense'   => $prospect['submissionDefense'],
+                ':staminaRecoveryRate' => $prospect['staminaRecoveryRate'],
+                ':moves'               => $prospect['moves'],
+                ':image'               => $prospect['image'],
+            ] );
+
+            // Now, delete the prospect and update the user
+            $stmtDelete = $this->db->prepare( "DELETE FROM prospects WHERE pid = :pid" );
+            $stmtDelete->execute( [':pid' => $prospect['pid']] );
+
+            $stmtUser = $this->db->prepare( "UPDATE users SET prospect_id = NULL WHERE user_id = :user_id" );
+            $stmtUser->execute( [':user_id' => $userId] );
+
+            $this->db->commit();
+            return true;
+
+        }
+        catch ( \PDOException $e )
+        {
+            $this->db->rollBack();
+            return 'Database error: ' . $e->getMessage();
+        }
     }
 }

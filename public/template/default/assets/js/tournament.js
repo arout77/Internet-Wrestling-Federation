@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'start-tournament-btn', 'submit-picks-btn', 'bracket-container', 'result-modal', 
         'modal-title', 'modal-message', 'modal-actions', 'modal-round-summary', 
         'winners-header', 'round-winners-gallery', 'incorrect-picks-container', 'incorrect-picks-list',
-        'buy-odds-container', 'buy-odds-btn', 'odds-section', 'odds-table-body'
+        'buy-odds-container', 'buy-odds-btn', 'odds-section', 'odds-table-body', 'oddsNotice', 'close-notice-btn'
     ];
     
     for (const id of required_ids) {
@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const buyOddsBtn = document.getElementById('buy-odds-btn');
     const oddsSection = document.getElementById('odds-section');
     const oddsTableBody = document.getElementById('odds-table-body');
-    const oddsNotice = document.getElementById('odds-section');
+    const oddsNoticeModal = document.getElementById('oddsNotice');
+    const closeNoticeBtn = document.getElementById('close-notice-btn');
+
     
     let userPicks = {};
     let currentRound = 1;
@@ -37,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startBtn.addEventListener('click', async () => {
         try {
-            // ** START OF CHANGE **
             const wrestlerIds = bracketContainer.dataset.wrestlerIds ? bracketContainer.dataset.wrestlerIds.split(',') : [];
 
             const response = await fetch(baseUrl + 'tournament/start', { 
@@ -46,9 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest' 
                 },
-                body: JSON.stringify({ wrestler_ids: wrestlerIds }) // Send the wrestler IDs
+                body: JSON.stringify({ wrestler_ids: wrestlerIds })
             });
-            // ** END OF CHANGE **
 
             const data = await response.json();
             if (response.status === 401 || response.status === 403) {
@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             buyOddsContainer.style.display = 'none';
-            oddsNotice.style.display = 'block';
+            oddsNoticeModal.style.display = 'flex';
             oddsSection.style.display = 'block';
 
         } catch (error) {
@@ -120,6 +120,10 @@ document.addEventListener('DOMContentLoaded', () => {
             buyOddsBtn.disabled = false;
             buyOddsBtn.textContent = 'Pay 1 Gold to See First Round Odds';
         }
+    });
+
+    closeNoticeBtn.addEventListener('click', () => {
+        oddsNoticeModal.style.display = 'none';
     });
 
     bracketContainer.addEventListener('click', (event) => {
@@ -134,27 +138,23 @@ document.addEventListener('DOMContentLoaded', () => {
         team.classList.add('selected');
         userPicks[matchId] = team.dataset.wrestlerId;
 
-        const currentMatchups = document.querySelectorAll('.round.current .matchup, .champion.current .matchup');
-        if (Object.keys(userPicks).length === currentMatchups.length) {
+        const allCurrentMatchups = document.querySelectorAll('.round.current .matchup');
+        const activeMatchups = Array.from(allCurrentMatchups).filter(m => m.querySelector('[data-wrestler-id]'));
+        
+        if (Object.keys(userPicks).length === activeMatchups.length) {
             submitPicksBtn.disabled = false;
         }
     });
 
     submitPicksBtn.addEventListener('click', async () => {
-        const finalPicks = {};
-        const currentMatchups = document.querySelectorAll('.round.current .matchup, .champion.current .matchup');
-        currentMatchups.forEach((match, index) => {
-            const selectedWrestler = match.querySelector('.team.selected');
-            if (selectedWrestler) finalPicks[index] = selectedWrestler.dataset.wrestlerId;
-        });
-        
         try {
-            const payload = { tournament_id: tournamentId, picks: finalPicks };
+            const payload = { tournament_id: tournamentId, picks: userPicks };
+            
             const response = await fetch(baseUrl + 'tournament/simulate', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest' 
                 },
                 body: JSON.stringify(payload)
             });
@@ -178,14 +178,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showRoundSummary(data) {
-        // --- THIS IS THE FIX ---
-        // Log the server response to help debug and add defensive checks.
         console.log("Server response received:", data);
-
-        // ** START OF CHANGE **
-        // Create a simple list of IDs for wrestlers that the user INCORRECTLY picked against
         const incorrectWinnerIds = (data.incorrect_picks_data || []).map(pick => pick.actual_winner.wrestler_id);
-        // ** END OF CHANGE **
 
         winnersHeader.textContent = `Round ${currentRound} Winners`;
         roundWinnersGallery.innerHTML = '';
@@ -194,14 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
             data.winners_data.forEach(winner => {
                 if (winner) {
                     const card = document.createElement('div');
-                    card.className = 'winner-card-container'; // Use a container for positioning
-
-                    // ** START OF CHANGE **
-                    // Check if the current winner was an incorrect pick
+                    card.className = 'winner-card-container';
                     const wasIncorrectPick = incorrectWinnerIds.includes(winner.wrestler_id);
                     const incorrectOverlay = wasIncorrectPick ? '<div class="incorrect-overlay">✖</div>' : '';
-                    // ** END OF CHANGE **
-
                     card.innerHTML = `
                         <div class="winner-card">
                             <img src="${baseUrl}public/media/images/${winner.image}.webp" alt="${winner.name}">
@@ -220,33 +209,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userPickName = pick.user_pick ? pick.user_pick.name : 'your pick';
                 const actualWinnerName = pick.actual_winner ? pick.actual_winner.name : 'the winner';
                 const li = document.createElement('li');
-                li.innerHTML = `You picked <strong>${userPickName}</strong>, but <strong>${actualWinnerName}</strong> won.`;
+                li.innerHTML = `You picked <strong class="text-red-500">${userPickName}</strong>, but <strong class="text-green-400">${actualWinnerName}</strong> won.`;
                 incorrectPicksList.appendChild(li);
             });
             incorrectPicksContainer.style.display = 'block';
         } else {
             incorrectPicksContainer.style.display = 'none';
         }
-        // --- END FIX ---
 
         modalTitle.textContent = data.tournament_winner ? 'Tournament Over!' : `Round ${currentRound} Complete!`;
         modalMessage.textContent = data.message;
-        modalActions.innerHTML = '';
+        
+        let actionsHtml = '';
+        if (data.tournament_winner) {
+            actionsHtml = `<button id="play-again-btn" class="btn btn-primary">Play Again</button>`;
+        } else if (data.all_correct) {
+            actionsHtml = `<button id="next-round-btn" class="btn btn-success">Continue to Next Round</button>`;
+        } else {
+            if (data.can_continue) {
+                actionsHtml += `<button id="pay-continue-btn" class="btn-success mt-4">Pay 3 Gold to Continue</button>`;
+            }
+            actionsHtml += `<button id="quit-btn" class="btn-error mt-4 ml-4">Quit Tournament</button>`;
+        }
+        modalActions.innerHTML = actionsHtml;
 
         if (data.tournament_winner) {
-            modalActions.innerHTML = `<button id="play-again-btn" class="btn btn-primary">Play Again</button>`;
             document.getElementById('play-again-btn').addEventListener('click', () => window.location.reload());
         } else if (data.all_correct) {
-            modalActions.innerHTML = `<button id="next-round-btn" class="btn btn-success">Continue to Next Round</button>`;
             document.getElementById('next-round-btn').addEventListener('click', handleNextRound);
         } else {
             if (data.can_continue) {
-                modalActions.innerHTML += `<button id="pay-continue-btn" class="btn btn-warning">Pay 3 Gold to Continue</button>`;
-                document.getElementById('pay-continue-btn').addEventListener('click', handlePayToContinue);
+                const payBtn = document.getElementById('pay-continue-btn');
+                if(payBtn) payBtn.addEventListener('click', handlePayToContinue);
             }
-            modalActions.innerHTML += `<button id="quit-btn" class="btn btn-danger">Quit Tournament</button>`;
-            document.getElementById('quit-btn').addEventListener('click', () => window.location.reload());
+            const quitBtn = document.getElementById('quit-btn');
+            if(quitBtn) quitBtn.addEventListener('click', () => window.location.reload());
         }
+
 
         resultModal.style.display = 'flex';
     }
@@ -284,8 +283,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateBracketWithResults(actualWinners) {
         bracketContainer.classList.add('locked');
         const matchups = document.querySelectorAll('.round.current .matchup, .champion.current .matchup');
-        matchups.forEach((match, index) => {
-            const winnerId = actualWinners[index];
+        let winnerIndex = 0;
+        matchups.forEach((match) => {
+            if (!match.querySelector('[data-wrestler-id]')) return; // Skip empty matchups
+            const winnerId = actualWinners[winnerIndex++];
             const teams = match.querySelectorAll('.team');
             teams.forEach(team => {
                 if (team.dataset.wrestlerId == winnerId) team.classList.add('winner');
@@ -300,8 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentRound++;
         
         const nextRoundDivs = document.querySelectorAll(`.round.round-${currentRound}`);
-        if (nextRoundDivs.length === 0) {
-            const finalMatchup = document.querySelector('.champion .matchup');
+        if (nextRoundDivs.length === 0 || nextRoundWrestlers.length < 2) {
+             const finalMatchup = document.querySelector('.champion .matchup');
             if (!finalMatchup || nextRoundWrestlers.length < 2) return;
             const [winner1, winner2] = [nextRoundWrestlers[0], nextRoundWrestlers[1]];
             finalMatchup.dataset.matchId = "final-0";
@@ -321,11 +322,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         submitPicksBtn.disabled = true;
+
         const populateSide = (side, wrestlerData) => {
             const matchups = document.querySelectorAll(`.split-${side} .round.round-${currentRound} .matchup`);
             matchups.forEach((match, index) => {
                 const wrestler1 = wrestlerData[index * 2];
-                const wrestler2 = wrestlerData[index * 2] + 1;
+                const wrestler2 = wrestlerData[(index * 2) + 1];
                 if (wrestler1 && wrestler2) {
                     match.dataset.matchId = `${currentRound}-${side}-${index}`;
                     const teamTop = match.querySelector('.team-top');
@@ -339,10 +341,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         };
-        const midPoint = nextRoundWrestlers.length / 2;
-        populateSide('one', nextRoundWrestlers.slice(0, midPoint));
-        populateSide('two', nextRoundWrestlers.slice(midPoint));
+
+        const is16Man = bracketContainer.classList.contains('bracket-16');
+
+        if (is16Man) {
+            populateSide('one', nextRoundWrestlers); 
+        } else {
+            const midPoint = nextRoundWrestlers.length / 2;
+            populateSide('one', nextRoundWrestlers.slice(0, midPoint));
+            populateSide('two', nextRoundWrestlers.slice(midPoint));
+        }
+
         bracketContainer.classList.remove('locked');
     }
 });
-

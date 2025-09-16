@@ -1,0 +1,36 @@
+{% extends "base.html.twig" %}
+
+{% block title %}IWF Match Simulator - Book Your Dream Wrestling Matches{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <!-- Hero Section -->
+    <section class="text-center py-16">
+        <h1 class="text-5xl md:text-7xl font-extrabold text-white mb-6">The Ultimate Wrestling Dream Match Simulator</h1>
+        <p class="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-8">Ever wondered who would win between legends of different eras? Stop wondering and start simulating! The IWF Match Simulator puts the power of a booker in your hands.</p>
+        <a href="{{ base_url }}app/match" class="shiny-cta inline-block font-bold py-4 px-10 rounded-full text-xl uppercase tracking-wide"><span>Book a Dream Match</span></a>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-16">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-700">
+                <h3 class="text-2xl font-semibold text-yellow-400 mb-4">Vast Roster of Legends</h3>
+                <p class="text-gray-300">Our roster includes over 150+ iconic wrestlers. From the giants of the Golden Era to the anti-heroes of the Attitude Era and beyond, the possibilities are endless.</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-700">
+                <h3 class="text-2xl font-semibold text-yellow-400 mb-4">Singles & Tag Team Action</h3>
+                <p class="text-gray-300">Pit two legends against each other in a classic one-on-one encounter, or form the ultimate tag team and see how they fare against other legendary pairings.</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-700">
+                <h3 class="text-2xl font-semibold text-yellow-400 mb-4">Detailed Play-by-Play</h3>
+                <p class="text-gray-300">Don't just see who won. Our simulation provides a detailed, turn-by-turn log of the entire match, describing every move, reversal, and dramatic moment as it unfolds.</p>
+            </div>
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-700">
+                <h3 class="text-2xl font-semibold text-yellow-400 mb-4">Calculate Betting Odds</h3>
+                <p class="text-gray-300">Run a match 100 or 1,000 times in a bulk simulation to see who wins most often. Our engine calculates win probabilities and provides realistic moneyline odds for any given matchup.</p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

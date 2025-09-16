@@ -1,0 +1,310 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Challenge Zone{% endblock %}
+
+{% block content %}
+<style>
+    /* Added styles for search and card consistency */
+    .search-container .search-input {
+        width: 2.5rem; 
+        height: 2.5rem; 
+        padding-left: 2.5rem;
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: width 0.3s ease-in-out;
+    }
+    .search-container.expanded .search-input {
+        width: 100%;
+        cursor: text;
+    }
+    @media (min-width: 768px) {
+        .search-container.expanded .search-input {
+            width: 20rem; 
+        }
+    }
+    .prospect-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .prospect-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+    }
+</style>
+
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Challenge Zone</h1>
+        <p class="text-xl text-gray-300 mt-4">Browse, search, and sort other players' prospects to issue a challenge!</p>
+        <a href="{{ base_url }}challenge/manage" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">Manage My Challenges &rarr;</a>
+    </header>
+
+    <!-- Search and Sort Controls -->
+    <div class="bg-gray-800 p-4 rounded-lg shadow-md mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div id="searchContainer" class="search-container relative flex items-center w-full md:w-auto">
+            <svg class="search-icon absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400 z-10 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
+            <input type="text" id="searchInput" class="search-input bg-gray-700 text-white w-full" placeholder="Search prospects...">
+        </div>
+        <div class="flex items-center gap-4">
+            <label for="sortSelect" class="text-gray-300 font-semibold">Sort By:</label>
+            <select id="sortSelect" class="bg-gray-700 text-white rounded-md p-2 border border-gray-600">
+                <option value="name">Name</option>
+                <option value="lvl">Level</option>
+                <option value="wins">Wins</option>
+                <option value="losses">Losses</option>
+                <option value="strength">Strength</option>
+                <option value="technicalAbility">Technical</option>
+                <option value="brawlingAbility">Brawling</option>
+                <option value="stamina">Stamina</option>
+                <option value="aerialAbility">Aerial</option>
+                <option value="toughness">Toughness</option>
+            </select>
+            <button id="sortOrderBtn" class="p-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 border border-gray-600">
+                <span id="sortOrderIcon">↓</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="prospects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <!-- Prospects will be rendered here by JavaScript -->
+    </div>
+    <div id="no-results" class="text-center py-16 text-gray-400 text-xl hidden">
+        No prospects found.
+    </div>
+</div>
+
+<!-- Challenge Modal (remains unchanged) -->
+<div id="challengeModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-gray-900 p-6 rounded-lg shadow-2xl w-full max-w-4xl text-white border-2 border-yellow-500 flex flex-col max-h-[90vh]">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-3xl font-bold text-yellow-400">Tale of the Tape</h2>
+            <button id="closeChallengeModal" class="text-3xl font-bold hover:text-gray-400">&times;</button>
+        </div>
+        
+        <div id="modal-content-container" class="flex-grow overflow-y-auto">
+            <!-- Content will be injected by JS -->
+        </div>
+
+        <div id="modal-loader" class="text-center py-16 hidden">
+             <p class="text-xl text-gray-300">Calculating Odds...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DATA ---
+        const myProspectData = {{ myProspect|json_encode|raw }};
+        let allProspects = {{ prospects|json_encode|raw }};
+        const challengeStatuses = {{ challenge_statuses|json_encode|raw }};
+        let currentSort = { key: 'lvl', order: 'desc' };
+
+        // --- DOM ELEMENTS ---
+        const prospectsGrid = document.getElementById('prospects-grid');
+        const searchInput = document.getElementById('searchInput');
+        const searchContainer = document.getElementById('searchContainer');
+        const sortSelect = document.getElementById('sortSelect');
+        const sortOrderBtn = document.getElementById('sortOrderBtn');
+        const sortOrderIcon = document.getElementById('sortOrderIcon');
+        const noResults = document.getElementById('no-results');
+
+        // --- MODAL ELEMENTS ---
+        const challengeModal = document.getElementById('challengeModal');
+        const closeChallengeModal = document.getElementById('closeChallengeModal');
+        const modalContentContainer = document.getElementById('modal-content-container');
+        const modalLoader = document.getElementById('modal-loader');
+        
+        // --- FUNCTIONS ---
+
+        const getStreakIcon = (streak) => {
+            if (streak === 'hot') {
+                return '<span title="On a Hot Streak! (Won 4 of last 5 matches)">🔥</span>';
+            }
+            if (streak === 'cold') {
+                return '<span title="On a Cold Streak! (Lost 4 of last 5 matches)">❄️</span>';
+            }
+            return '';
+        };
+
+        const renderProspects = () => {
+            const searchTerm = searchInput.value.toLowerCase();
+
+            let filteredProspects = allProspects.filter(p => p.name.toLowerCase().includes(searchTerm));
+            
+            filteredProspects.sort((a, b) => {
+                let valA = a[currentSort.key] || 0;
+                let valB = b[currentSort.key] || 0;
+                
+                // Ensure numeric conversion for stats that might be strings
+                valA = (currentSort.key !== 'name') ? parseFloat(valA) : valA;
+                valB = (currentSort.key !== 'name') ? parseFloat(valB) : valB;
+
+                if (currentSort.order === 'asc') {
+                    return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
+                } else {
+                    return typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA;
+                }
+            });
+
+            prospectsGrid.innerHTML = ''; // Clear grid
+
+            if (filteredProspects.length === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+                filteredProspects.forEach(prospect => {
+                    prospectsGrid.appendChild(createProspectCard(prospect));
+                });
+            }
+        };
+
+        const createProspectCard = (prospect) => {
+            const card = document.createElement('div');
+            card.className = 'prospect-card bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center cursor-pointer';
+            card.dataset.pid = prospect.pid;
+
+            const status = challengeStatuses[prospect.pid];
+            let buttonHtml = '';
+            if (status === 'sent') {
+                buttonHtml = `<button class="w-full bg-yellow-600 text-white font-bold py-2 px-4 rounded-md cursor-not-allowed" disabled>Challenge Pending</button>`;
+            } else if (status === 'received') {
+                buttonHtml = `<button class="w-full bg-purple-600 text-white font-bold py-2 px-4 rounded-md cursor-not-allowed" disabled>Challenge Received</button>`;
+            } else {
+                buttonHtml = `<button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md challenge-btn">Challenge</button>`;
+            }
+
+            card.innerHTML = `
+                <img src="${prospect.image}" alt="${prospect.name}" class="w-32 h-32 rounded-full mb-4 border-4 border-gray-600 object-cover object-top">
+                <h2 class="text-2xl font-bold text-white text-center">${prospect.name} ${getStreakIcon(prospect.streak)}</h2>
+                <p class="text-lg text-yellow-400">Level: ${prospect.lvl}</p>
+                <p class="text-md text-gray-400 mb-4">Record: ${prospect.wins || 0} - ${prospect.losses || 0}</p>
+                <div class="mt-auto w-full">
+                    ${buttonHtml}
+                </div>
+            `;
+            return card;
+        };
+
+        const openChallengeModal = async (opponentPid) => {
+            modalContentContainer.innerHTML = '';
+            modalLoader.classList.remove('hidden');
+            challengeModal.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`{{ base_url }}challenge/ajax_get_challenge_details/${opponentPid}`);
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error);
+                
+                populateModalContent(data.opponent_prospect, data.odds);
+                modalLoader.classList.add('hidden');
+
+            } catch (error) {
+                modalContentContainer.innerHTML = `<p class="text-red-500 text-center">Error: ${error.message}</p>`;
+                modalLoader.classList.add('hidden');
+            }
+        };
+
+        const populateModalContent = (opponent, oddsData) => {
+            const myOdds = oddsData.probabilities[myProspectData.name] || 0;
+            const opponentOdds = oddsData.probabilities[opponent.name] || 0;
+            const myMoneyline = oddsData.moneyline[myProspectData.name] || 'N/A';
+            const opponentMoneyline = oddsData.moneyline[opponent.name] || 'N/A';
+            const potentialPayout = myOdds > 0 ? (100 + (100 * (1 / myOdds) - 100)) : 0;
+
+            let traitsHtml = opponent.traits && opponent.traits.length > 0
+                ? opponent.traits.map(t => `<span class="bg-gray-700 px-2 py-1 rounded text-sm">${t.name}</span>`).join(' ')
+                : '<span class="text-gray-500">None</span>';
+
+            modalContentContainer.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Opponent Details -->
+                    <div class="text-center">
+                        <img src="${opponent.image}" alt="${opponent.name}" class="w-40 h-40 rounded-full mx-auto mb-4 border-4 border-red-500 object-cover object-top">
+                        <h3 class="text-3xl font-bold text-red-400">${opponent.name}</h3>
+                        <p class="text-xl text-gray-300">Level: ${opponent.lvl}</p>
+                        <p class="text-md text-gray-400">${opponent.height} / ${opponent.weight} lbs</p>
+                        <p class="text-md text-gray-400 mt-2">Manager: <span class="font-semibold">${opponent.manager_name || 'None'}</span></p>
+                        <div class="mt-4">
+                            <h4 class="font-bold text-lg mb-2">Traits</h4>
+                            <div class="flex flex-wrap justify-center gap-2">${traitsHtml}</div>
+                        </div>
+                    </div>
+                    <!-- Stats & Wager -->
+                    <div>
+                        <h4 class="text-xl font-bold text-center mb-4">Attributes</h4>
+                        <div class="grid grid-cols-2 gap-4 text-lg bg-gray-800 p-4 rounded-md">
+                            <p>Strength: <span class="font-bold text-white float-right">${opponent.strength}</span></p>
+                            <p>Technical: <span class="font-bold text-white float-right">${opponent.technicalAbility}</span></p>
+                            <p>Brawling: <span class="font-bold text-white float-right">${opponent.brawlingAbility}</span></p>
+                            <p>Stamina: <span class="font-bold text-white float-right">${opponent.stamina}</span></p>
+                            <p>Aerial: <span class="font-bold text-white float-right">${opponent.aerialAbility}</span></p>
+                            <p>Toughness: <span class="font-bold text-white float-right">${opponent.toughness}</span></p>
+                        </div>
+                        <div class="mt-6 bg-gray-800 p-4 rounded-md">
+                            <h4 class="text-xl font-bold text-center mb-4">Betting Odds</h4>
+                            <p class="text-center text-gray-400 text-sm mb-4">Odds based on a 100-match simulation.</p>
+                            <div class="text-center text-lg">
+                                <p>Your Win Chance: <span class="font-bold text-green-400">${(myOdds * 100).toFixed(0)}% (${myMoneyline})</span></p>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <label for="wagerAmount" class="block text-lg font-semibold mb-2 text-center">Set Your Wager</label>
+                            <input type="number" id="wagerAmount" min="100" step="50" value="100" class="w-full bg-gray-700 text-white p-2 rounded-lg border-2 border-gray-600 text-center">
+                            <button id="sendChallengeBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors mt-4">Send Challenge</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('sendChallengeBtn').addEventListener('click', async () => {
+                const wager = document.getElementById('wagerAmount').value;
+                try {
+                    const response = await fetch(`{{ base_url }}challenge/send`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ defender_pid: opponent.pid, wager: wager })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(result.message);
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + result.error);
+                    }
+                } catch (err) {
+                    alert('An error occurred.');
+                }
+            });
+        };
+
+        // --- EVENT LISTENERS ---
+        
+        // Use event delegation for the entire grid to handle clicks on cards or buttons
+        prospectsGrid.addEventListener('click', (e) => {
+            const card = e.target.closest('.prospect-card');
+            if (card) {
+                openChallengeModal(card.dataset.pid);
+            }
+        });
+        
+        closeChallengeModal.addEventListener('click', () => challengeModal.classList.add('hidden'));
+
+        searchInput.addEventListener('input', renderProspects);
+        sortSelect.addEventListener('change', () => {
+            currentSort.key = sortSelect.value;
+            renderProspects();
+        });
+        sortOrderBtn.addEventListener('click', () => {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+            sortOrderIcon.textContent = currentSort.order === 'asc' ? '↑' : '↓';
+            renderProspects();
+        });
+        
+        searchContainer.addEventListener('click', () => searchContainer.classList.add('expanded'));
+        searchInput.addEventListener('blur', () => { if (!searchInput.value) searchContainer.classList.remove('expanded'); });
+
+        // --- INITIAL RENDER ---
+        renderProspects();
+    });
+</script>
+{% endblock %}
+

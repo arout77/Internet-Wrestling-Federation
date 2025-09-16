@@ -39,7 +39,7 @@ class Tournament_Controller extends Base_Controller
         for ( $i = 0; $i < $simulation_count; $i++ )
         {
             $result = $simulatorModel->start_simulation( $wrestler1->wrestler_id, $wrestler2->wrestler_id );
-            if ( isset( $result['winner'] ) && $result['winner']->wrestler_id == $wrestler1->wrestler_id )
+            if ( isset( $result['winner'] ) && is_object( $result['winner'] ) && $result['winner']->wrestler_id == $wrestler1->wrestler_id )
             {
                 $wrestler1_wins++;
             }
@@ -179,7 +179,6 @@ class Tournament_Controller extends Base_Controller
 
             $userModel->updateGold( $userId, -1 );
 
-            // ** START OF CHANGE **
             $postData     = json_decode( file_get_contents( 'php://input' ), true );
             $wrestler_ids = $postData['wrestler_ids'] ?? null;
 
@@ -197,7 +196,6 @@ class Tournament_Controller extends Base_Controller
 
             $stmt = $this->db->prepare( "INSERT INTO tournaments (user_id, wrestler_ids, initial_size) VALUES (?, ?, ?)" );
             $stmt->execute( [$userId, json_encode( $wrestler_ids ), $initial_size] );
-            // ** END OF CHANGE **
 
             $tournamentId = $this->db->lastInsertId();
             $this->db->commit();
@@ -238,9 +236,7 @@ class Tournament_Controller extends Base_Controller
             $actualWinners           = [];
             $all_correct             = true;
 
-            // ** START OF CHANGE **
             $incorrect_picks_data = [];
-            // ** END OF CHANGE **
 
             $matchups = array_chunk( $wrestlerIdsInTournament, 2 );
 
@@ -255,8 +251,6 @@ class Tournament_Controller extends Base_Controller
                 if ( $userPickId != $winnerId )
                 {
                     $all_correct = false;
-                    // ** START OF CHANGE **
-                    // If the pick is incorrect, gather the data for the modal
                     if ( $userPickId )
                     {
                         $incorrect_picks_data[] = [
@@ -264,7 +258,6 @@ class Tournament_Controller extends Base_Controller
                             'actual_winner' => $apiModel->getWrestlerById( $winnerId ),
                         ];
                     }
-                    // ** END OF CHANGE **
                 }
             }
 
@@ -282,13 +275,34 @@ class Tournament_Controller extends Base_Controller
             }
             $response['winners_data'] = $winners_data;
 
-            // ** START OF CHANGE **
             $response['incorrect_picks_data'] = $incorrect_picks_data;
-            // ** END OF CHANGE **
 
             if ( $all_correct )
             {
-                // ... (rest of the 'if all correct' logic is unchanged) ...
+                $response['all_correct']     = true; // ** THE FIX IS HERE **
+                $wrestler_ids_for_next_round = array_values( $actualWinners );
+
+                if ( count( $wrestler_ids_for_next_round ) === 1 )
+                {
+                    $userModel = $this->model( 'User' );
+                    $reward    = ( $tournament->initial_size == 32 ) ? 100 : 50;
+                    $userModel->updateGold( $_SESSION['user_id'], $reward );
+                    $response['tournament_winner'] = $apiModel->getWrestlerById( $wrestler_ids_for_next_round[0] );
+                    $response['message']           = "Congratulations! You correctly picked all winners and won {$reward} Gold!";
+                }
+                else
+                {
+                    $stmt = $this->db->prepare( "UPDATE tournaments SET current_round = current_round + 1, wrestler_ids = :wrestler_ids WHERE id = :id" );
+                    $stmt->execute( [':wrestler_ids' => json_encode( $wrestler_ids_for_next_round ), ':id' => $tournamentId] );
+                    $response['message'] = 'Congratulations! You picked all winners correctly!';
+
+                    $nextRoundWrestlers = [];
+                    foreach ( $wrestler_ids_for_next_round as $id )
+                    {
+                        $nextRoundWrestlers[] = $apiModel->getWrestlerById( $id );
+                    }
+                    $response['next_round_matchups'] = $nextRoundWrestlers;
+                }
             }
             else
             {
@@ -444,10 +458,7 @@ class Tournament_Controller extends Base_Controller
             ];
         }
 
-        // **START OF CHANGE**
-        // Set a class based on the number of matchups to control CSS
         $bracket_class = ( count( $matchups ) <= 8 ) ? 'bracket-16' : 'bracket-32';
-        // **END OF CHANGE**
 
         $this->template->render(
             'tournament/index.html.twig',
@@ -456,7 +467,7 @@ class Tournament_Controller extends Base_Controller
                 'event_slogan'  => $slogan,
                 'wrestlers'     => $tournament_wrestlers,
                 'matchups'      => $matchups,
-                'bracket_class' => $bracket_class, // Pass the new class to the template
+                'bracket_class' => $bracket_class,
             ]
         );
     }

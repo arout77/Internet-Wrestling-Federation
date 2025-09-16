@@ -30,12 +30,16 @@ class Train_Controller extends Base_Controller
         $sortBy     = $_GET['sort_by'] ?? 'level_requirement';
         $sortOrder  = $_GET['sort_order'] ?? 'ASC';
 
-        $trainModel     = $this->model( 'Train' );
+        $trainModel = $this->model( 'Train' );
+
+        // Fetch both regular moves and special opportunities
         $availableMoves = $trainModel->getAvailableMoves( $prospect['pid'], $prospect['lvl'], $filterType, $sortBy, $sortOrder );
+        $opportunities  = $trainModel->getTrainingOpportunities( $prospect['pid'] );
 
         $this->template->render( 'career/train.html.twig', [
             'prospect'         => $prospect,
             'availableMoves'   => $availableMoves,
+            'opportunities'    => $opportunities,
             'currentFilter'    => $filterType,
             'currentSortBy'    => $sortBy,
             'currentSortOrder' => $sortOrder,
@@ -80,6 +84,7 @@ class Train_Controller extends Base_Controller
 
     /**
      * Handles the purchase of a new move.
+     * UPDATED to return the new gold amount on success.
      */
     public function learn_move( $moveId )
     {
@@ -95,11 +100,18 @@ class Train_Controller extends Base_Controller
         $prospect  = $userModel->getProspectByUserId( $_SESSION['user_id'] );
 
         $trainModel = $this->model( 'Train' );
-        $result     = $trainModel->learnMove( $prospect, $moveId );
+        $result     = $trainModel->learnMove( $prospect['pid'], $moveId );
 
         if ( $result === true )
         {
-            echo json_encode( ['success' => true, 'message' => 'Move learned successfully!'] );
+            $updatedProspect = $userModel->getProspectByUserId( $_SESSION['user_id'] );
+            $newGold         = $updatedProspect['gold'];
+
+            echo json_encode( [
+                'success' => true,
+                'message' => 'Move learned successfully!',
+                'newGold' => $newGold, // Send the new gold amount back to the client
+            ] );
         }
         else
         {

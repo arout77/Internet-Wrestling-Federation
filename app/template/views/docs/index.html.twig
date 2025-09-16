@@ -1,28 +1,40 @@
-{% extends 'base.html.twig' %}
+{% extends "base.html.twig" %}
+
+{% block title %}Game Guide{% endblock %}
 
 {% block content %}
-<section id="about" class="about">
-    <div class="container" data-aos="fade-up">
-        <p class="hero">
-            {{ site_name }}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Welcome to the IWF Game Guide</h1>
+        <p class="text-xl text-gray-300 mt-4">Everything you need to know to become a legend.</p>
+    </header>
+
+    <div class="bg-gray-800 p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
+        <p class="text-lg text-gray-300 mb-6">
+            Welcome, future champion! This guide is your ringside companion to mastering the Internet Wrestling Federation (IWF). Whether you're looking to build a Hall of Fame career, simulate dream matches between legends, or prove your booking genius, you'll find all the details you need right here.
         </p>
-        {{ message }}
+        <p class="text-lg text-gray-300 mb-8">
+            Use the links below to navigate through the different sections of our guide. Learn the ropes, discover advanced strategies, and prepare to leave your mark on the world of professional wrestling.
+        </p>
 
-        <pre>
-        <code class="language-php">
-            namespace App\Controller;
-
-            use \Src\Base_Controller;
-
-            class Home_Controller extends Base_Controller {
-
-                public function index()
-                {
-                    // Do stuff
-                }
-            }
-        </code>
-        </pre>
-
-</section>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <a href="{{ base_url }}docs/game_modes" class="block bg-gray-700 p-6 rounded-lg hover:bg-gray-600 transition-colors">
+                <h3 class="text-2xl font-bold text-yellow-400 mb-2">Game Modes</h3>
+                <p class="text-gray-400">Discover the different ways to play, from Career Mode to the Match Simulator.</p>
+            </a>
+            <a href="{{ base_url }}docs/career_guide" class="block bg-gray-700 p-6 rounded-lg hover:bg-gray-600 transition-colors">
+                <h3 class="text-2xl font-bold text-yellow-400 mb-2">Career Mode Guide</h3>
+                <p class="text-gray-400">A deep dive into creating your prospect, leveling up, and choosing an Archetype.</p>
+            </a>
+            <a href="{{ base_url }}docs/features_rewards" class="block bg-gray-700 p-6 rounded-lg hover:bg-gray-600 transition-colors">
+                <h3 class="text-2xl font-bold text-yellow-400 mb-2">Features & Rewards</h3>
+                <p class="text-gray-400">Learn about Managers, the Challenge Zone, Tournaments, and more.</p>
+            </a>
+            <a href="{{ base_url }}docs/faq" class="block bg-gray-700 p-6 rounded-lg hover:bg-gray-600 transition-colors">
+                <h3 class="text-2xl font-bold text-yellow-400 mb-2">Frequently Asked Questions</h3>
+                <p class="text-gray-400">Get answers to the most common questions about gameplay and mechanics.</p>
+            </a>
+        </div>
+    </div>
+</div>
 {% endblock %}

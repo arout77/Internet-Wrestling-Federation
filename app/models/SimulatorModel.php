@@ -405,9 +405,12 @@ class SimulatorModel extends System_Model
      */
     private function calculateDamage( $attackerState, $defenderState, $move, $isBulk = false )
     {
-        $minDamage     = 0;
-        $maxDamage     = 0;
-        $decodedDamage = json_decode( $move->min_damage, true );
+        $minDamage = 0;
+        $maxDamage = 0;
+
+        // FIX: Ensure min_damage is a string before decoding
+        $minDamageJson = is_string( $move->min_damage ) ? $move->min_damage : '{}';
+        $decodedDamage = json_decode( $minDamageJson, true );
 
         if ( json_last_error() === JSON_ERROR_NONE && isset( $decodedDamage['min'] ) && isset( $decodedDamage['max'] ) )
         {
@@ -421,8 +424,9 @@ class SimulatorModel extends System_Model
         }
 
         // Check if the move is a finisher and enforce minimum damage
-        $wrestlerMoves = json_decode( $attackerState['data']->moves, true );
-        $finisherName  = $wrestlerMoves['finisher'][0] ?? null;
+        $wrestlerMovesJson = is_string( $attackerState['data']->moves ) ? $attackerState['data']->moves : '{}';
+        $wrestlerMoves     = json_decode( $wrestlerMovesJson, true );
+        $finisherName      = $wrestlerMoves['finisher'][0] ?? null;
 
         if ( $finisherName && $move->move_name === $finisherName )
         {
@@ -488,6 +492,36 @@ class SimulatorModel extends System_Model
             $finalDamage *= 0.90; // 10% damage reduction
         }
 
+        // Archetype Bonuses - Check if property exists first
+        if ( property_exists( $attackerState['data'], 'archetype' ) && $attackerState['data']->archetype )
+        {
+            switch ( $attackerState['data']->archetype )
+            {
+                case 'powerhouse':
+                    if ( $move->type === 'grapple' && $defenderState['data']->weight < 250 )
+                    {
+                        $finalDamage *= 1.10; // 10% bonus vs lighter opponents
+                        if ( !$isBulk )
+                        {
+                            $this->logMessage( "{$attackerState['data']->name}'s Powerhouse Archetype adds extra impact!" );
+                        }
+
+                    }
+                    break;
+                case 'high-flyer':
+                    if ( $move->type === 'highFlying' )
+                    {
+                        $attackerState['momentum'] += 5; // Extra momentum gain
+                        if ( !$isBulk )
+                        {
+                            $this->logMessage( "{$attackerState['data']->name}'s High-Flyer Archetype builds momentum!" );
+                        }
+
+                    }
+                    break;
+            }
+        }
+
         // Apply comeback damage modifier if active
         if ( isset( $attackerState['comeback_damage_modifier'] ) )
         {
@@ -544,6 +578,15 @@ class SimulatorModel extends System_Model
         if ( $move->submissionAttemptChance > 0 && in_array( 'Submission Specialist', $attackerState['data']->traits ) )
         {
             $finalChance += 10;
+        }
+
+        // Technician Archetype Bonus - Check if property exists
+        if ( property_exists( $defenderState['data'], 'archetype' ) && $defenderState['data']->archetype === 'technician' )
+        {
+            if ( $move->type === 'grapple' )
+            {
+                $finalChance -= 5; // 5% higher chance to reverse grapples
+            }
         }
 
         return max( 5, min( 95, $finalChance ) );
@@ -611,7 +654,23 @@ class SimulatorModel extends System_Model
      */
     private function selectMove( $attackerState, $defenderState )
     {
-        $wrestlerMoves = json_decode( $attackerState['data']->moves, true );
+        // FIX: Ensure the moveset is a string and provide a default if not.
+        $movesJson     = is_string( $attackerState['data']->moves ) ? $attackerState['data']->moves : '{}';
+        $wrestlerMoves = json_decode( $movesJson, true );
+
+        // FIX: Ensure the moveset structure is always a valid array to prevent type errors
+        if ( !is_array( $wrestlerMoves ) )
+        {
+            $wrestlerMoves = [];
+        }
+        $moveTypes = ['strike', 'grapple', 'submission', 'highFlying', 'finisher'];
+        foreach ( $moveTypes as $type )
+        {
+            if ( !isset( $wrestlerMoves[$type] ) || !is_array( $wrestlerMoves[$type] ) )
+            {
+                $wrestlerMoves[$type] = [];
+            }
+        }
 
         if ( empty( $wrestlerMoves ) || !is_array( $wrestlerMoves ) || count( $wrestlerMoves ) === 0 )
         {
@@ -729,26 +788,56 @@ class SimulatorModel extends System_Model
      * @param $wrestler1
      * @param $wrestler2
      * @param $simCount
+     * @return mixed
      */
     public function runBulkSimulations( $wrestler1, $wrestler2, $simCount = 100 )
     {
-        $winCounts = [
-            $wrestler1->name => 0,
-            $wrestler2->name => 0,
-            'draw'           => 0,
-        ];
+        $isTagMatch = is_array( $wrestler1 ) && is_array( $wrestler2 );
+
+        $winCounts = [];
+        if ( $isTagMatch )
+        {
+            $winCounts['Team 1'] = 0;
+            $winCounts['Team 2'] = 0;
+        }
+        else
+        {
+            $winCounts[$wrestler1->name] = 0;
+            $winCounts[$wrestler2->name] = 0;
+        }
+        $winCounts['draw'] = 0;
 
         for ( $i = 0; $i < $simCount; $i++ )
         {
-            $result = $this->simulateMatch( $wrestler1, $wrestler2, true );
+            $result = $isTagMatch
+            ? $this->simulateTagMatch( $wrestler1, $wrestler2, true )
+            : $this->simulateMatch( $wrestler1, $wrestler2, true );
 
-            if ( is_object( $result['winner'] ) )
+            if ( $isTagMatch )
             {
-                $winCounts[$result['winner']->name]++;
+                if ( $result['winner'] === 'Team 1' )
+                {
+                    $winCounts['Team 1']++;
+                }
+                elseif ( $result['winner'] === 'Team 2' )
+                {
+                    $winCounts['Team 2']++;
+                }
+                else
+                {
+                    $winCounts['draw']++;
+                }
             }
             else
             {
-                $winCounts['draw']++;
+                if ( is_object( $result['winner'] ) )
+                {
+                    $winCounts[$result['winner']->name]++;
+                }
+                else
+                {
+                    $winCounts['draw']++;
+                }
             }
         }
 
@@ -764,11 +853,217 @@ class SimulatorModel extends System_Model
             }
         }
 
-        return [
-            'wins'          => $winCounts,
-            'probabilities' => $probabilities,
-            'moneyline'     => $moneylineOdds,
-        ];
+        $response = ['wins' => $winCounts, 'probabilities' => $probabilities, 'moneyline' => $moneylineOdds];
+
+        if ( $isTagMatch )
+        {
+            $response['team1_names'] = $wrestler1[0]->name . ' & ' . $wrestler1[1]->name;
+            $response['team2_names'] = $wrestler2[0]->name . ' & ' . $wrestler2[1]->name;
+        }
+
+        return $response;
+    }
+
+    /**
+     * @param $team1
+     * @param $team2
+     * @return mixed
+     */
+    public function start_tag_simulation( $team1, $team2 )
+    {
+        return $this->simulateTagMatch( $team1, $team2, false );
+    }
+
+    /**
+     * @param $team1
+     * @param $team2
+     * @param $isBulk
+     */
+    private function simulateTagMatch( $team1, $team2, $isBulk = false )
+    {
+        $this->matchLog = [];
+        $winner         = null;
+        $turn           = 0;
+        $maxTurns       = 250;
+        $matchState     = $this->initializeTagMatchState( $team1, $team2 );
+
+        if ( !$isBulk )
+        {
+            $team1Names = $team1[0]->name . ' & ' . $team1[1]->name;
+            $team2Names = $team2[0]->name . ' & ' . $team2[1]->name;
+            $this->logMessage( "--- Tag Match Start: {$team1Names} vs. {$team2Names} ---" );
+        }
+
+        while ( $turn < $maxTurns && $winner === null )
+        {
+            $turn++;
+            if ( !$isBulk )
+            {
+                $this->logMessage( "--- Turn {$turn} ---" );
+            }
+
+            // **START FIX**
+            // Stamina Recovery
+            foreach ( array_merge( $team1, $team2 ) as $wrestler )
+            {
+                $initialStamina                                = $wrestler->stamina * 10;
+                $recoveryRate                                  = $wrestler->staminaRecoveryRate;
+                $matchState[$wrestler->wrestler_id]['stamina'] = min( $initialStamina, $matchState[$wrestler->wrestler_id]['stamina'] + $recoveryRate );
+            }
+            // **END FIX**
+
+            $activeTeam1 = array_filter( $team1, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 );
+            $activeTeam2 = array_filter( $team2, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 );
+
+            if ( empty( $activeTeam1 ) )
+            {
+                $winner = 'Team 2';
+                break;
+            }
+            if ( empty( $activeTeam2 ) )
+            {
+                $winner = 'Team 1';
+                break;
+            }
+
+            // Randomize who attacks first this turn
+            if ( rand( 0, 1 ) === 0 )
+            {
+                // Team 1 attacks first
+                $attacker = $activeTeam1[array_rand( $activeTeam1 )];
+                $defender = $activeTeam2[array_rand( $activeTeam2 )];
+                $this->performAttack( $matchState, $attacker, $defender, $isBulk );
+
+                if ( empty( array_filter( $team2, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 ) ) )
+                {
+                    $winner = 'Team 1';
+                    break;
+                }
+
+                // Team 2 gets their attack, if they still can
+                $activeTeam1 = array_filter( $team1, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 );
+                $activeTeam2 = array_filter( $team2, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 );
+                if ( !empty( $activeTeam2 ) && !empty( $activeTeam1 ) )
+                {
+                    $attacker = $activeTeam2[array_rand( $activeTeam2 )];
+                    $defender = $activeTeam1[array_rand( $activeTeam1 )];
+                    $this->performAttack( $matchState, $attacker, $defender, $isBulk );
+                    if ( empty( array_filter( $team1, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 ) ) )
+                    {
+                        $winner = 'Team 2';
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                // Team 2 attacks first
+                $attacker = $activeTeam2[array_rand( $activeTeam2 )];
+                $defender = $activeTeam1[array_rand( $activeTeam1 )];
+                $this->performAttack( $matchState, $attacker, $defender, $isBulk );
+
+                if ( empty( array_filter( $team1, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 ) ) )
+                {
+                    $winner = 'Team 2';
+                    break;
+                }
+
+                // Team 1 gets their attack, if they still can
+                $activeTeam1 = array_filter( $team1, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 );
+                $activeTeam2 = array_filter( $team2, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 );
+                if ( !empty( $activeTeam1 ) && !empty( $activeTeam2 ) )
+                {
+                    $attacker = $activeTeam1[array_rand( $activeTeam1 )];
+                    $defender = $activeTeam2[array_rand( $activeTeam2 )];
+                    $this->performAttack( $matchState, $attacker, $defender, $isBulk );
+                    if ( empty( array_filter( $team2, fn( $w ) => $matchState[$w->wrestler_id]['hp'] > 0 ) ) )
+                    {
+                        $winner = 'Team 1';
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ( !$winner )
+        {
+            $winner = 'draw';
+        }
+
+        if ( !$isBulk )
+        {
+            if ( $winner === 'draw' )
+            {
+                $this->logMessage( "--- The match is a Draw! ---" );
+            }
+            else
+            {
+                $this->logMessage( "--- The winner is {$winner}! ---" );
+            }
+        }
+
+        return ['winner' => $winner, 'log' => $this->matchLog];
+    }
+
+    /**
+     * @param $matchState
+     * @param $attacker
+     * @param $defender
+     * @param $isBulk
+     */
+    private function performAttack( &$matchState, $attacker, $defender, $isBulk )
+    {
+        $move = $this->selectMove( $matchState[$attacker->wrestler_id], $matchState[$defender->wrestler_id] );
+        if ( $move )
+        {
+            if ( !$isBulk )
+            {
+                $this->logMessage( "{$attacker->name} attempts a {$move->move_name} on {$defender->name}..." );
+            }
+
+            $hitChance = $this->calculateHitChance( $matchState[$attacker->wrestler_id], $matchState[$defender->wrestler_id], $move );
+            if ( rand( 1, 100 ) <= $hitChance )
+            {
+                $damage = $this->calculateDamage( $matchState[$attacker->wrestler_id], $matchState[$defender->wrestler_id], $move, $isBulk );
+                $matchState[$defender->wrestler_id]['hp'] -= $damage;
+                if ( !$isBulk )
+                {
+                    $this->logMessage( "It connects! {$damage} damage dealt." );
+                    $this->logMessage( "{$defender->name} has " . max( 0, round( $matchState[$defender->wrestler_id]['hp'] ) ) . " HP remaining." );
+                }
+            }
+            else
+            {
+                if ( !$isBulk )
+                {
+                    $this->logMessage( "...but {$defender->name} reverses it!" );
+                }
+
+            }
+        }
+        else
+        {
+            if ( !$isBulk )
+            {
+                $this->logMessage( "{$attacker->name} is too exhausted to make a move!" );
+            }
+
+        }
+    }
+
+    /**
+     * @param $team1
+     * @param $team2
+     * @return mixed
+     */
+    private function initializeTagMatchState( $team1, $team2 )
+    {
+        $state = [];
+        foreach ( array_merge( $team1, $team2 ) as $wrestler )
+        {
+            $state[$wrestler->wrestler_id] = $this->initializeMatchState( $wrestler, $wrestler )[$wrestler->wrestler_id];
+        }
+        return $state;
     }
 
     /**

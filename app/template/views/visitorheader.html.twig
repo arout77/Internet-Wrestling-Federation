@@ -22,31 +22,51 @@
                 Game Modes
                 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
-            <div id="game-modes-menu" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-700">
-                <a href="{{ base_url }}app/career" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Career Mode</a>
-                <a href="{{ base_url }}app/booking" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Booker Mode</a>
-                <a href="{{ base_url }}app/match" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Simulator</a>
-                <a href="{{ base_url }}tournament" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Tournament</a>
+            <div id="game-modes-menu" class="hidden absolute right-0 mt-2 w-56 bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-700">
+                <a href="{{ base_url }}gamemodes/career" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Career Mode</a>
+                <a href="{{ base_url }}gamemodes/booking" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Booker Mode</a>
+                <a href="{{ base_url }}gamemodes/simulator" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Simulator</a>
+                <a href="{{ base_url }}gamemodes/tournament" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Tournament</a>
+                <a href="{{ base_url }}app/wrestlers" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Roster</a>
             </div>
         </div>
         
-        <a href="{{ base_url }}app/wrestlers" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-600 {% if route_action == 'wrestlers' %}text-yellow-400{% else %}text-gray-300{% endif %}">Roster</a>
+        <!-- Game Guide Dropdown -->
+        <div class="relative" id="game-guide-dropdown-container">
+            <button id="game-guide-btn" class="hover:text-white transition duration-300 text-lg animate-fade-in-up animation-delay-600 text-gray-300 flex items-center">
+                Game Guide
+                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            <div id="game-guide-menu" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-700">
+                <a href="{{ base_url }}docs/index" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Introduction</a>
+                <a href="{{ base_url }}docs/game_modes" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Game Modes</a>
+                <a href="{{ base_url }}docs/career_guide" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Career Guide</a>
+                <a href="{{ base_url }}docs/features_rewards" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Features & Rewards</a>
+                <a href="{{ base_url }}docs/faq" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">FAQ</a>
+            </div>
+        </div>
         
         {% if session.user_id %}
             <div class="flex items-center gap-4">
+                <a href="{{ base_url }}challenge/manage" class="relative text-gray-300 hover:text-white" title="Notifications">
+                    <svg class="h-7 w-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2.98 2.98 0 0 0 2.818-2H9.182A2.98 2.98 0 0 0 12 22zm7-7.414V10c0-3.217-2.185-5.927-5.145-6.742C13.562 2.52 12.846 2 12 2s-1.562.52-1.855 1.258C7.185 4.073 5 6.783 5 10v4.586l-1.707 1.707A.996.996 0 0 0 3 17v1h18v-1a.996.996 0 0 0-.293-.707L19 14.586z"></path></svg>
+                    <span id="notification-badge" class="absolute top-0 right-0 h-5 w-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center border-2 border-gray-800 hidden">0</span>
+                </a>
+                 <a href="{{ base_url }}store" class="text-gray-300 hover:text-white flex items-center gap-2" title="Add Gold / AP">
+                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm-1 14H9v-2h2v-2H9v-2h2V8H9V6h4v10h-2v-2zm4 0h-2v-2h2v2zm0-4h-2v-2h2v2z"></path></svg>
+                    <span class="font-semibold">Store</span>
+                </a>
+
                 {% if prospect and prospect.gold is defined %}
                     <div class="flex items-center gap-2 bg-yellow-500 bg-opacity-25 border border-yellow-500 rounded-full px-4 py-1 text-yellow-300 font-bold text-lg animate-fade-in-up animation-delay-700" title="Gold">
-                        <svg class="h-6 w-6 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2ZM12,20a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"/>
-                            <path d="M12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/>
-                        </svg>
-                        <span>{{ prospect.gold }}</span>
+                        <svg class="h-6 w-6 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2ZM12,20a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"/><path d="M12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/></svg>
+                        <span id="navbar-gold-display">{{ prospect.gold }}</span>
                     </div>
                 {% endif %}
-                {% if prospect and prospect.attribute_points > 0 %}
-                    <div class="ap-display inline-block px-4 py-2 rounded-full text-lg font-bold bg-green-400 bg-opacity-20 border border-green-500 text-green-300" title="Attribute Points">
-                        <svg class="w-5 h-5 inline-block mr-1 fill-current" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
-                        {{ prospect.attribute_points }} AP
+                {% if prospect and prospect.attribute_points is defined %}
+                    <div id="navbar-ap-container" class="ap-display inline-flex items-center px-4 py-2 rounded-full text-lg font-bold bg-green-400 bg-opacity-20 border border-green-500 text-green-300 {% if prospect.attribute_points == 0 %}hidden{% endif %}" title="Attribute Points">
+                        <svg class="w-5 h-5 inline-block mr-2 fill-current" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <span id="navbar-ap-display">{{ prospect.attribute_points }}</span> AP
                     </div>
                 {% endif %}
             </div>
@@ -58,20 +78,38 @@
     </nav>
 
     <!-- Mobile Menu -->
-    <div id="mobile-menu" class="hidden md:hidden bg-gray-800 p-4 absolute top-full left-0 w-full">
+    <div id="mobile-menu" class="hidden md:hidden bg-gray-800 p-4 absolute top-full left-0 w-full z-50">
         <button id="mobile-game-modes-toggle" class="w-full text-left text-white py-2 flex justify-between items-center font-semibold">
             <span>Game Modes</span>
             <svg class="w-4 h-4 transform transition-transform" id="mobile-dropdown-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
         </button>
         <div id="mobile-game-modes-menu" class="hidden pl-4 border-l-2 border-gray-700">
-            <a href="{{ base_url }}app/career" class="block text-white py-2">Career Mode</a>
-            <a href="{{ base_url }}app/booking" class="block text-white py-2">Booker Mode</a>
-            <a href="{{ base_url }}app/match" class="block text-white py-2">Simulator</a>
-            <a href="{{ base_url }}tournament" class="block text-white py-2">Tournament</a>
+            <a href="{{ base_url }}gamemodes/career" class="block text-white py-2">Career Mode</a>
+            <a href="{{ base_url }}gamemodes/booking" class="block text-white py-2">Booker Mode</a>
+            <a href="{{ base_url }}gamemodes/simulator" class="block text-white py-2">Simulator</a>
+            <a href="{{ base_url }}gamemodes/tournament" class="block text-white py-2">Tournament</a>
+            <a href="{{ base_url }}app/wrestlers" class="block text-white py-2">Roster</a>
         </div>
-        <a href="{{ base_url }}app/wrestlers" class="block text-white py-2 font-semibold">Roster</a>
+
+        <button id="mobile-game-guide-toggle" class="w-full text-left text-white py-2 flex justify-between items-center font-semibold">
+            <span>Game Guide</span>
+            <svg class="w-4 h-4 transform transition-transform" id="mobile-guide-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+        <div id="mobile-game-guide-menu" class="hidden pl-4 border-l-2 border-gray-700">
+            <a href="{{ base_url }}docs/index" class="block text-white py-2">Introduction</a>
+            <a href="{{ base_url }}docs/game_modes" class="block text-white py-2">Game Modes</a>
+            <a href="{{ base_url }}docs/career_guide" class="block text-white py-2">Career Guide</a>
+            <a href="{{ base_url }}docs/features_rewards" class="block text-white py-2">Features & Rewards</a>
+            <a href="{{ base_url }}docs/faq" class="block text-white py-2">FAQ</a>
+        </div>
+
          <div class="border-t border-gray-700 mt-2 pt-2">
             {% if session.user_id %}
+                <a href="{{ base_url }}challenge/manage" class="flex items-center text-white py-2">
+                    Notifications
+                    <span id="mobile-notification-badge" class="ml-2 h-6 w-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center hidden">0</span>
+                </a>
+                 <a href="{{ base_url }}store" class="block text-white py-2 font-semibold">Store</a>
                 <a href="{{ base_url }}user/logout" class="block text-white py-2">Logout</a>
             {% else %}
                 <a href="{{ base_url }}user/login" class="block text-white py-2">Login</a>
@@ -84,37 +122,60 @@
 document.addEventListener('DOMContentLoaded', function() {
     const gameModesBtn = document.getElementById('game-modes-btn');
     const gameModesMenu = document.getElementById('game-modes-menu');
+    const gameGuideBtn = document.getElementById('game-guide-btn');
+    const gameGuideMenu = document.getElementById('game-guide-menu');
     const menuToggle = document.getElementById('menu-toggle');
     const mobileMenu = document.getElementById('mobile-menu');
+
     const mobileGameModesToggle = document.getElementById('mobile-game-modes-toggle');
     const mobileGameModesMenu = document.getElementById('mobile-game-modes-menu');
     const mobileDropdownIcon = document.getElementById('mobile-dropdown-icon');
+    
+    const mobileGameGuideToggle = document.getElementById('mobile-game-guide-toggle');
+    const mobileGameGuideMenu = document.getElementById('mobile-game-guide-menu');
+    const mobileGuideIcon = document.getElementById('mobile-guide-icon');
 
-    // Desktop Dropdown
-    if (gameModesBtn && gameModesMenu) {
-        gameModesBtn.addEventListener('click', function(event) {
-            event.stopPropagation();
-            gameModesMenu.classList.toggle('hidden');
-        });
+    // Desktop Dropdowns
+    function setupDropdown(button, menu) {
+        if (button && menu) {
+            button.addEventListener('click', function(event) {
+                event.stopPropagation();
+                // Close other menus
+                if (menu.id !== 'game-modes-menu' && gameModesMenu) gameModesMenu.classList.add('hidden');
+                if (menu.id !== 'game-guide-menu' && gameGuideMenu) gameGuideMenu.classList.add('hidden');
+                menu.classList.toggle('hidden');
+            });
+        }
     }
+    setupDropdown(gameModesBtn, gameModesMenu);
+    setupDropdown(gameGuideBtn, gameGuideMenu);
 
-    // Mobile Collapsible Section
-    if (mobileGameModesToggle && mobileGameModesMenu && mobileDropdownIcon) {
-        mobileGameModesToggle.addEventListener('click', function() {
-            mobileGameModesMenu.classList.toggle('hidden');
-            mobileDropdownIcon.classList.toggle('rotate-180');
-        });
+
+    // Mobile Collapsible Sections
+    function setupMobileToggle(toggle, menu, icon) {
+        if (toggle && menu && icon) {
+            toggle.addEventListener('click', function() {
+                menu.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+            });
+        }
     }
+    setupMobileToggle(mobileGameModesToggle, mobileGameModesMenu, mobileDropdownIcon);
+    setupMobileToggle(mobileGameGuideToggle, mobileGameGuideMenu, mobileGuideIcon);
+
 
     // Global click listener to close menus
     document.addEventListener('click', function(event) {
-        // Close desktop dropdown if clicking outside
-        if (gameModesMenu && !gameModesMenu.classList.contains('hidden') && gameModesBtn && !gameModesBtn.contains(event.target)) {
+        // Close desktop dropdowns
+        if (gameModesMenu && !gameModesMenu.classList.contains('hidden') && !gameModesBtn.contains(event.target)) {
             gameModesMenu.classList.add('hidden');
         }
+        if (gameGuideMenu && !gameGuideMenu.classList.contains('hidden') && !gameGuideBtn.contains(event.target)) {
+            gameGuideMenu.classList.add('hidden');
+        }
         
-        // Close mobile menu if clicking outside of it and its toggle button
-        if (mobileMenu && !mobileMenu.classList.contains('hidden') && menuToggle && !menuToggle.contains(event.target) && !mobileMenu.contains(event.target)) {
+        // Close mobile menu if clicking outside
+        if (mobileMenu && !mobileMenu.classList.contains('hidden') && !menuToggle.contains(event.target) && !mobileMenu.contains(event.target)) {
             mobileMenu.classList.add('hidden');
         }
     });
@@ -128,3 +189,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+

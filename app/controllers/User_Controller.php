@@ -17,6 +17,7 @@ class User_Controller extends Base_Controller
     public function __construct( $app )
     {
         parent::__construct( $app );
+        session_start();
         $this->userModel = new UserModel( $this->app );
     }
 

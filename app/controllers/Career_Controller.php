@@ -6,6 +6,19 @@ use Src\Controller\Base_Controller;
 
 class Career_Controller extends Base_Controller
 {
+    /**
+     * @param $app
+     */
+    public function __construct( $app )
+    {
+        parent::__construct( $app );
+        if ( !isset( $_SESSION['user_id'] ) )
+        {
+            $this->redirect( 'user/login' );
+            exit;
+        }
+    }
+
     public function index()
     {
         $user = $this->model( 'User' )->getProspectByUserId( $_SESSION['user_id'] );
@@ -24,12 +37,21 @@ class Career_Controller extends Base_Controller
             $record    = $userModel->getWrestlerRecord( $user['pid'] );
         }
 
+        // Check for a flash message from a previous action (like retirement)
+        $flash_message = $_SESSION['flash_message'] ?? null;
+        if ( $flash_message )
+        {
+            // Unset the message so it doesn't show on subsequent visits
+            unset( $_SESSION['flash_message'] );
+        }
+
         $this->template->render( 'app/career.html.twig', [
-            'isLoggedIn' => true,
-            'user'       => $user,
-            'prospect'   => $user,
-            'manager'    => $manager,
-            'record'     => $record,
+            'isLoggedIn'    => true,
+            'user'          => $user,
+            'prospect'      => $user,
+            'manager'       => $manager,
+            'record'        => $record,
+            'flash_message' => $flash_message, // Pass the message to the template
         ] );
     }
 
@@ -478,6 +500,10 @@ class Career_Controller extends Base_Controller
 
         if ( is_array( $result ) )
         {
+            // After creating the prospect, immediately check for and assign any qualifying traits.
+            $careerModel = $this->model( 'Career' );
+            $careerModel->syncProspectTraits( $result['id'] );
+
             echo json_encode( ['success' => true, 'prospect' => $result] );
         }
         else
@@ -485,5 +511,33 @@ class Career_Controller extends Base_Controller
             http_response_code( 500 );
             echo json_encode( ['error' => $result] );
         }
+    }
+
+    /**
+     * Handles the retirement of a max-level prospect.
+     */
+    public function retire()
+    {
+        if ( $_SERVER['REQUEST_METHOD'] !== 'POST' || !isset( $_SESSION['user_id'] ) )
+        {
+            $this->redirect( 'career' );
+            exit;
+        }
+
+        $careerModel = $this->model( 'Career' );
+        $result      = $careerModel->retireProspectToRoster( $_SESSION['user_id'] );
+
+        if ( $result === true )
+        {
+            // Optionally set a success flash message
+            $_SESSION['flash_message'] = 'Your prospect has been immortalized in the Hall of Fame!';
+        }
+        else
+        {
+            // Optionally set an error flash message
+            $_SESSION['flash_message'] = 'Error: ' . $result;
+        }
+
+        $this->redirect( 'career' );
     }
 }

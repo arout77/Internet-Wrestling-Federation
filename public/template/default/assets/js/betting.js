@@ -46,7 +46,7 @@ export async function calculateBettingOdds(selectedWrestlers, currentMatchType, 
 
     try {
         // 3. Call the new backend endpoint that handles all simulations
-        const response = await fetch('http://localhost/iwf-betting/api/simulate_odds', {
+        const response = await fetch(baseUrl + '/api/simulate_odds', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

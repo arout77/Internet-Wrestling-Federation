@@ -87,6 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sortSelect.addEventListener('change', handleSortChange);
         sortOrderBtn.addEventListener('click', handleSortOrderToggle);
         searchInput.addEventListener('input', filterSortAndRenderRoster);
+        searchInput.addEventListener('click', () => searchInput.classList.add('ml-8'));
+        searchInput.addEventListener('blur', () => searchInput.classList.remove('ml-8'));
         searchContainer.addEventListener('click', () => searchContainer.classList.add('expanded'));
         searchInput.addEventListener('blur', () => { if (!searchInput.value) searchContainer.classList.remove('expanded'); });
 
@@ -318,19 +320,14 @@ document.addEventListener('DOMContentLoaded', () => {
         modalBody.innerHTML = '<p class="text-center">Please wait, this may take a moment.</p>';
         genericModal.classList.remove('hidden');
         
-        // The backend for bulk simulation will also need to be updated for tag teams.
-        // For now, it will likely only work correctly for singles matches.
         let simData = { sim_count: simCount };
         if (matchType === 'single') {
             simData.wrestler1_id = selectedWrestlers.player1.wrestler_id;
             simData.wrestler2_id = selectedWrestlers.player2.wrestler_id;
         } else {
-            // Add tag team data if your backend supports it
-            // simData.type = 'tag';
-            // simData.team1 = ...
-            // simData.team2 = ...
-             modalBody.innerHTML = `<p class="text-yellow-400 text-center">Bulk simulation for tag teams is not yet supported.</p>`;
-            return;
+            simData.type = 'tag';
+            simData.team1_ids = [selectedWrestlers.team1_player1.wrestler_id, selectedWrestlers.team1_player2.wrestler_id];
+            simData.team2_ids = [selectedWrestlers.team2_player1.wrestler_id, selectedWrestlers.team2_player2.wrestler_id];
         }
 
         try {
@@ -342,14 +339,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             
             if (response.ok) {
-                // ... (your existing bulk sim display logic, it should work as is)
-                 let html = '<div class="space-y-3">';
+                let html = '<div class="space-y-3">';
+                
+                // Use team names from result if it's a tag match
+                const team1Name = result.team1_names || 'Team 1';
+                const team2Name = result.team2_names || 'Team 2';
+
                 for (const winnerName in result.wins) {
+                    let displayName = winnerName;
+                    if (winnerName === 'Team 1' && result.team1_names) {
+                        displayName = result.team1_names;
+                    } else if (winnerName === 'Team 2' && result.team2_names) {
+                        displayName = result.team2_names;
+                    }
+
                     if (winnerName.toLowerCase() === 'draw') {
                         const percentage = ((result.wins[winnerName] / simCount) * 100).toFixed(1);
                         html += `
                             <div class="grid grid-cols-2 items-center text-lg">
-                                <span class="font-semibold">${winnerName}:</span>
+                                <span class="font-semibold">${displayName}:</span>
                                 <span class="text-right">${result.wins[winnerName]} outcomes (${percentage}%)</span>
                             </div>`;
                         continue;
@@ -368,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     html += `
                         <div class="bg-gray-700 p-3 rounded-lg">
-                            <h3 class="text-xl font-bold text-white">${winnerName}</h3>
+                            <h3 class="text-xl font-bold text-white">${displayName}</h3>
                             <div class="flex justify-between items-center text-gray-300 mt-2">
                                 <span>Win Count:</span>
                                 <span class="font-semibold">${result.wins[winnerName]} of ${simCount} (${percentage}%)</span>
@@ -378,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="font-bold text-lg ${moneyline > 0 ? 'text-green-400' : 'text-red-400'}">${moneyline > 0 ? '+' : ''}${moneyline}</span>
                             </div>
                             <div class="flex justify-between items-center text-gray-300 mt-1 pt-2 border-t border-gray-600">
-                                <span>A 100 Gold Bet On ${winnerName} Pays Out:</span>
+                                <span>A 100 Gold Bet On ${displayName} Pays Out:</span>
                                 <span class="font-bold text-green-400">${new Intl.NumberFormat('en-US').format(totalReturn.toFixed(0))} Gold</span>
                             </div>
                         </div>
@@ -458,3 +466,4 @@ document.addEventListener('DOMContentLoaded', () => {
         filterSortAndRenderRoster();
     }
 });
+

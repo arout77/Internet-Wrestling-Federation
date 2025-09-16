@@ -15,6 +15,28 @@ class TrainModel extends System_Model
     }
 
     /**
+     * Gets special, limited-time training opportunities for a prospect.
+     * @param string $prospectPid
+     * @return array
+     */
+    public function getTrainingOpportunities( $prospectPid )
+    {
+        try {
+            $sql = "SELECT am.*, to.expires_after_matches
+                    FROM all_moves am
+                    JOIN training_opportunities `to` ON am.move_id = to.move_id
+                    WHERE to.prospect_pid = :pid";
+            $stmt = $this->db->prepare( $sql );
+            $stmt->execute( [':pid' => $prospectPid] );
+            return $stmt->fetchAll( PDO::FETCH_ASSOC );
+        }
+        catch ( \PDOException $e )
+        {
+            return [];
+        }
+    }
+
+    /**
      * Gets moves available for a prospect to learn, with filtering and sorting.
      * @param string $prospectPid
      * @param int $prospectLevel
@@ -30,7 +52,8 @@ class TrainModel extends System_Model
             $sql = "SELECT * FROM all_moves
                     WHERE level_requirement <= :level
                     AND type != 'finisher'
-                    AND move_id NOT IN (SELECT move_id FROM prospect_moves WHERE prospect_pid = :pid)";
+                    AND move_id NOT IN (SELECT move_id FROM prospect_moves WHERE prospect_pid = :pid)
+                    AND move_id NOT IN (SELECT move_id FROM training_opportunities WHERE prospect_pid = :pid)"; // Exclude special offers
 
             // Add filtering
             if ( $filterType !== 'all' )
@@ -114,6 +137,10 @@ class TrainModel extends System_Model
             $sqlMove  = "INSERT INTO prospect_moves (prospect_pid, move_id) VALUES (:pid, :mid)";
             $stmtMove = $this->db->prepare( $sqlMove );
             $stmtMove->execute( [':pid' => $prospectPid, ':mid' => $moveId] );
+
+            // If this was a special opportunity, remove it
+            $deleteStmt = $this->db->prepare( "DELETE FROM training_opportunities WHERE prospect_pid = :pid AND move_id = :mid" );
+            $deleteStmt->execute( [':pid' => $prospectPid, ':mid' => $moveId] );
 
             $this->db->commit();
             return true;

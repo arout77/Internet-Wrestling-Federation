@@ -151,7 +151,7 @@ class UserModel extends System_Model
                 ':name'                => $prospectData['name'],
                 ':height'              => $prospectData['height'],
                 ':weight'              => $prospectData['weight'],
-                ':image'               => $prospectData['avatar'],
+                ':image'               => $prospectData['image'],
                 ':baseHp'              => '1000',
                 ':strength'            => 50,
                 ':technicalAbility'    => 50,
@@ -216,32 +216,7 @@ class UserModel extends System_Model
             return null;
         }
 
-        return [
-            'id'                  => $prospectData['id'],
-            'pid'                 => $prospectData['pid'],
-            'name'                => $prospectData['name'],
-            'height'              => $prospectData['height'],
-            'weight'              => $prospectData['weight'],
-            'description'         => $prospectData['description'],
-            'gold'                => $prospectData['gold'],
-            'current_xp'          => $prospectData['current_xp'],
-            'lvl'                 => $prospectData['lvl'],
-            'attribute_points'    => $prospectData['attribute_points'],
-            'baseHp'              => $prospectData['baseHp'],
-            'strength'            => $prospectData['strength'],
-            'technicalAbility'    => $prospectData['technicalAbility'],
-            'brawlingAbility'     => $prospectData['brawlingAbility'],
-            'stamina'             => $prospectData['stamina'],
-            'aerialAbility'       => $prospectData['aerialAbility'],
-            'toughness'           => $prospectData['toughness'],
-            'reversalAbility'     => $prospectData['reversalAbility'],
-            'submissionDefense'   => $prospectData['submissionDefense'],
-            'staminaRecoveryRate' => $prospectData['staminaRecoveryRate'],
-            'moves'               => $prospectData['moves'],
-            'image'               => $prospectData['image'],
-            'manager_id'          => $prospectData['manager_id'],
-            'user_id'             => $prospectData['user_id'],
-        ];
+        return $prospectData;
     }
 
     /**
@@ -260,6 +235,58 @@ class UserModel extends System_Model
         catch ( \PDOException $e )
         {
             return ['wins' => 0, 'losses' => 0];
+        }
+    }
+
+    /**
+     * Credits a user's account after a successful purchase.
+     * @param string $userId
+     * @param string $itemId
+     * @return array
+     */
+    public function creditPurchase( $userId, $itemId )
+    {
+        $prospect = $this->getProspectByUserId( $userId );
+        if ( !$prospect )
+        {
+            return ['success' => false, 'error' => 'Prospect not found'];
+        }
+
+        list( $itemType, $itemValue ) = explode( '-', $itemId );
+        $itemValue                  = (int) $itemValue;
+        $sql                        = "";
+        $params                     = [':value' => $itemValue, ':pid' => $prospect['pid']];
+
+        switch ( $itemType )
+        {
+            case 'gold':
+                $sql = "UPDATE prospects SET gold = gold + :value WHERE pid = :pid";
+                break;
+            case 'ap':
+                $sql = "UPDATE prospects SET attribute_points = attribute_points + :value WHERE pid = :pid";
+                break;
+            default:
+                return ['success' => false, 'error' => 'Invalid item type'];
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $stmt = $this->db->prepare( $sql );
+            $stmt->execute( $params );
+
+            $updatedProspect = $this->getProspectByPid( $prospect['pid'] );
+
+            $this->db->commit();
+            return [
+                'success' => true,
+                'newGold' => $updatedProspect['gold'],
+                'newAP'   => $updatedProspect['attribute_points'],
+            ];
+        }
+        catch ( \PDOException $e )
+        {
+            $this->db->rollBack();
+            return ['success' => false, 'error' => 'Database error during transaction.'];
         }
     }
 }
