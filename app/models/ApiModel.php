@@ -14,36 +14,51 @@ class ApiModel extends System_Model
     }
 
     /**
-     * Fetches a single wrestler from the roster by their ID.
-     * @param int $wrestler_id The ID of the wrestler to fetch.
+     * Fetches a single wrestler from the roster by their ID, now including their full moveset.
+     * @param int $id The ID of the wrestler to fetch.
      * @return object|false The wrestler data object, or false if not found.
      */
     public function getWrestlerById( $id )
     {
-        // ... (your existing code to fetch the wrestler)
         $stmt = $this->db->prepare( "SELECT * FROM roster WHERE wrestler_id = ?" );
         $stmt->execute( [$id] );
         $wrestler = $stmt->fetch( \PDO::FETCH_OBJ );
 
         if ( $wrestler )
         {
-            // NEW: Fetch and attach traits
+            // Fetch and attach traits
             $traitStmt = $this->db->prepare( "
                 SELECT t.name FROM traits t
                 JOIN roster_traits rt ON t.trait_id = rt.trait_id
                 WHERE rt.roster_wrestler_id = ?
             " );
             $traitStmt->execute( [$id] );
-            $traits           = $traitStmt->fetchAll( \PDO::FETCH_COLUMN );
-            $wrestler->traits = $traits ?: []; // Attach traits as an array
+            $wrestler->traits = $traitStmt->fetchAll( \PDO::FETCH_COLUMN ) ?: [];
+
+            // Fetch and attach moveset
+            $moveStmt = $this->db->prepare( "
+                SELECT am.*
+                FROM all_moves am
+                JOIN roster_moves rm ON am.move_id = rm.move_id
+                WHERE rm.roster_wrestler_id = ?
+            " );
+            $moveStmt->execute( [$id] );
+            $moves = $moveStmt->fetchAll( \PDO::FETCH_OBJ );
+
+            // Organize moves by type (strike, grapple, etc.)
+            $wrestler->moves = [];
+            foreach ( $moves as $move )
+            {
+                $wrestler->moves[$move->type][] = $move;
+            }
         }
 
         return $wrestler;
     }
 
     /**
-     * Fetches all wrestlers and their data
-     * @return mixed
+     * Fetches all wrestlers and their data, now including full movesets.
+     * @return array
      */
     public function get_all_wrestlers()
     {
@@ -52,23 +67,29 @@ class ApiModel extends System_Model
         $stmt->execute();
         $wrestlers = $stmt->fetchAll( \PDO::FETCH_OBJ );
 
+        $all_moves_stmt = $this->db->prepare( "
+            SELECT am.*, am.type, rm.roster_wrestler_id
+            FROM all_moves am
+            JOIN roster_moves rm ON am.move_id = rm.move_id
+        " );
+        $all_moves_stmt->execute();
+        $all_moves_data = $all_moves_stmt->fetchAll( \PDO::FETCH_OBJ );
+
+        // Create a map of wrestler_id to their moves for efficient lookup
+        $moves_map = [];
+        foreach ( $all_moves_data as $move )
+        {
+            $moves_map[$move->roster_wrestler_id][$move->type][] = $move;
+        }
+
         foreach ( $wrestlers as $wrestler )
         {
-            // Step 1: Calculate Core Skill Score (weighted)
-            $coreSkillSum =
-            ( $wrestler->strength * 1.01 ) +
-            ( $wrestler->technicalAbility * 1.2 ) +
-            $wrestler->brawlingAbility +
-                ( $wrestler->aerialAbility * 1.15 );
-            $coreSkillAvg = $coreSkillSum / 4.36; // Divide by total weight
-
-            // Step 2: Calculate Durability Modifier
-            $durabilityAvg = ( $wrestler->stamina + $wrestler->toughness ) / 2;
-
-            // Step 3: Combine for a preliminary score
+            // Calculate Overall
+            $coreSkillSum       = ( $wrestler->strength * 1.01 ) + ( $wrestler->technicalAbility * 1.2 ) + $wrestler->brawlingAbility + ( $wrestler->aerialAbility * 1.15 );
+            $coreSkillAvg       = $coreSkillSum / 4.36;
+            $durabilityAvg      = ( $wrestler->stamina + $wrestler->toughness ) / 2;
             $preliminaryOverall = ( $coreSkillAvg * 0.7 ) + ( $durabilityAvg * 0.3 );
 
-            // Step 4: Apply Prime, Legend, or Icon Bonuses
             $num_stats_over_80 = 0;
             $num_stats_over_95 = 0;
             if ( $wrestler->strength >= 80 )
@@ -114,29 +135,35 @@ class ApiModel extends System_Model
             $bonus = 0;
             if ( $num_stats_over_80 >= 4 && $durabilityAvg >= 90 )
             {
-                $bonus = 5 + $num_stats_over_95; // Icon Bonus
+                $bonus = 5 + $num_stats_over_95;
             }
+            // Icon Bonus
+
             elseif ( $num_stats_over_80 >= 3 )
             {
-                $bonus = 3 + $num_stats_over_95; // Legend Bonus
+                $bonus = 3 + $num_stats_over_95;
             }
+            // Legend Bonus
+
             elseif ( $num_stats_over_80 >= 2 )
             {
-                $bonus = 1 + $num_stats_over_95; // Prime Bonus
+                $bonus = 1 + $num_stats_over_95;
             }
+            // Prime Bonus
 
-            // Final Overall is the preliminary score plus the bonus
             $wrestler->overall = round( $preliminaryOverall + $bonus );
 
-            // Fetch and attach traits for each wrestler
+            // Fetch and attach traits
             $traitStmt = $this->db->prepare( "
                 SELECT t.name FROM traits t
                 JOIN roster_traits rt ON t.trait_id = rt.trait_id
                 WHERE rt.roster_wrestler_id = ?
             " );
             $traitStmt->execute( [$wrestler->wrestler_id] );
-            $traits           = $traitStmt->fetchAll( \PDO::FETCH_COLUMN );
-            $wrestler->traits = $traits ?: [];
+            $wrestler->traits = $traitStmt->fetchAll( \PDO::FETCH_COLUMN ) ?: [];
+
+            // Assign moves from the map
+            $wrestler->moves = $moves_map[$wrestler->wrestler_id] ?? [];
         }
 
         return $wrestlers;
@@ -434,7 +461,7 @@ class ApiModel extends System_Model
     {
         if ( $probability <= 0 )
         {
-            return '+99900';
+            return '+9900';
         }
 
         if ( $probability >= 1 )
@@ -442,30 +469,15 @@ class ApiModel extends System_Model
             return '-99900';
         }
 
-        // Calculate the true, fair odds first
-        $trueOdds = 0;
         if ( $probability < 0.5 )
         {
-            $trueOdds = ( 100 / $probability ) - 100;
+            $odds = ( 100 / $probability ) - 100;
+            return '+' . min( 9900, round( $odds ) );
         }
         else
         {
-            $trueOdds = -100 / ( ( 100 / ( 100 * $probability ) ) - 1 );
-        }
-
-        // **THE FIX:** Apply a 10% vig (commission) to the profit.
-        if ( $trueOdds > 0 )
-        {
-            // For underdogs, the profit is the odds value. Reduce it by 10%.
-            $finalOdds = $trueOdds * 0.90;
-            return '+' . round( $finalOdds );
-        }
-        else
-        {
-            // For favorites, the profit is 100 for a bet of |odds|.
-            // To take a 10% vig, the user now has to bet more to win the same 100.
-            $finalOdds = $trueOdds / 0.90;
-            return round( $finalOdds );
+            $odds = -100 / ( ( 100 / ( 100 * $probability ) ) - 1 );
+            return round( $odds );
         }
     }
 

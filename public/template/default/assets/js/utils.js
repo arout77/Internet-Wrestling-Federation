@@ -67,7 +67,7 @@ export function probabilityToFractionalOdds(probability) {
 export function probabilityToMoneylineOdds(probability) {
     // Handle edge cases for 0% and 100% probability first, as per user's specific requests.
     if (probability === 0) {
-        return '+249000'; // As requested for 0.00% probability
+        return '+9900'; // As requested for 0.00% probability
     }
     // For 100% probability, it's an extreme favorite, so a very large negative moneyline.
     if (probability === 1) {
@@ -85,7 +85,7 @@ export function probabilityToMoneylineOdds(probability) {
 
     // Ensure effectiveProbability is not zero or negative after applying margin
     if (effectiveProbability <= 0) {
-        return '+249000'; // Consistent with the user's previous request for 0% probability
+        return '+9900'; // Consistent with the user's previous request for 0% probability
     }
 
     const decimalOdds = 1 / effectiveProbability;
@@ -94,9 +94,11 @@ export function probabilityToMoneylineOdds(probability) {
     if (decimalOdds >= 2.00) { // Underdog (positive moneyline)
         // Formula: (Decimal Odds - 1) * 100
         moneylineValue = Math.round((decimalOdds - 1) * 100);
+        return `+${Math.min(9900, moneylineValue)}`;
     } else { // Favored (negative moneyline)
         // Formula: -100 / (Decimal Odds - 1) (absolute value)
         moneylineValue = Math.round(100 / (decimalOdds - 1));
+        return `-${moneylineValue}`;
     }
 
     // Handle the case where moneylineValue might become 0 due to rounding for very high probabilities

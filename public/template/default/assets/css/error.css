@@ -1,0 +1,33 @@
+/* Custom styles for the 404 error page */
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh; /* Ensures it takes up most of the screen */
+}
+
+.text-shadow-lg {
+    text-shadow: 3px 3px 0px rgba(0,0,0,0.2), 6px 6px 0px rgba(0,0,0,0.1);
+}
+
+.error-container img {
+    animation: float 6s ease-in-out infinite;
+}
+
+.error-container img:last-child {
+    animation-delay: 2s;
+}
+
+
+@keyframes float {
+	0% {
+		transform: translatey(0px) rotate(-12deg);
+	}
+	50% {
+		transform: translatey(-20px) rotate(0deg);
+	}
+	100% {
+		transform: translatey(0px) rotate(-12deg);
+	}
+}

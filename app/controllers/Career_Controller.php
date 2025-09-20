@@ -454,15 +454,27 @@ class Career_Controller extends Base_Controller
             exit;
         }
 
-        $careerModel  = $this->model( 'Career' );
-        $learnedMoves = $careerModel->getProspectLearnedMoves( $prospect['pid'] );
-        $knownMoves   = $careerModel->getMovesByNames( $prospect['moves'] );
-        $traits       = $careerModel->getProspectTraits( $prospect['id'] );
+        $careerModel = $this->model( 'Career' );
+
+        // Get the two lists of moves
+        $allLearnedMoves = $careerModel->getProspectLearnedMoves( $prospect['pid'] );
+        $knownMoves      = $careerModel->getMovesByNames();
+        $traits          = $careerModel->getProspectTraits( $prospect['id'] );
+
+        // Create a list of just the names from the known moves list
+        $knownMoveNames = array_column( $knownMoves, 'move_name' );
+
+        // Filter the learned moves list to exclude any moves that are also in the known moves list
+        $onlyPurchasedMoves = array_filter( $allLearnedMoves, function ( $move ) use ( $knownMoveNames )
+        {
+            return !in_array( $move['move_name'], $knownMoveNames );
+        } );
+        // **FIX ENDS HERE**
 
         $this->template->render( 'career/moveset.html.twig', [
             'prospect'     => $prospect,
-            'learnedMoves' => $learnedMoves,
-            'knownMoves'   => $knownMoves,
+            'learnedMoves' => $onlyPurchasedMoves, // Pass the correctly filtered list
+            'knownMoves' => $knownMoves,
             'traits'       => $traits,
         ] );
     }

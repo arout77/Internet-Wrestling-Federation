@@ -78,49 +78,44 @@ async function processWrestlerData(rawWrestlers, allMoves) {
 
     // Helper to get move details by name
     const getMoveDetails = (moveName) => {
-        // Make comparison case-insensitive and trim spaces for robustness
-        const normalizedMoveName = moveName.trim().toLowerCase();
-        const rawDetails = allMoves.find(move => (move.move_name || '').trim().toLowerCase() === normalizedMoveName);
-        
-        if (!rawDetails) {
-            console.warn(`Move details not found for: ${moveName}`);
-            // Return a default structure to prevent errors
-            return { name: moveName, damage: { min: 0, max: 0 }, staminaCost: 0, description: "Move details missing.", type: "unknown" };
+        let nameToFind;
+
+        // Check if moveName is an object and has a 'move_name' property
+        if (typeof moveName === 'object' && moveName !== null && moveName.move_name) {
+            nameToFind = moveName.move_name.trim().toLowerCase();
+        } 
+        // Check if moveName is a string
+        else if (typeof moveName === 'string') {
+            nameToFind = moveName.trim().toLowerCase();
+        } 
+        // If it's neither, we can't process it
+        else {
+            console.warn('Invalid move name format:', moveName);
+            return {
+                name: 'Unknown Move',
+                damage: 0,
+                stamina_cost: 0,
+                type: 'Basic'
+            }; // Return a default/error object
         }
 
-        let minDamage = 0;
-        let maxDamage = 0;
-
-        // --- IMPORTANT FIX: Handle inconsistent min_damage format ---
-        try {
-            // Attempt to parse min_damage as JSON first
-            const parsedDamage = JSON.parse(rawDetails.min_damage);
-            if (typeof parsedDamage === 'object' && parsedDamage !== null && 'min' in parsedDamage && 'max' in parsedDamage) {
-                minDamage = parseFloat(parsedDamage.min) || 0;
-                maxDamage = parseFloat(parsedDamage.max) || 0;
-            } else {
-                // If it's not a valid JSON object with min/max, try parsing as a direct number
-                minDamage = parseFloat(rawDetails.min_damage) || 0;
-                maxDamage = parseFloat(rawDetails.max_damage) || 0; // Use max_damage for max if min_damage was just a number
-            }
-        } catch (e) {
-            // If JSON parsing fails, assume it's a direct number
-            minDamage = parseFloat(rawDetails.min_damage) || 0;
-            maxDamage = parseFloat(rawDetails.max_damage) || 0; // Use max_damage for max
+        const move = allMoves.find(m => m.move_name.toLowerCase() === nameToFind);
+        if (!move) {
+            // console.warn(`Move not found: "${nameToFind}"`);
+            return {
+                name: nameToFind,
+                damage: 0,
+                stamina_cost: 0,
+                type: 'Basic'
+            }; // Return a default object for unknown moves
         }
-        // --- END FIX ---
 
-        const mappedMove = {
-            name: rawDetails.move_name, // Corrected: Use 'move_name' for the name property
-            type: rawDetails.type || "unknown", // Ensure type is always present
-            damage: {
-                min: minDamage, 
-                max: maxDamage  
-            },
-            staminaCost: parseFloat(rawDetails.stamina_cost) || 0,
-            description: rawDetails.move_description || "No description provided." // Corrected: Use 'move_description'
+        return {
+            name: move.move_name,
+            damage: (parseInt(move.min_damage, 10) + parseInt(move.max_damage, 10)) / 2,
+            stamina_cost: parseInt(move.stamina_cost, 10) || 0,
+            type: move.type,
         };
-        return mappedMove;
     };
 
     return rawWrestlers.map(wrestler => {
@@ -174,12 +169,17 @@ async function processWrestlerData(rawWrestlers, allMoves) {
         const baseHp = parseFloat(wrestler.baseHp) || 1000; // Default to 1000 if not a valid number
 
         let parsedMoves = {};
-        try {
-            // Attempt to parse the moves JSON string
-            parsedMoves = JSON.parse(wrestler.moves);
-        } catch (e) {
-            console.error(`Error parsing moves JSON for ${wrestler.name}:`, e);
-            parsedMoves = {}; // Default to empty object if parsing fails
+        // FIX: Directly use the wrestler.moves object as it's already parsed.
+        // The check for string is a good safeguard.
+        if (typeof wrestler.moves === 'string') {
+            try {
+                parsedMoves = JSON.parse(wrestler.moves);
+            } catch (e) {
+                console.error(`Error parsing moves JSON for ${wrestler.name}:`, e);
+                parsedMoves = {}; // Default to empty object on error
+            }
+        } else {
+            parsedMoves = wrestler.moves; // Use the object directly
         }
 
         const mappedMoves = {};

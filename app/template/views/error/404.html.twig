@@ -1,0 +1,33 @@
+{% extends "base.html.twig" %}
+
+{% block title %}404 - Page Not Found{% endblock %}
+
+{% block head %}
+    {{ parent() }}
+    <link href="{{ base_url }}public/template/default/assets/css/error.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="error-container text-center py-16">
+    <div class="flex justify-center items-center gap-8 mb-8">
+        <img src="https://iwf-wrestling.com/public/media/images/anderson.webp" alt="Confused Wrestler" class="w-48 h-48 object-cover rounded-full border-4 border-red-500 transform -rotate-12">
+        <div>
+            <h1 class="text-9xl font-extrabold text-yellow-400 text-shadow-lg">404</h1>
+            <h2 class="text-4xl font-bold text-white mt-[-20px]">Page Pinned!</h2>
+        </div>
+        <img src="https://iwf-wrestling.com/public/media/images/trophy.png" alt="Wrestler getting pinned" class="w-48 h-48 object-cover rounded-full border-4 border-blue-500 transform rotate-12">
+    </div>
+
+    <p class="text-2xl text-gray-300 mb-4">Looks like this page got hit with a finisher!</p>
+    <p class="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">The referee has counted to three, and this page is down for the count. It might have been moved to a different arena, or maybe it just couldn't kick out in time.</p>
+
+    <div class="flex justify-center gap-4">
+        <a href="{{ base_url }}" class="shiny-cta inline-block font-bold py-3 px-8 rounded-full text-lg uppercase tracking-wide">
+            <span>Return to Homepage</span>
+        </a>
+        <a href="{{ base_url }}docs" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg uppercase tracking-wide transition duration-300">
+            Read the Guide
+        </a>
+    </div>
+</div>
+{% endblock %}

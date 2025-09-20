@@ -467,7 +467,7 @@ class CareerModel extends System_Model
      */
     public function recordMatchOutcome( $wrestler1_id, $wrestler2_id, $winner_id )
     {
-        $sql  = "INSERT INTO matches (wrestler1_id, wrestler2_id, winner_id, match_date) VALUES (:w1, :w2, :winner, NOW())";
+        $sql  = "INSERT INTO matches (player1_id, player2_id, single_winner_id, match_date) VALUES (:w1, :w2, :winner, NOW())";
         $stmt = $this->db->prepare( $sql );
         return $stmt->execute( [
             ':w1'     => $wrestler1_id,

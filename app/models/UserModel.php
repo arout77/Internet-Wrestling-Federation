@@ -220,6 +220,25 @@ class UserModel extends System_Model
     }
 
     /**
+     * Get a user by their prospect ID.
+     *
+     * @param string $prospectId The prospect ID to search for.
+     * @return mixed The user data as an object, or false if not found.
+     */
+    public function getUserByProspectId( $prospectId )
+    {
+        $sql = "SELECT u.*
+            FROM users u
+            JOIN prospects p ON u.prospect_id = p.pid
+            WHERE p.pid = :prospect_id";
+
+        $stmt = $this->db->prepare( $sql );
+        $stmt->execute( ['prospect_id' => $prospectId] );
+
+        return $stmt->fetch( \PDO::FETCH_OBJ );
+    }
+
+    /**
      * Fetches a wrestler's win/loss record.
      * @param string $wrestlerId
      * @return array

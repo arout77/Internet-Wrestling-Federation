@@ -123,7 +123,7 @@ class Tournament_Controller extends Base_Controller
     {
         if ( $percentage <= 0 )
         {
-            return '+9999';
+            return '+9900';
         }
 
         if ( $percentage >= 100 )
@@ -145,7 +145,7 @@ class Tournament_Controller extends Base_Controller
         else
         {
             $moneyline = ( ( 100 - $percentage ) / $percentage ) * 100;
-            return '+' . round( $moneyline / $vigFactor );
+            return '+' . min( 9900, round( $moneyline / $vigFactor ) );
         }
     }
 

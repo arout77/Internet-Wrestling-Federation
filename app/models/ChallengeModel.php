@@ -20,7 +20,7 @@ class ChallengeModel extends System_Model
      */
     public function getAllDummyProspects()
     {
-        $sql  = "SELECT p.* FROM prospects p JOIN users u ON p.pid = u.prospect_id WHERE u.name LIKE 'IWF Wrestler%'";
+        $sql  = "SELECT p.* FROM prospects p JOIN users u ON p.pid = u.prospect_id WHERE u.name LIKE 'dummy%'";
         $stmt = $this->db->prepare( $sql );
         $stmt->execute();
         $prospects = $stmt->fetchAll( PDO::FETCH_ASSOC );
@@ -212,6 +212,10 @@ class ChallengeModel extends System_Model
             ] );
 
             $this->db->commit();
+
+            // Send email notifications
+            $this->sendChallengeEmails( $challengerPid, $defenderPid, $wager );
+
             return true;
         }
         catch ( \PDOException $e )
@@ -353,5 +357,120 @@ class ChallengeModel extends System_Model
         $sql  = "UPDATE challenges SET is_read = 1 WHERE defender_pid = :pid AND status = 'pending'";
         $stmt = $this->db->prepare( $sql );
         return $stmt->execute( [':pid' => $prospectPid] );
+    }
+
+    /**
+     * @param $challenger_pid
+     * @param $defender_pid
+     * @param $wager_amount
+     */
+    private function sendChallengeEmails( $challenger_pid, $defender_pid, $wager_amount )
+    {
+        $userModel = new UserModel( $this->app );
+        $apiModel  = new ApiModel( $this->app );
+
+        $challengerUser = $userModel->getUserByProspectId( $challenger_pid );
+        $defenderUser   = $userModel->getUserByProspectId( $defender_pid );
+
+        $challengerProspect = $apiModel->getWrestlerById( $challenger_pid );
+        $defenderProspect   = $apiModel->getWrestlerById( $defender_pid );
+
+        if ( $challengerUser && $defenderUser && $challengerProspect && $defenderProspect )
+        {
+            $smtpConfig = [
+                'smtp_host'   => 'smtp.ionos.com',
+                'smtp_user'   => 'andrew@iwf-wrestling.com',
+                'smtp_pass'   => 'Rileybug2006!',
+                'smtp_port'   => 587,
+                'smtp_auth'   => true,
+                'smtp_secure' => 'tls', // or 'ssl'
+                'from_email' => 'no-reply@iwf-wrestling.com',
+            ];
+            try {
+                // 3. Instantiate your custom email service with Twig and the config
+                $email = new \Src\Middleware\CustomEmailService( $smtpConfig );
+
+                $recipientEmail2 = $defenderUser->email;
+                $subject2        = 'You have a new challenge on IWF!';
+
+                // Data to pass into the template
+                $templateData = [
+                    'challenger_name' => $challengerProspect->name,
+                    'defender_name'   => $defenderProspect->name,
+                    'wager_amount'    => $wager_amount,
+                ];
+
+                try {
+                    // The 4th argument is the path to the template file
+                    // The 5th argument is the array of data for the template
+                    $email->send(
+                        $recipientEmail2,
+                        $subject2,
+                        '', // Body is ignored when using a template
+                        'emails/new_challenge_notification.html.twig', // Your template file
+                        $templateData
+                    );
+                    echo "Email with template sent successfully!";
+                }
+                catch ( \Exception $e )
+                {
+                    echo "Email could not be sent. Mailer Error: {$e->getMessage()}";
+                }
+
+                // Confirm with the challenger
+                $email->send(
+                    $challengerProspect->email,
+                    'Your IWF challenge has been sent!',
+                    '',
+                    'emails/challenge_sent_confirmation.html.twig',
+                    [
+                        'challenger_name' => $challengerProspect->name,
+                        'defender_name'   => $defenderProspect->name,
+                        'wager_amount'    => $wager_amount,
+                    ]
+                );
+
+                // 5. Call the send method
+                if ( $email->send( $recipient, $subject, $template, $data ) )
+                {
+                    echo "Email was sent successfully!";
+                }
+                else
+                {
+                    echo "Failed to send email. Please check the server logs for more details.";
+                }
+
+            }
+            catch ( Exception $e )
+            {
+                echo "An error occurred: " . $e->getMessage();
+            }
+
+            // Notify the defender
+            // $email->send(
+            //     $defenderUser->email,
+            //     'You have a new challenge in the IWF!',
+            //     '', // Body is ignored when using a template
+            //     'emails/new_challenge_notification.html.twig',
+            //     [
+            //         'defender_name'   => $defenderProspect->name,
+            //         'challenger_name' => $challengerProspect->name,
+            //         'wager_amount'    => $wager_amount,
+            //     ]
+            // );
+
+            // Confirm with the challenger
+            // $email->send(
+            //     $challengerUser->email,
+            //     'Your IWF challenge has been sent!',
+            //     '',
+            //     'emails/challenge_sent_confirmation.html.twig',
+            //     [
+            //         'challenger_name' => $challengerProspect->name,
+            //         'defender_name'   => $defenderProspect->name,
+            //         'wager_amount'    => $wager_amount,
+            //     ]
+            // );
+        }
     }
 }

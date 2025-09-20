@@ -5,8 +5,8 @@
 // --- BOOTSTRAP ---
 // This section loads the necessary framework files to access models and the database.
 // Adjust the path if your script is in a different location relative to the project root.
-require_once '../../vendor/autoload.php';
-require_once '../../src/KernelApi.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../src/KernelApi.php';
 
 // --- VALIDATION ---
 // Ensure the bootstrap process returned the application container correctly.
@@ -24,7 +24,7 @@ $db = $app['db']; // Get the database connection from the app container.
 $challengeModel = new \App\Model\ChallengeModel( $app );
 $careerModel    = new \App\Model\CareerModel( $app );
 $simulatorModel = new \App\Model\SimulatorModel( $app );
-$apiModel       = new \App\Model\ApiModel( $app ); // Added ApiModel to fetch moves
+$apiModel       = new \App\Model\ApiModel( $app );
 
 // --- CONFIGURATION ---
 define( 'MATCHES_PER_PROSPECT', 25 );
@@ -53,91 +53,109 @@ try {
     echo "Found " . $prospectCount . " dummy prospects.\n";
     echo "Each prospect will have moves assigned and then be simulated in " . MATCHES_PER_PROSPECT . " matches.\n\n";
 
-    // 2. Loop through each prospect to assign moves and simulate matches
+    // 2. Loop through each prospect to assign and structure their movesets first
     foreach ( $dummyProspects as $index => &$prospect )
-    { // Use reference to update in place
-        $prospectName = $prospect['name'];
-        echo "Processing: $prospectName (" . ( $index + 1 ) . "/$prospectCount)\n";
-
-        // 2a. Assign new moves based on level
+    {
         $prospectLevel = $prospect['lvl'];
         $eligibleMoves = array_filter( $allMoves, function ( $move ) use ( $prospectLevel )
-    {
+        {
             return $move->level_requirement <= $prospectLevel;
         } );
 
-        $newMoveset = json_decode( $prospect['moves'], true );
-
-        // FIX: Ensure the moveset structure is always a valid array to prevent type errors
-        if ( !is_array( $newMoveset ) )
-    {
-            $newMoveset = [];
+        $newMovesetNames = json_decode( $prospect['moves'], true );
+        if ( !is_array( $newMovesetNames ) )
+        {
+            $newMovesetNames = [];
         }
+
         $moveTypes = ['strike', 'grapple', 'submission', 'highFlying', 'finisher'];
         foreach ( $moveTypes as $type )
-    {
-            if ( !isset( $newMoveset[$type] ) || !is_array( $newMoveset[$type] ) )
         {
-                $newMoveset[$type] = [];
+            if ( !isset( $newMovesetNames[$type] ) || !is_array( $newMovesetNames[$type] ) )
+            {
+                $newMovesetNames[$type] = [];
             }
         }
 
-        // Categorize eligible moves
         $categorizedMoves = ['strike' => [], 'grapple' => [], 'submission' => [], 'highFlying' => [], 'finisher' => []];
         foreach ( $eligibleMoves as $move )
-    {
-            if ( isset( $categorizedMoves[$move->type] ) )
         {
+            if ( isset( $categorizedMoves[$move->type] ) )
+            {
                 $categorizedMoves[$move->type][] = $move->move_name;
             }
         }
 
-        // Add 5 new random moves, avoiding duplicates
         $allEligibleBasicMoves = array_merge( $categorizedMoves['strike'], $categorizedMoves['grapple'], $categorizedMoves['submission'], $categorizedMoves['highFlying'] );
-        $currentBasicMoves     = array_merge( $newMoveset['strike'], $newMoveset['grapple'], $newMoveset['submission'], $newMoveset['highFlying'] );
+        $currentBasicMoves     = array_merge( $newMovesetNames['strike'], $newMovesetNames['grapple'], $newMovesetNames['submission'], $newMovesetNames['highFlying'] );
         $potentialNewMoves     = array_diff( $allEligibleBasicMoves, $currentBasicMoves );
 
         if ( !empty( $potentialNewMoves ) )
-    {
+        {
             shuffle( $potentialNewMoves );
             for ( $i = 0; $i < min( 5, count( $potentialNewMoves ) ); $i++ )
-        {
+            {
                 $moveNameToAdd = $potentialNewMoves[$i];
                 foreach ( $eligibleMoves as $em )
-            {
-                    if ( $em->move_name === $moveNameToAdd )
                 {
-                        $newMoveset[$em->type][] = $moveNameToAdd;
-                        $newMoveset[$em->type]   = array_unique( $newMoveset[$em->type] );
+                    if ( $em->move_name === $moveNameToAdd )
+                    {
+                        $newMovesetNames[$em->type][] = $moveNameToAdd;
+                        $newMovesetNames[$em->type]   = array_unique( $newMovesetNames[$em->type] );
                         break;
                     }
                 }
             }
         }
 
-        // Assign a new, level-appropriate finisher
         if ( !empty( $categorizedMoves['finisher'] ) )
-    {
-            $newMoveset['finisher'] = [$categorizedMoves['finisher'][array_rand( $categorizedMoves['finisher'] )]];
+        {
+            $newMovesetNames['finisher'] = [$categorizedMoves['finisher'][array_rand( $categorizedMoves['finisher'] )]];
         }
 
-        // Save the new moveset to the database
-        $newMovesetJson = json_encode( $newMoveset );
-        $careerModel->updateProspectMoveset( $prospect['pid'], $newMovesetJson );
-        $prospect['moves'] = $newMovesetJson; // Update the local prospect array for the simulation
-        echo "  - Assigned new moveset.\n";
+        $careerModel->updateProspectMoveset( $prospect['pid'], json_encode( $newMovesetNames ) );
 
-        // 2b. Simulate matches
-        for ( $i = 1; $i <= MATCHES_PER_PROSPECT; $i++ )
+        // Build the structured moves object that the simulator expects
+        $structuredMoves = [];
+        foreach ( $newMovesetNames as $type => $moveNames )
+        {
+            $structuredMoves[$type] = [];
+            foreach ( $moveNames as $name )
+            {
+                foreach ( $allMoves as $moveObj )
+                {
+                    if ( $moveObj->move_name === $name )
+                    {
+                        $structuredMoves[$type][] = $moveObj;
+                        break;
+                    }
+                }
+            }
+        }
+        // Attach the fully structured moves object to the prospect array itself
+        $prospect['moves'] = (object) $structuredMoves;
+    }
+    // Unset the reference to avoid accidental modification later
+    unset( $prospect );
+
+    echo "All prospect movesets have been assigned and prepared for simulation.\n";
+    echo "=============================================\n";
+
+    // 3. Loop through each prepared prospect to simulate matches
+    foreach ( $dummyProspects as $index => $prospect )
     {
-            // Select a random opponent
+        $prospectName = $prospect['name'];
+        echo "Simulating for: $prospectName (" . ( $index + 1 ) . "/$prospectCount)\n";
+
+        for ( $i = 1; $i <= MATCHES_PER_PROSPECT; $i++ )
+        {
             $opponent = null;
             do
-        {
+            {
                 $opponent = $dummyProspects[array_rand( $dummyProspects )];
             } while ( $opponent['pid'] === $prospect['pid'] );
 
-            // Prepare objects for the simulator
+            // Both prospect and opponent now have structured moves objects
             $prospectObj              = (object) $prospect;
             $prospectObj->wrestler_id = $prospect['pid'];
             $prospectObj->traits      = array_column( $prospect['traits'], 'name' );
@@ -146,16 +164,13 @@ try {
             $opponentObj->wrestler_id = $opponent['pid'];
             $opponentObj->traits      = array_column( $opponent['traits'], 'name' );
 
-            // Run the simulation
             $result = $simulatorModel->simulateMatch( $prospectObj, $opponentObj, true );
 
-            // Record the result
             if ( isset( $result['winner'] ) && is_object( $result['winner'] ) )
-        {
+            {
                 $winnerPid = $result['winner']->pid;
                 $loserPid  = ( $winnerPid === $prospect['pid'] ) ? $opponent['pid'] : $prospect['pid'];
                 $careerModel->recordWinLoss( $winnerPid, $loserPid );
-                // Also record the full match outcome for streak tracking
                 $careerModel->recordMatchOutcome( $prospect['pid'], $opponent['pid'], $winnerPid );
             }
         }

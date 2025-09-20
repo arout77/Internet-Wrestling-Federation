@@ -11,9 +11,9 @@ namespace App\Controller {
     {
         public function controller()
         {
-            $params = explode("-", $this->route->parameter[1]);
+            $params         = explode( "-", $this->route->parameter[1] );
             $controllerName = ucwords( $params[0] );
-            $methodName = $params[1] ?? 'index';
+            $methodName     = $params[1] ?? 'index';
 
             $this->template->render( 'error/controller.html.twig',
                 [
@@ -25,9 +25,9 @@ namespace App\Controller {
 
         public function method()
         {
-            $params = explode("-", $this->route->parameter[1]);
+            $params         = explode( "-", $this->route->parameter[1] );
             $controllerName = ucwords( $params[0] );
-            $methodName = $params[1];
+            $methodName     = $params[1];
 
             $this->template->render( 'error/method.html.twig',
                 [
@@ -39,12 +39,12 @@ namespace App\Controller {
 
         public function index()
         {
-            $this->template->render('error/index.html.twig');
+            $this->template->render( 'error/index.html.twig' );
         }
 
         public function not_found()
         {
-            $this->template->render('error/index.html.twig');
+            $this->template->render( 'error/404.html.twig' );
         }
     }
 }

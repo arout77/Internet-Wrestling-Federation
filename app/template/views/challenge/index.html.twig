@@ -6,8 +6,8 @@
 <style>
     /* Added styles for search and card consistency */
     .search-container .search-input {
-        width: 2.5rem; 
-        height: 2.5rem; 
+        width: 2.5rem; /* 40px, just the icon width */
+        height: 2.5rem; /* 40px */
         padding-left: 2.5rem;
         border-radius: 9999px;
         cursor: pointer;
@@ -16,10 +16,13 @@
     .search-container.expanded .search-input {
         width: 100%;
         cursor: text;
+        padding-left: 20px;
+        padding-left: 20px;
     }
     @media (min-width: 768px) {
         .search-container.expanded .search-input {
-            width: 20rem; 
+            width: 16rem; /* 256px */
+            padding-left: 3.5rem;
         }
     }
     .prospect-card {
@@ -41,7 +44,7 @@
     <!-- Search and Sort Controls -->
     <div class="bg-gray-800 p-4 rounded-lg shadow-md mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <div id="searchContainer" class="search-container relative flex items-center w-full md:w-auto">
-            <svg class="search-icon absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400 z-10 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
+            <svg class="search-icon absolute left-4 top-4 -translate-y-1/2 h-6 w-6 text-gray-400 z-10 cursor-pointer" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
             <input type="text" id="searchInput" class="search-input bg-gray-700 text-white w-full" placeholder="Search prospects...">
         </div>
         <div class="flex items-center gap-4">

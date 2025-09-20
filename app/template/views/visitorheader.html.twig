@@ -22,8 +22,12 @@
                 Game Modes
                 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
-            <div id="game-modes-menu" class="hidden absolute right-0 mt-2 w-56 bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-700">
-                <a href="{{ base_url }}gamemodes/career" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Career Mode</a>
+            <div id="game-modes-menu" class="hidden absolute right-0 mt-2 w-56 bg-gray-800 rounded-md shadow-lg py-1 px-2 z-50 border border-gray-700">
+                <a href="#" class="text-lg"><h4>Career</h4></a>
+                <a href="{{ base_url }}gamemodes/career" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Career Dashboard</a>
+                <a href="{{ base_url }}challenge" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Challenge Zone</a>
+                <hr class="container block px-4 py-2 mt-2 text-sm text-gray-700" style="border-top: 1px solid rgba(55, 65, 81, var(--tw-text-opacity));">
+                <a href="#" class="text-md"><h4>More Game Modes</h4></a>
                 <a href="{{ base_url }}gamemodes/booking" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Booker Mode</a>
                 <a href="{{ base_url }}gamemodes/simulator" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Simulator</a>
                 <a href="{{ base_url }}gamemodes/tournament" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Tournament</a>
