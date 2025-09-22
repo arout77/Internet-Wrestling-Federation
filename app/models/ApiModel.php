@@ -14,6 +14,54 @@ class ApiModel extends System_Model
     }
 
     /**
+     * Fetches a single wrestler from the roster by their name.
+     * @param string $name The name of the wrestler to fetch.
+     * @return object|false The wrestler data object, or false if not found.
+     */
+    public function getWrestlerByName( $name )
+    {
+        $stmt = $this->db->prepare( "SELECT * FROM roster WHERE name = ?" );
+        $stmt->execute( [$name] );
+        $wrestler = $stmt->fetch( \PDO::FETCH_OBJ );
+
+        if ( $wrestler )
+        {
+            // Fetch and attach traits
+            $traitStmt = $this->db->prepare( "
+                SELECT t.name FROM traits t
+                JOIN roster_traits rt ON t.trait_id = rt.trait_id
+                WHERE rt.roster_wrestler_id = ?
+            " );
+            $traitStmt->execute( [$wrestler->wrestler_id] );
+            $wrestler->traits = $traitStmt->fetchAll( \PDO::FETCH_COLUMN ) ?: [];
+
+            // Fetch and attach moveset
+            $moveStmt = $this->db->prepare( "
+                SELECT am.*
+                FROM all_moves am
+                JOIN roster_moves rm ON am.move_id = rm.move_id
+                WHERE rm.roster_wrestler_id = ?
+            " );
+            $moveStmt->execute( [$wrestler->wrestler_id] );
+            $moves = $moveStmt->fetchAll( \PDO::FETCH_OBJ );
+
+            // Organize moves by type
+            $wrestler->moves = new \stdClass();
+            foreach ( $moves as $move )
+            {
+                $type = $move->type;
+                if ( !isset( $wrestler->moves->$type ) )
+                {
+                    $wrestler->moves->$type = [];
+                }
+                $wrestler->moves->$type[] = $move;
+            }
+        }
+
+        return $wrestler;
+    }
+
+    /**
      * Fetches a single wrestler from the roster by their ID, now including their full moveset.
      * @param int $id The ID of the wrestler to fetch.
      * @return object|false The wrestler data object, or false if not found.
@@ -54,6 +102,13 @@ class ApiModel extends System_Model
         }
 
         return $wrestler;
+    }
+
+    public function submissionMoves()
+    {
+        $moves = $this->simulatorModel->getSubmissionMoves();
+        header( 'Content-Type: application/json' );
+        echo json_encode( $moves );
     }
 
     /**

@@ -116,6 +116,21 @@ class Api_Controller extends Base_Controller
     }
 
     /**
+     * Renders the traits guide page.
+     *
+     * @return array
+     */
+    public function traitsGuide()
+    {
+        $traits = $this->traitsModel->getAllTraits();
+        return [
+            'view'   => 'docs/traits_guide.html.twig',
+            'title'  => 'Trait System Guide',
+            'traits' => $traits,
+        ];
+    }
+
+    /**
      * @return mixed
      */
     public function record_match_result()

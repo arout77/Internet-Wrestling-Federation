@@ -36,6 +36,19 @@ namespace App\Controller {
         }
 
         /**
+         * Renders the traits guide page.
+         *
+         * @return array
+         */
+        public function traits_guide()
+        {
+            $model  = $this->model( 'Traits' );
+            $traits = $model->getAllTraits();
+
+            $this->template->render( 'docs/traits_guide.html.twig', ['traits' => $traits] );
+        }
+
+        /**
          * Displays the Features & Rewards documentation page.
          */
         public function features_rewards()

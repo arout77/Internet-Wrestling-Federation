@@ -41,7 +41,7 @@ class SimulatorModel extends System_Model
     /**
      * @var array
      */
-    private $comeback_activated = [];
+    private $comeback_activated = []; // NEW: Track comeback trait usage
 
     /**
      * @param $app
@@ -54,12 +54,13 @@ class SimulatorModel extends System_Model
 
     /**
      * Extracts a flat list of move names from a wrestler's data object.
-     * @param object $wrestler The wrestler object.
+     * @param object $wrestler The wrestler object containing the moves structure.
      * @return array A flat array of move names.
      */
     public function getWrestlerMoveNames( $wrestler )
     {
         $moveNames = [];
+        // Ensure moves property exists and is an object or array
         if ( isset( $wrestler->moves ) && ( is_object( $wrestler->moves ) || is_array( $wrestler->moves ) ) )
         {
             foreach ( $wrestler->moves as $moveType => $moves )
@@ -68,6 +69,7 @@ class SimulatorModel extends System_Model
                 {
                     foreach ( $moves as $move )
                     {
+                        // Check if move is an object and has the move_name property
                         if ( is_object( $move ) && isset( $move->move_name ) )
                         {
                             $moveNames[] = $move->move_name;
@@ -80,29 +82,51 @@ class SimulatorModel extends System_Model
     }
 
     /**
-     * @param $level
-     * @return mixed
+     * Fetches all submission moves from the database.
+     *
+     * @return array
+     */
+    public function getSubmissionMoves()
+    {
+        $sql   = "SELECT * FROM all_moves WHERE type = 'submission'";
+        $query = $this->db->query( $sql );
+        return $query->execute();
+    }
+
+    /**
+     * Calculates performance modifiers based on a wrestler's level.
+     * @param int $level The wrestler's level.
+     * @return array An array containing damage and hit chance modifiers.
      */
     public function get_level_modifiers( $level )
     {
         $level     = (int) $level;
-        $modifiers = ['damage_modifier' => 1.0, 'hit_chance_modifier' => 0];
+        $modifiers = [
+            'damage_modifier'     => 1.0,
+            'hit_chance_modifier' => 0,
+        ];
+
         if ( $level >= 90 )
         {
-            $modifiers = ['damage_modifier' => 1.25, 'hit_chance_modifier' => 10];
+            $modifiers['damage_modifier']     = 1.25;
+            $modifiers['hit_chance_modifier'] = 10;
         }
         elseif ( $level >= 75 )
         {
-            $modifiers = ['damage_modifier' => 1.15, 'hit_chance_modifier' => 5];
+            $modifiers['damage_modifier']     = 1.15;
+            $modifiers['hit_chance_modifier'] = 5;
         }
         elseif ( $level >= 50 )
         {
-            $modifiers = ['damage_modifier' => 1.10, 'hit_chance_modifier' => 2];
+            $modifiers['damage_modifier']     = 1.10;
+            $modifiers['hit_chance_modifier'] = 2;
         }
         elseif ( $level >= 25 )
         {
-            $modifiers = ['damage_modifier' => 1.05, 'hit_chance_modifier' => 1];
+            $modifiers['damage_modifier']     = 1.05;
+            $modifiers['hit_chance_modifier'] = 1;
         }
+
         return $modifiers;
     }
 
@@ -122,7 +146,12 @@ class SimulatorModel extends System_Model
         }
 
         $this->run_full_simulation();
-        return ['winner' => $this->winner, 'loser' => $this->loser, 'log' => $this->matchLog];
+
+        return [
+            'winner' => $this->winner,
+            'loser'  => $this->loser,
+            'log'    => $this->matchLog,
+        ];
     }
 
     private function run_full_simulation()
@@ -138,22 +167,25 @@ class SimulatorModel extends System_Model
     private function checkForDisqualification( &$attackerState )
     {
         $dqChance = 0.15;
-        $reasons  = ["using a foreign object", "ignoring the referee's 5-count", "performing an illegal maneuver", "attacking a non-legal opponent"];
+        $reasons  = [
+            "using a foreign object",
+            "ignoring the referee's 5-count",
+            "performing an illegal maneuver",
+            "attacking a non-legal opponent",
+        ];
+
         if ( in_array( 'Dirty Player', $attackerState['data']->traits ) )
         {
             $dqChance += 0.15;
         }
-
         if ( in_array( 'Brawler', $attackerState['data']->traits ) )
         {
             $dqChance += 0.05;
         }
-
         if ( in_array( 'Showman', $attackerState['data']->traits ) )
         {
             $dqChance += 0.15;
         }
-
         if ( $attackerState['data']->brawlingAbility >= 90 )
         {
             $dqChance += 0.05;
@@ -165,6 +197,7 @@ class SimulatorModel extends System_Model
             $this->logMessage( "{$attackerState['data']->name} has been disqualified for {$reason}!" );
             return true;
         }
+
         return false;
     }
 
@@ -649,17 +682,12 @@ class SimulatorModel extends System_Model
     /**
      * @param $attackerState
      * @param $defenderState
-     * @param array $attackerMoveNames
+     * @param $attackerMoveNames
      * @return mixed
      */
     private function selectMove( $attackerState, $defenderState, $attackerMoveNames )
     {
         $wrestlerMoves = (array) ( $attackerState['data']->moves ?? [] );
-
-        if ( empty( $wrestlerMoves ) )
-        {
-            return (object) ['move_name' => 'Struggle', 'baseHitChance' => 1.0, 'stat' => 'strength', 'stamina_cost' => 10, 'momentumGain' => 2, 'min_damage' => 5, 'max_damage' => 10, 'type' => 'strike', 'submissionAttemptChance' => 0];
-        }
 
         $fullMoveDetails = array_filter( $this->allMoves, fn( $move ) => in_array( $move->move_name, $attackerMoveNames ) );
 
@@ -682,12 +710,23 @@ class SimulatorModel extends System_Model
 
         $finishers    = [];
         $finisherName = null;
+        // **FIX STARTS HERE**
         if ( isset( $wrestlerMoves['finisher'] ) && !empty( $wrestlerMoves['finisher'] ) )
         {
-            // **FIX:** Check if the finisher array and its first element exist
+            // Check if the finisher is an object with a move_name property
             if ( isset( $wrestlerMoves['finisher'][0]->move_name ) )
             {
                 $finisherName = $wrestlerMoves['finisher'][0]->move_name;
+            }
+            // Check if the finisher is a simple string (for prospects)
+
+            elseif ( is_string( $wrestlerMoves['finisher'][0] ) )
+            {
+                $finisherName = $wrestlerMoves['finisher'][0];
+            }
+
+            if ( $finisherName )
+            {
                 foreach ( $executableMoves as $move )
                 {
                     if ( $move->move_name === $finisherName )
@@ -698,6 +737,7 @@ class SimulatorModel extends System_Model
                 }
             }
         }
+        // **FIX ENDS HERE**
 
         $regularMoves = array_filter( $executableMoves, function ( $move ) use ( $finisherName )
         {

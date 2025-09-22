@@ -1,0 +1,33 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Trait System Guide{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 bg-gray-900 rounded-lg">
+    <div class="prose max-w-none">
+        <h1 class="text-4xl font-bold mb-6 text-gray-300">Trait System Guide</h1>
+
+        <p class="text-lg text-gray-300 mb-8 flex flex-col items-center">
+            In the International Wrestling Federation (IWF), Traits are special passive abilities that can give a wrestler a unique edge in the ring. Traits appear as badges on wrestler cards; for example, the "Technician" badge:<br>
+
+            <span class="bg-indigo-500 text-white text-xs text-center w-48 font-semibold mr-2 px-2.5 py-0.5 rounded">Technician</span><br>
+
+
+            Each trait provides a specific benefit that can influence the flow of a match, from increasing damage to creating surprise opportunities. Understanding these traits is key to mastering your wrestler's potential.
+        </p>
+        <div class="bg-white shadow-md bg-gray-900">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-300">Available Traits</h2>
+            <ul class="space-y-4">
+                {% for trait in traits %}
+                    <li class="p-4 bg-gray-800 rounded-md border border-indigo-800">
+                        <h3 class="font-bold text-lg text-indigo-400">{{ trait.name }}</h3>
+                        <p class="text-gray-300">{{ trait.description }}</p>
+                    </li>
+                {% else %}
+                    <li class="text-gray-300">No traits found.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

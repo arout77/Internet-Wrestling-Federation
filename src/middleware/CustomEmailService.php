@@ -19,7 +19,7 @@ class CustomEmailService extends Base_Controller
      * @param Environment $twig The configured Twig environment object.
      * @param string $fromEmail The email address that will appear in the "From" header.
      */
-    public function __construct( string $fromEmail = 'no-reply@iwf-wrestling.com' )
+    public function __construct( array $config )
     {
         $this->fromEmail = $fromEmail;
     }
