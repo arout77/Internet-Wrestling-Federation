@@ -45,6 +45,26 @@
                 <button id="singleMatchBtn" class="px-6 py-2 font-bold rounded-l-lg bg-yellow-500 text-gray-900">Singles Match</button>
                 <button id="tagTeamMatchBtn" class="px-6 py-2 font-bold rounded-r-lg bg-gray-700 hover:bg-gray-600 transition-colors">Tag Team Match</button>
 
+                <div class="mb-4">
+                    <label for="team1-select" class="block text-white text-sm font-bold mb-2">Select Team 1:</label>
+                    <select id="team1-select" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="">-- Choose a Tag Team --</option>
+                        {% for team in tag_teams %}
+                            <option value="{{ team.team_name }}">{{ team.team_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="team2-select" class="block text-white text-sm font-bold mb-2">Select Team 2:</label>
+                    <select id="team2-select" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="">-- Choose a Tag Team --</option>
+                        {% for team in tag_teams %}
+                            <option value="{{ team.team_name }}">{{ team.team_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <button id="randomMatchupBtn" class="px-4 py-2 font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors text-white">Random Matchup</button>
                 <button id="resetMatchBtn" class="px-4 py-2 font-bold rounded-lg bg-red-600 hover:bg-red-500 transition-colors text-white">Reset Match</button>
                 <button id="helpBtn" class="help-button">?</button>
@@ -99,6 +119,21 @@
         <h2 class="text-3xl font-bold text-center text-yellow-400 mb-4">Match Results</h2>
         <div id="winnerDisplay" class="text-center mb-6"></div>
         <div id="matchLog" class="bg-gray-900 rounded-lg p-4 h-96 overflow-y-auto border border-gray-700"></div>
+    </div>
+
+    <div class="mt-12 p-8 bg-gray-900 rounded-lg shadow-lg border border-gray-700" style="background-color: var(--roster-bg);">
+        <h2 class="text-3xl font-bold text-yellow-400 mb-4">Established Tag Teams</h2>
+        <div id="tagTeamRoster" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+            {% for team in tag_teams %}
+                <div class="wrestler-card bg-gray-800 p-2 rounded-lg text-center"
+                     data-team-name="{{ team.team_name }}"
+                     data-member-ids="{{ team.members|join(',') }}"
+                     draggable="true">
+                    <img src="{{ base_url }}public/media/images/tagteams/{{ team.team_image }}.webp" alt="{{ team.team_name }}" class="w-full h-64 object-cover rounded-md mb-2">
+                    <p class="text-white font-semibold">{{ team.team_name }}</p>
+                </div>
+            {% endfor %}
+        </div>
     </div>
 
     <div class="mt-12 p-8 bg-gray-900 rounded-lg shadow-lg border border-gray-700" style="background-color: var(--roster-bg);">

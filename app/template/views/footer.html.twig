@@ -7,6 +7,7 @@
 </footer>
 {% if route_action == 'match' %}
 <script type="module" src="{{ template_url }}assets/js/data.js"></script>
+<script type="module" src="{{ template_url }}assets/js/simulator.js"></script>
 {# This tells Twig to only load app.js if a variable named 'load_app_js' is not defined or is false #}
 {% if load_app_js is not defined or load_app_js == false %}
     <script type="module" src="{{ template_url }}assets/js/app.js"></script>

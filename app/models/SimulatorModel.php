@@ -94,6 +94,29 @@ class SimulatorModel extends System_Model
     }
 
     /**
+     * Fetches all tag teams and their members.
+     *
+     * @return array
+     */
+    public function getAllTagTeams()
+    {
+        $sql = "SELECT tt.team_name, tt.team_image, GROUP_CONCAT(r.wrestler_id) as members
+                FROM tag_teams tt
+                JOIN roster r ON tt.team_name = r.tag_team
+                GROUP BY tt.team_name, tt.team_image";
+        $stmt = $this->db->query( $sql );
+        $stmt->execute();
+        $teams = $stmt->fetchAll( \PDO::FETCH_ASSOC );
+        // Convert the comma-separated member IDs into an array
+        foreach ( $teams as $team )
+        {
+            $team['members'] = explode( ',', $team['members'] );
+        }
+
+        return $teams;
+    }
+
+    /**
      * Calculates performance modifiers based on a wrestler's level.
      * @param int $level The wrestler's level.
      * @return array An array containing damage and hit chance modifiers.

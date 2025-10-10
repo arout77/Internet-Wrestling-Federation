@@ -51,10 +51,12 @@ class App_Controller extends Base_Controller
     {
         $apiModel  = $this->model( 'Api' );
         $wrestlers = $apiModel->get_all_wrestlers();
+        $tagTeams  = $this->model( 'Simulator' )->getAllTagTeams();
 
         $this->template->render( 'app/match.html.twig', [
             'title'     => 'Match Simulator',
             'wrestlers' => $wrestlers,
+            'tag_teams' => $tagTeams,
         ] );
     }
 

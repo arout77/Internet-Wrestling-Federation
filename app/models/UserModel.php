@@ -136,15 +136,30 @@ class UserModel extends System_Model
         try {
             $pid = bin2hex( random_bytes( 16 ) );
 
-            $sqlProspect  = "INSERT INTO prospects (pid, name, height, weight, image, baseHp, strength, technicalAbility, brawlingAbility, stamina, aerialAbility, toughness, reversalAbility, submissionDefense, staminaRecoveryRate, moves, lvl, attribute_points) VALUES (:pid, :name, :height, :weight, :image, :baseHp, :strength, :technicalAbility, :brawlingAbility, :stamina, :aerialAbility, :toughness, :reversalAbility, :submissionDefense, :staminaRecoveryRate, :moves, 1, 5)";
+            $sqlProspect  = "INSERT INTO prospects (pid, name, height, weight, image, baseHp, strength, technicalAbility, brawlingAbility, stamina, aerialAbility, toughness, reversalAbility, submissionDefense, staminaRecoveryRate, lvl, attribute_points) VALUES (:pid, :name, :height, :weight, :image, :baseHp, :strength, :technicalAbility, :brawlingAbility, :stamina, :aerialAbility, :toughness, :reversalAbility, :submissionDefense, :staminaRecoveryRate, 1, 5)";
             $stmtProspect = $this->db->prepare( $sqlProspect );
 
-            $defaultMoves = json_encode( [
-                "strike"     => ["Punch", "Clothesline", "Knee Drop"],
-                "grapple"    => ["Body Slam", "Suplex", "Inverted atomic drop", "Abdominal Stretch", "Hip Toss", "Arm Bar"],
-                "finisher"   => ["Piledriver"],
-                "highFlying" => ["Dropkick"],
-            ] );
+            $moves = [
+                "Abdominal Stretch", "Arm Bar", "Body Slam", "Clothesline", "Dropkick",
+                "Hip Toss", "Inverted atomic drop", "Knee Drop", "Piledriver", "Punch",
+                "Suplex",
+            ];
+            $move_id = [];
+
+            foreach ( $moves as $move )
+            {
+                $sql   = "SELECT `move_id` FROM `all_moves` WHERE `move_name` = ?";
+                $query = $this->db->prepare( $sql );
+                $query->execute( [$move] );
+                $move_id[] = $query->fetchColumn();
+            }
+
+            foreach ( $move_id as $id )
+            {
+                $sql   = "INSERT INTO prospect_moves(`prospect_pid`, `move_id`) VALUES(?,?)";
+                $query = $this->db->prepare( $sql );
+                $query->execute( [$pid, $id] );
+            }
 
             $stmtProspect->execute( [
                 ':pid'                 => $pid,
@@ -162,7 +177,6 @@ class UserModel extends System_Model
                 ':reversalAbility'     => 50,
                 ':submissionDefense'   => '50',
                 ':staminaRecoveryRate' => 5,
-                ':moves'               => $defaultMoves,
             ] );
 
             $sqlUser  = "UPDATE users SET prospect_id = :pid WHERE user_id = :user_id";

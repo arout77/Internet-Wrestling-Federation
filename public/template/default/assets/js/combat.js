@@ -92,21 +92,36 @@ function updateMomentum(matchStateObj, wrestlerId, amount, isBulkSimulation = fa
 
 /**
  * Selects a random move from a wrestler's moveset based on move types.
- * @param {object} wrestler - The wrestler object.
+ * @param {object} attacker - The attacking wrestler.
+ * @param {object} defender - The defending wrestler.
+ * @param {boolean} finishersOnly - If true, only finisher moves will be considered.
  * @returns {object} The selected move object.
  */
-function selectRandomMove(wrestler) {
-    const allMoves = [
-        ...(wrestler.moves.basic || []),
-        ...(wrestler.moves.signature || []),
-        ...(wrestler.moves.finisher || [])
-    ];
-    if (allMoves.length === 0) {
-        // Return a default move if the wrestler has no moves
+function selectRandomMove(attacker, defender, finishersOnly = false) {
+    let availableMoves = [];
+    const defenderWeight = parseInt(defender.weight, 10);
+
+    if (finishersOnly) {
+        availableMoves = (attacker.moves.finisher || []).filter(move => {
+            return !move.weight_limit || defenderWeight <= parseInt(move.weight_limit, 10);
+        });
+    } else {
+        const basicMoves = (attacker.moves.basic || []).filter(move => {
+            return !move.weight_limit || defenderWeight <= parseInt(move.weight_limit, 10);
+        });
+        const signatureMoves = (attacker.moves.signature || []).filter(move => {
+            return !move.weight_limit || defenderWeight <= parseInt(move.weight_limit, 10);
+        });
+        availableMoves = [...basicMoves, ...signatureMoves];
+    }
+
+    if (availableMoves.length === 0) {
+        // Fallback to a basic punch if no other moves are available
         return { name: "Basic Punch", type: "basic", damage: 5, momentumGain: 5 };
     }
-    const moveIndex = getRandomInt(0, allMoves.length - 1);
-    return allMoves[moveIndex];
+    
+    const moveIndex = getRandomInt(0, availableMoves.length - 1);
+    return availableMoves[moveIndex];
 }
 
 /**
@@ -199,13 +214,13 @@ export async function advanceTurn(matchStateObj, selectedWrestlers, matchType, w
         return;
     }
 
-    // Ensure match state properties exist
+    // Initialize match state properties
     if (!matchStateObj.initialHp) matchStateObj.initialHp = {};
     if (!matchStateObj.currentHp) matchStateObj.currentHp = {};
     if (!matchStateObj.momentum) matchStateObj.momentum = {};
     if (!matchStateObj.stamina) matchStateObj.stamina = {};
     if (!matchStateObj.stunnedStatus) matchStateObj.stunnedStatus = {};
-    if (!matchStateObj.winnerId) matchStateObj.winnerId = null; // To track match end
+    if (!matchStateObj.winnerId) matchStateObj.winnerId = null;
 
     const allWrestlers = Object.values(selectedWrestlers).filter(w => w);
     allWrestlers.forEach(wrestler => {
@@ -216,9 +231,9 @@ export async function advanceTurn(matchStateObj, selectedWrestlers, matchType, w
         if (matchStateObj.stunnedStatus[wrestler.id] === undefined) matchStateObj.stunnedStatus[wrestler.id] = 0;
     });
 
-    if (matchStateObj.winnerId) return; // Stop if match is already won
+    if (matchStateObj.winnerId) return;
 
-    // --- Stun Check ---
+    // Stun Check
     for (const wrestler of allWrestlers) {
         if (matchStateObj.stunnedStatus[wrestler.id] > 0) {
             if (!isBulkSimulation) updateMatchLog(`${wrestler.name} is stunned and cannot make a move!`, 'info');
@@ -230,7 +245,7 @@ export async function advanceTurn(matchStateObj, selectedWrestlers, matchType, w
     const availableWrestlers = allWrestlers.filter(w => w && matchStateObj.currentHp[w.id] > 0);
     if (availableWrestlers.length < 2) return;
 
-    // --- Initiative Roll ---
+    // Initiative Roll
     const initiativeRolls = availableWrestlers.map(w => {
         const roll = getRandomInt(1, 100);
         const bonus = (w.stats.reversalAbility || 0) + (matchStateObj.momentum[w.id] || 0) * 0.5;
@@ -242,23 +257,61 @@ export async function advanceTurn(matchStateObj, selectedWrestlers, matchType, w
 
     let turnActionTaken = false;
 
-    // --- Universal Reversal Check ---
+    // Reversal Checks (Universal and Trait-Based)
     const reversalChance = (defender.stats.reversalAbility || 0) * 0.005;
     if (Math.random() < reversalChance) {
         updateMomentum(matchStateObj, defender.id, 10, isBulkSimulation);
         if (!isBulkSimulation) updateMatchLog(`${defender.name} reverses ${attacker.name}'s move!`, 'reversal');
         turnActionTaken = true;
-    }
-
-    // --- Trait-Based Reversals ---
-    if (!turnActionTaken) {
-        // ... (Technician and Submission Specialist logic remains the same)
-    }
-
-    // --- Regular Move Execution ---
-    if (!turnActionTaken) {
-        const move = selectRandomMove(attacker);
+    } else if (defender.traits.includes('Technician') && Math.random() < 0.15) {
+        const staminaDrain = 5;
+        matchStateObj.stamina[attacker.id] = Math.max(0, matchStateObj.stamina[attacker.id] - staminaDrain);
+        if (!isBulkSimulation) {
+            updateMatchLog(`${defender.name} masterfully reverses the attempt, causing ${attacker.name} to lose ${staminaDrain} stamina!`, 'reversal');
+        }
+        turnActionTaken = true;
+    } else if (defender.traits.includes('Submission Specialist') && Math.random() < 0.1) {
+        if (!isBulkSimulation) {
+            updateMatchLog(`${defender.name} sees an opening and reverses the move!`, 'reversal');
+        }
+        [attacker, defender] = [defender, attacker];
         
+        try {
+            const response = await fetch('/api/submission-moves');
+            const submissionMoves = await response.json();
+            const move = submissionMoves[getRandomInt(0, submissionMoves.length - 1)];
+            
+            let momentumGain = move.momentumGain;
+            if (attacker.traits.includes('Technician')) {
+                momentumGain *= 1.20;
+            }
+
+            const damage = calculateDamage(attacker, defender, move, matchStateObj, isBulkSimulation);
+            matchStateObj.currentHp[defender.id] -= damage;
+            updateMomentum(matchStateObj, attacker.id, momentumGain, isBulkSimulation);
+
+            if (!isBulkSimulation) {
+                updateMatchLog(`${attacker.name} counters with a ${move.name}! It deals ${damage} damage.`, 'action');
+            }
+        } catch (error) {
+            console.error("Failed to fetch submission moves:", error);
+        }
+        turnActionTaken = true;
+    }
+
+    // Main Action: Regular Move or Finisher
+    if (!turnActionTaken) {
+        const defenderHpPercent = matchStateObj.currentHp[defender.id] / matchStateObj.initialHp[defender.id];
+        const canAttemptFinisher = matchStateObj.momentum[attacker.id] >= 90 && defenderHpPercent <= 0.40;
+
+        let move;
+        if (canAttemptFinisher && Math.random() < 0.5) {
+            move = selectRandomMove(attacker, defender, true); // True for finishers only
+            if (!isBulkSimulation) updateMatchLog(`${attacker.name} is going for the finisher!`, 'finisher');
+        } else {
+            move = selectRandomMove(attacker, defender);
+        }
+
         let momentumGain = move.momentumGain;
         if (attacker.traits.includes('Technician')) {
             momentumGain *= 1.20;
@@ -271,8 +324,8 @@ export async function advanceTurn(matchStateObj, selectedWrestlers, matchType, w
 
         if (!isBulkSimulation) updateMatchLog(`${attacker.name} uses ${move.name} on ${defender.name}! It deals ${damage} damage.`, 'action');
 
-        // --- NEW: Pin and Submission Attempt Logic ---
-        if (matchStateObj.currentHp[defender.id] > 0) { // Can't pin/submit a knocked out opponent
+        // Pin/Submission and Stun Logic
+        if (matchStateObj.currentHp[defender.id] > 0) {
             // Pin Attempt
             if (move.pinAttemptChance && Math.random() < move.pinAttemptChance) {
                 if (!isBulkSimulation) {
@@ -306,17 +359,14 @@ export async function advanceTurn(matchStateObj, selectedWrestlers, matchType, w
             }
         }
 
-        // Stun Application
         if (move.type === 'signature' && Math.random() < 0.25) {
             matchStateObj.stunnedStatus[defender.id] = 1;
-            if (!isBulkSimulation) updateMatchLog(`${defender.name} is stunned!`, 'info');
         } else if (move.type === 'finisher' && Math.random() < 0.50) {
             matchStateObj.stunnedStatus[defender.id] = 1;
-            if (!isBulkSimulation) updateMatchLog(`${defender.name} is left reeling!`, 'info');
         }
     }
 
-    // --- Post-Turn Updates ---
+    // Post-Turn Updates
     if (!isBulkSimulation) {
         const damagedWrestler = allWrestlers.find(w => w.id === defender.id);
         if (damagedWrestler) {
@@ -324,9 +374,9 @@ export async function advanceTurn(matchStateObj, selectedWrestlers, matchType, w
             triggerDamageAnimation(damagedWrestler.id);
         }
         
-        if (matchStateObj.currentHp[defender.id] <= 0) {
+        if (matchStateObj.currentHp[defender.id] <= 0 && !matchStateObj.winnerId) {
             matchStateObj.winnerId = attacker.id;
-            updateMatchLog(`${defender.name} has been knocked out! ${attacker.name} wins!`, 'knockout');
+            updateMatchLog(`${defender.name} is unable to kick out! ${attacker.name} wins by pinfall!`, 'win');
         }
     }
 }

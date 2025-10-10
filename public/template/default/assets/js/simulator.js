@@ -1,3 +1,5 @@
+// js/simulator.js
+
 document.addEventListener('DOMContentLoaded', () => {
     // Data from Twig
     const rosterData = RosterData || [];
@@ -30,6 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const tagTeamMatchBtn = document.getElementById('tagTeamMatchBtn');
     const singleMatchLayout = document.getElementById('singleMatchLayout');
     const tagTeamMatchLayout = document.getElementById('tagTeamMatchLayout');
+    // Real-life tag teams
+    const team1Select = document.getElementById('team1-select');
+    const team2Select = document.getElementById('team2-select');
+    const team1Player1 = document.getElementById('team1-player1');
+    const team1Player2 = document.getElementById('team1-player2');
+    const team2Player1 = document.getElementById('team2-player1');
+    const team2Player2 = document.getElementById('team2-player2');
 
     // Drop Zones
     const dropZones = {
@@ -42,6 +51,112 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // State
+    // Fetch tag teams from the API
+    fetch(baseUrl + 'api/tagTeams')
+        .then(response => response.json())
+        .then(data => {
+            tagTeamsData = data;
+            // We can populate the dropdowns dynamically here if prefered
+        });
+
+    const tagTeamCards = document.querySelectorAll('.tag-team-card');
+    const team1DropZone1 = document.getElementById('team1_player1DropZone');
+    const team1DropZone2 = document.getElementById('team1_player2DropZone');
+    const team2DropZone1 = document.getElementById('team2_player1DropZone');
+    const team2DropZone2 = document.getElementById('team2_player2DropZone');
+
+    tagTeamCards.forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('application/json', JSON.stringify({
+                type: 'team',
+                memberIds: card.dataset.memberIds.split(','),
+                teamName: card.dataset.teamName
+            }));
+        });
+    });
+
+    // Helper function to handle dropping a team card
+    const handleTeamDrop = (e, teamDropZones) => {
+        e.preventDefault();
+        const data = JSON.parse(e.dataTransfer.getData('application/json'));
+
+        if (data.type === 'team' && data.memberIds.length === 2) {
+            // Clear existing content and populate both drop zones for the team
+            clearDropZone(teamDropZones[0]);
+            clearDropZone(teamDropZones[1]);
+            fetchWrestlerAndPopulate(data.memberIds[0], teamDropZones[0]);
+            fetchWrestlerAndPopulate(data.memberIds[1], teamDropZones[1]);
+        }
+    };
+
+    // Assign drop event listeners to all tag team drop zones
+    const team1DropZones = [team1Player1DropZone, team1Player2DropZone];
+    const team2DropZones = [team2Player1DropZone, team2Player2DropZone];
+
+    team1DropZones.forEach(zone => {
+        zone.addEventListener('drop', (e) => handleTeamDrop(e, team1DropZones));
+        zone.addEventListener('dragover', (e) => e.preventDefault());
+    });
+
+    team2DropZones.forEach(zone => {
+        zone.addEventListener('drop', (e) => handleTeamDrop(e, team2DropZones));
+        zone.addEventListener('dragover', (e) => e.preventDefault());
+    });
+
+    // Add new event listeners for the team drop zones
+    team1DropZone1.addEventListener('drop', (e) => handleTeamDrop(e, team1DropZone1, team1DropZone2));
+    team1DropZone2.addEventListener('drop', (e) => handleTeamDrop(e, team1DropZone1, team1DropZone2));
+    team2DropZone1.addEventListener('drop', (e) => handleTeamDrop(e, team2DropZone1, team2DropZone2));
+    team2DropZone2.addEventListener('drop', (e) => handleTeamDrop(e, team2DropZone1, team2DropZone2));
+
+    // You will need to add 'dragover' event listeners to your drop zones as well
+    [team1DropZone1, team1DropZone2, team2DropZone1, team2DropZone2].forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault(); // This is necessary to allow dropping
+        });
+    });
+
+    // Helper function to fetch wrestler data and update the UI
+    function fetchWrestlerDataAndPopulate(wrestlerId, dropZone) {
+        // You likely already have a function for this, but here's a template
+        fetch(`/api/wrestler/${wrestlerId}`)
+            .then(response => response.json())
+            .then(wrestlerData => {
+                // Code to render the wrestler card in the drop zone
+                // This will be similar to your existing drop handling for single wrestlers
+                renderWrestlerInDropZone(wrestlerData, dropZone);
+            });
+    }
+
+    team1Select.addEventListener('change', (event) => {
+        const selectedTeamName = event.target.value;
+        const selectedTeam = tagTeamsData.find(team => team.team_name === selectedTeamName);
+
+        if (selectedTeam) {
+            team1Player1.value = selectedTeam.members[0];
+            team1Player2.value = selectedTeam.members[1];
+            team1Player1.disabled = true;
+            team1Player2.disabled = true;
+        } else {
+            team1Player1.disabled = false;
+            team1Player2.disabled = false;
+        }
+    });
+
+    team2Select.addEventListener('change', (event) => {
+        const selectedTeamName = event.target.value;
+        const selectedTeam = tagTeamsData.find(team => team.team_name === selectedTeamName);
+
+        if (selectedTeam) {
+            team2Player1.value = selectedTeam.members[0];
+            team2Player2.value = selectedTeam.members[1];
+            team2Player1.disabled = true;
+            team2Player2.disabled = true;
+        } else {
+            team2Player1.disabled = false;
+            team2Player2.disabled = false;
+        }
+    });
     let selectedWrestlers = {
         player1: null,
         player2: null,

@@ -115,6 +115,13 @@ class Api_Controller extends Base_Controller
         );
     }
 
+    public function tagTeams()
+    {
+        $teams = $this->model( 'Simulator' )->getAllTagTeams();
+        header( 'Content-Type: application/json' );
+        echo json_encode( $teams );
+    }
+
     /**
      * Renders the traits guide page.
      *
