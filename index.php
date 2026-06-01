@@ -1,140 +1,134 @@
 <?php
-// MIT License
-
-// Copyright (c) 2024 Andrew Rout
-
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
 
 /**
- * An open source application development framework designed for PHP 7
+ * Rhapsody Framework
  *
- * @package         Rhapsody Framwework
- * @author          Andrew Rout [ arout@diamondphp.org ]
- * @copyright       Copyright (c) 2024, Andrew Rout
- * @license         https://diamondphp.org/support/license
- * @link            https://diamondphp.org
- * @since           Version 1.0.0
- * @filesource
+ * Front Controller
  *
+ * This file is the single entry point for all requests. It's responsible for
+ * bootstrapping the application, setting up error handling, the service container,
+ * and handing the request off to the router.
  */
-declare ( strict_types = 1 );
 
-define( 'DS', DIRECTORY_SEPARATOR );
+// 1. Register the Composer autoloader
+require_once __DIR__ . '/vendor/autoload.php';
 
-// Defines the location of the front controller (this file)
-// For security purposes, we recommend the front controller
-// to be the only PHP file stored in a publicly accessible folder
-if ( !defined( 'BASE_PATH' ) )
-{
-	$dir = dirname( __FILE__ );
-	$dir = chop( $dir );
-	$dir = chop( $dir, "/" );
-	define( 'BASE_PATH', $dir . DS );
+// --- START DEBUG COLLECTOR ---
+\Core\Debug::getInstance()->start();
+
+// --- ADD MAINTENANCE MODE CHECK ---
+$maintenanceFile = __DIR__ . '/storage/framework/down';
+if (file_exists($maintenanceFile)) {
+    http_response_code(503);
+    echo "<h1>Be right back.</h1><p>We are currently performing scheduled maintenance. Please check back soon.</p>";
+    exit();
+}
+// --- END MAINTENANCE MODE CHECK ---
+
+// 2. Define the project root path for reliability
+$rootPath = dirname(__FILE__);
+
+// 3. Load environment variables from the .env file
+try {
+    $dotenv = Dotenv\Dotenv::createImmutable($rootPath);
+    $dotenv->load();
+} catch (\Dotenv\Exception\InvalidPathException $e) {
+    die('Could not find .env file. Please ensure it exists in the project root: ' . $rootPath);
 }
 
-// If you moved your .env file to another directory,
-// remove BASE_PATH . below and enter the full file path
-define( 'ENV_PATH', BASE_PATH . '.env' );
+// 4. Register Error Handling (Whoops)
+// This provides beautiful, detailed error pages during development but
+// should be disabled in a production environment for security.
+$config = require_once $rootPath . '/config.php';
 
-// Check for and attempt to fix read permissions to the .env file
-// Will not work on all servers
-$fp = fileperms( ENV_PATH );
-if ( file_exists( ENV_PATH ) )
-{
-	if ( substr( sprintf( '%o', $fp ), -4 ) != 0644 )
-	{
-		chmod( ENV_PATH, 0644 );
-	}
+// Register global error handler (logs errors, custom error pages)
+\Core\ErrorHandler::register($config);
+
+// Then, if development, Whoops will still work but ErrorHandler takes precedence.
+// if ($config['app_env'] === 'development') {
+//     // Whoops is already registered via ErrorHandler's renderWhoops()
+//     // We can remove the old Whoops registration block entirely.
+//     // Leaving commented out in place for legacy reasons
+//     $whoops = new \Whoops\Run;
+//     $whoops->pushHandler(new \Whoops\Handler\PrettyPageHandler);
+//     $whoops->register();
+// }
+
+// 5. Start the session
+// This makes the $_SESSION superglobal available for our authentication system.
+\Core\Session::start();
+
+// 6. Bootstrap the application and get the service container
+// This is the core of the dependency injection system. The container
+// now knows how to build all our core services.
+$container            = require_once $rootPath . '/bootstrap.php';
+$GLOBALS['container'] = $container;
+
+// 7. Use necessary core classes
+use App\Controllers\RouterController;
+use Core\Request;
+
+// 8. Create the Request object
+// This object encapsulates all information about the incoming HTTP request.
+$request = new Request();
+
+// 9. Load the application routes from cache if available
+$routeCachePath = $rootPath . '/storage/cache/routes/routes.php';
+if (file_exists($routeCachePath) && $config['app_env'] === 'production') {
+    $routes = require_once $routeCachePath;
+    RouterController::setRoutes($routes);
+} else {
+    require_once $rootPath . '/routes/web.php';
+    require_once $rootPath . '/routes/api.php';
 }
 
-// Either the ENV_PATH variable above is set incorrectly,
-// or we just cannot read the file. Alert user and abort.
-if ( !is_readable( ENV_PATH ) )
-{
-	exit( '<h3>Either the <span style="color: red;">.env</span> global configuration file was not found,
-        or the file does not have read permissions. Exiting...</h3>' );
+// 10. Dispatch the request through the router, passing the container
+// The router will execute global middleware (like CSRF), find the matching route,
+// execute its specific middleware (like auth), and finally use the container
+// to build and run the controller.
+$response = RouterController::dispatch($request, $container);
+
+// NEW: Convert 404 responses to exceptions so the error handler can render custom page
+if ($response->getStatusCode() === 404) {
+    throw new \Core\Exceptions\HttpException(404, 'Page not found');
+}
+if ($response->getStatusCode() === 500) {
+    throw new \Core\Exceptions\HttpException(500, 'Server error');
+}
+$matchedRoute = RouterController::getMatchedRoute();
+
+// --- INJECT DEBUG TOOLBAR ---
+if ($config['app_env'] === 'development') {
+    // Get the headers from the response
+    $headers = $response->getHeaders();
+    // Default to 'text/html' if no content type is set
+    $contentType = $headers['Content-Type'] ?? 'text/html';
+
+    // ONLY inject the toolbar if this is an HTML response.
+    // This prevents breaking our JSON API responses.
+    if (str_contains($contentType, 'text/html')) {
+        $debug = \Core\Debug::getInstance();
+        $debug->end($response, $config, $container, $matchedRoute); // Pass final data to the collector
+        $toolbar     = new \Core\Toolbar($debug->getData());
+        $toolbarHtml = $toolbar->render();
+
+        $content = $response->getContent();
+        // Inject toolbar before closing body tag, or append if not found
+        $bodyEndPosition = strripos($content, '</body>');
+        if ($bodyEndPosition !== false) {
+            $content = substr_replace($content, $toolbarHtml, $bodyEndPosition, 0);
+        } else {
+            $content .= $toolbarHtml;
+        }
+        $response->setContent($content);
+
+        // --- Inject update notifications if available (in development) ---
+
+        /** @var \App\Services\NotificationService $notificationService */
+        $notificationService = $container->resolve(\App\Services\NotificationService::class);
+        $response            = $notificationService->injectBanner($response);
+    }
 }
 
-unset( $fp );
-
-require_once BASE_PATH . 'vendor' . DS . 'autoload.php';
-
-// If you moved the /src folder, erase the default value below and enter
-// the file path to the new location of the 'src' folder.
-// Be sure to include the trailing slash.
-// Example::
-// $system_folder = '/usr/home/foobar/src/';
-$system_folder = BASE_PATH . 'src' . DS;
-
-// Import service locator
-require_once $system_folder . 'Factory.php';
-// Load path definitions
-require_once $system_folder . 'Paths.php';
-
-// Check if system check was requested
-if ( $app['config']->setting( 'system_startup_check' ) == 'TRUE' )
-{
-	require_once SYSTEM_PATH . 'system_startup_check.php';
-}
-// Needed for router to build routes
-$subdir = $app['config']->setting( 'subdir' );
-
-/*-------------------------------------------
- * Process the request
- *
- * Nothing at all has actually been done yet,
- * aside from setting some global definitions
- * -----------------------------------------*/
-
-# Get and set currently used controller, action and parameters
-$app['router']->getRoute( $subdir );
-
-if ( $_POST )
-{
-	// $token = filter_input(INPUT_POST, 'token', FILTER_SANITIZE_STRING);
-
-	// if (!$token || $token !== $_SESSION['token']) {
-	// 	// return 405 http status code
-	// 	header($_SERVER['SERVER_PROTOCOL'] . ' 405 Method Not Allowed');
-	// 	exit;
-	// }
-	// $app['router']->interceptPost($_POST, $app);
-}
-
-if ( $_GET )
-{
-	// $app['router']->interceptGet($app);
-}
-
-/*-------------------------------------------
- * Start session
- * -----------------------------------------*/
-// Be sure to only make changes to session options
-// within the .env configuration file.
-$app['session']->start();
-
-/*-------------------------------------------
- * Instantiate requested URL
- * -----------------------------------------*/
-# Display the requested page
-require_once $app['config']->setting( 'system_path' ) . 'Run.php';
-$app['base_controller']->__construct( $app );
-$app['base_controller']->parse();
-
-unset( $subdir );
+// 11. Send the response back to the client
+$response->send();
