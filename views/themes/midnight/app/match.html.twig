@@ -1,0 +1,232 @@
+{% extends "layouts/main.twig" %}
+
+{% block content %}
+<style>
+    /* Shake animation for when a wrestler takes damage */
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .shake {
+        animation: shake 0.5s ease-in-out;
+    }
+</style>
+<div class="container mx-auto p-4">
+
+    <div id="matchSetup" class="py-20 px-4">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-4xl font-bold">Match Simulator</h1>
+            <div class="flex space-x-2">
+                <button id="reset-match-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Reset</button>
+                <button id="random-matchup-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Random Match</button>
+                <button id="open-betting-modal-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg transition-colors">Calculate Odds</button>
+                <button id="run-sim-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Simulate</button>
+            </div>
+        </div>
+
+        <!-- Matchup Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
+            <div id="matchup-slot-0" class="match-card-slot bg-gray-900/70 rounded-lg border-2 border-dashed border-indigo-500 min-h-[275px] flex items-center justify-center">
+                <span class="text-gray-400">Select Wrestler 1</span>
+            </div>
+            <div id="matchup-slot-1" class="match-card-slot bg-gray-900/70 rounded-lg border-2 border-dashed border-yellow-600 min-h-[275px] flex items-center justify-center">
+                <span class="text-gray-400">Select Wrestler 2</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Results -->
+    <div id="bulk-results-container" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div id="bulk-results-content" class="bg-gray-800 p-8 rounded-lg shadow-xl max-w-xl w-full"></div>
+    </div>
+
+    <div class="glass p-8">
+        <!-- Roster Selection Tabs -->
+        <div class="mb-4 border-b border-gray-700">
+            <nav class="flex space-x-4" aria-label="Tabs">
+                <button id="tab-wrestlers" class="tab-btn active text-white py-4 px-1 border-b-2 font-medium text-lg border-blue-500">Singles</button>
+                <button id="tab-tag-teams" class="tab-btn text-gray-400 hover:text-white py-4 px-1 border-b-2 font-medium text-lg border-transparent hover:border-gray-300">Tag Teams</button>
+            </nav>
+        </div>
+
+        <!-- Roster Filters -->
+        <div id="roster-controls" class="flex items-center space-x-4 mb-6">
+            <input type="text" id="roster-filter" class="w-full md:w-1/3 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Filter by name...">
+            <select id="roster-sort" class="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="name_asc">Sort by Name (A-Z)</option>
+                <option value="name_desc">Sort by Name (Z-A)</option>
+                <option value="overall_desc">Sort by Overall</option>
+                <option value="strength_desc">Sort by Strength</option>
+                <option value="technical_desc">Sort by Technical</option>
+                <option value="brawling_desc">Sort by Brawling</option>
+                <option value="aerial_desc">Sort by Aerial</option>
+                <option value="stamina_desc">Sort by Stamina</option>
+                <option value="toughness_desc">Sort by Toughness</option>
+            </select>
+        </div>
+
+        <!-- Roster Grids -->
+        <div id="roster-container-parent">
+            <div id="roster-container" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Wrestler cards will be injected here by JavaScript -->
+            </div>
+        </div>
+        <div id="tag-team-roster-container-parent" class="hidden">
+            <div id="tag-team-roster-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <!-- Tag team cards will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simulation Modal -->
+<div id="simulation-modal" class="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-5/6 flex flex-col">
+        <div class="flex justify-between items-center p-4 border-b border-gray-700">
+            <h3 class="text-2xl font-bold">Match Simulation</h3>
+            <button id="close-sim-modal-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+        </div>
+        
+        <!-- Wrestler HUDs -->
+        <div class="grid grid-cols-2 gap-4 p-4 bg-gray-900">
+            <!-- Wrestler 1 HUD -->
+            <div id="sim-wrestler-1-hud" class="text-center">
+                <div id="sim-wrestler-1-img-container" class="relative inline-block">
+                    <img id="sim-wrestler-1-img" src="" alt="Wrestler 1" class="w-32 h-32 object-cover rounded-full mx-auto border-4 border-blue-500">
+                </div>
+                <h4 id="sim-wrestler-1-name" class="text-xl font-bold mt-2"></h4>
+                <!-- HP Bar -->
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-2">
+                    <div id="sim-wrestler-1-hp" class="bg-green-500 h-4 rounded-full text-xs text-white text-center leading-none" style="width: 100%">HP</div>
+                </div>
+                <!-- Stamina Bar -->
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-1">
+                    <div id="sim-wrestler-1-stamina" class="bg-yellow-500 h-4 rounded-full text-xs text-black text-center leading-none" style="width: 100%">Stamina</div>
+                </div>
+                <div class="progress mt-1">
+                    <div id="sim-wrestler-1-momentum" class="bg-indigo-500 h-4 rounded-full text-xs text-black text-center leading-none" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">Momentum</div>
+                </div>
+            </div>
+            <!-- Wrestler 2 HUD -->
+            <div id="sim-wrestler-2-hud" class="text-center">
+                 <div id="sim-wrestler-2-img-container" class="relative inline-block">
+                    <img id="sim-wrestler-2-img" src="" alt="Wrestler 2" class="w-32 h-32 object-cover rounded-full mx-auto border-4 border-red-500">
+                </div>
+                <h4 id="sim-wrestler-2-name" class="text-xl font-bold mt-2"></h4>
+                <!-- HP Bar -->
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-2">
+                    <div id="sim-wrestler-2-hp" class="bg-green-500 h-4 rounded-full text-xs text-white text-center leading-none" style="width: 100%">HP</div>
+                </div>
+                <!-- Stamina Bar -->
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-1">
+                    <div id="sim-wrestler-2-stamina" class="bg-yellow-500 h-4 rounded-full text-xs text-black text-center leading-none" style="width: 100%">Stamina</div>
+                </div>
+                <div class="progress mt-1">
+                    <div id="sim-wrestler-2-momentum" class="bg-indigo-500 h-4 rounded-full text-xs text-black text-center leading-none" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">Momentum</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Log Area -->
+        <div id="simulation-log" class="p-6 overflow-y-auto text-sm font-mono whitespace-pre-wrap flex-grow">
+            Simulating match...
+        </div>
+    </div>
+</div>
+
+<!-- Winner Modal -->
+<div id="winner-modal" class="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md text-center p-6">
+        <h2 class="text-3xl font-bold text-yellow-400 mb-4">The Winner Is...</h2>
+        <img id="winner-img" src="" alt="Winner" class="w-48 h-48 object-cover rounded-full mx-auto border-4 border-yellow-400 mb-4">
+        <h3 id="winner-name" class="text-2xl font-bold"></h3>
+        <p class="text-gray-400">by <span id="victory-method"></span></p>
+        <button id="close-winner-modal-btn" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+    </div>
+</div>
+
+
+<!-- Betting Modal -->
+<div id="betting-modal" class="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
+        <div class="flex justify-between items-center p-4 border-b border-gray-700">
+            <h3 class="text-2xl font-bold">Betting Odds Simulator</h3>
+            <button id="close-betting-modal-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+        </div>
+        <div class="p-6">
+            <p class="mb-4">Run multiple simulations to see the win probability for each wrestler.</p>
+            <div class="flex justify-around items-center mb-4 text-lg">
+                <span id="betting-wrestler1-name" class="font-bold"></span>
+                <span>vs</span>
+                <span id="betting-wrestler2-name" class="font-bold"></span>
+            </div>
+            <div class="mb-4">
+                <label for="num-simulations" class="block text-sm font-medium text-gray-300 mb-1">Number of Simulations:</label>
+                <select id="num-simulations" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="10">10</option>
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="500">500</option>
+                    <option value="1000">1,000</option>
+                    <option value="5000">5,000</option>
+                    <option value="10000">10,000</option>
+                    <option value="50000">50,000</option>
+                </select>
+            </div>
+            <button id="run-bulk-sim-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Calculate Odds</button>
+        </div>
+    </div>
+</div>
+
+
+<script type="module">
+    import * as simulator from '{{ base_url }}/public/js/simulator.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const tabWrestlers = document.getElementById('tab-wrestlers');
+        const tabTagTeams = document.getElementById('tab-tag-teams');
+        const rosterParent = document.getElementById('roster-container-parent');
+        const tagTeamParent = document.getElementById('tag-team-roster-container-parent');
+        const rosterControls = document.getElementById('roster-controls');
+
+        if (tabWrestlers) {
+            tabWrestlers.addEventListener('click', () => {
+                tabWrestlers.classList.add('active', 'border-blue-500', 'text-white');
+                tabWrestlers.classList.remove('text-gray-400', 'border-transparent');
+                tabTagTeams.classList.remove('active', 'border-blue-500', 'text-white');
+                tabTagTeams.classList.add('text-gray-400', 'border-transparent');
+                
+                rosterParent.classList.remove('hidden');
+                rosterControls.classList.remove('hidden');
+                tagTeamParent.classList.add('hidden');
+            });
+        }
+        
+        if (tabTagTeams) {
+            tabTagTeams.addEventListener('click', () => {
+                tabTagTeams.classList.add('active', 'border-blue-500', 'text-white');
+                tabTagTeams.classList.remove('text-gray-400', 'border-transparent');
+                tabWrestlers.classList.remove('active', 'border-blue-500', 'text-white');
+                tabWrestlers.classList.add('text-gray-400', 'border-transparent');
+
+                tagTeamParent.classList.remove('hidden');
+                rosterParent.classList.add('hidden');
+                rosterControls.classList.add('hidden');
+            });
+        }
+
+        const closeSimModalBtn = document.getElementById('close-sim-modal-btn');
+        if (closeSimModalBtn) {
+            closeSimModalBtn.addEventListener('click', () => {
+                const simModal = document.getElementById('simulation-modal');
+                if (simModal) {
+                    simModal.classList.add('hidden');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+

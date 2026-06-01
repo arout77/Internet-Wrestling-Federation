@@ -1,0 +1,74 @@
+{% extends 'layouts/main.twig' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+
+    <!-- Prospect Info Header -->
+    <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-8 flex items-center justify-between shadow-lg">
+        <div>
+            <h1 class="text-3xl font-bold text-yellow-400 mb-1">{{ prospect.name }}</h1>
+            <div class="flex items-center space-x-6">
+                <span class="text-lg text-gray-300">Level: <strong class="text-white">{{ prospect.lvl }}</strong></span>
+                <span class="text-lg text-gray-300">Overall: <strong class="text-white">{{ prospect.getOverallRating() }}</strong></span>
+                <span class="text-lg text-gray-300">Gold: <strong class="text-white">{{ prospect.gold }}</strong></span>
+            </div>
+        </div>
+        <div>
+            <img src="{{ base_url }}/public/images/avatars/{{ prospect.image }}" alt="{{ prospect.name }}" class="w-24 h-24 rounded-full border-4 border-yellow-500 object-cover"
+                 onerror="this.onerror=null; this.src='https://placehold.co/96x96/333/999?text=?';">
+        </div>
+    </div>
+
+    <!-- Opponent Roster Grid -->
+    <h2 class="text-2xl font-semibold text-white mb-6">Choose Your Opponent</h2>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        {% for opponent in opponents %}
+            {% set isLocked = opponent.lvl > prospect.lvl %}
+            
+            <div classclass="relative bg-gray-900 border border-gray-700 rounded-lg shadow-md overflow-hidden transition-all duration-300 {{ isLocked ? 'opacity-50 grayscale' : 'hover:shadow-yellow-500/20 hover:border-gray-600' }}">
+                
+                <!-- REMOVED the black overlay div -->
+
+                <div class="flex flex-col h-full wrestler-card">
+                    <div class="relative">
+                        <img src="{{ base_url }}/public/images/{{ opponent.image }}.webp" alt="{{ opponent.name }}" 
+                             class="w-full h-48 object-cover"
+                             onerror="this.onerror=null; this.src='https://placehold.co/200x192/333/999?text={{ opponent.name }}';">
+                        <div class="absolute bottom-0 left-0 bg-black bg-opacity-70 px-3 py-1">
+                            <h3 class="text-lg font-bold text-white truncate">{{ opponent.name }}</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 flex-grow">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-gray-300">Level: <strong class="text-white text-lg">{{ opponent.lvl }}</strong></span>
+                            <span class="text-gray-300">Overall: <strong class="text-yellow-400 text-lg">{{ opponent.getOverallRating() }}</strong></span>
+                        </div>
+                        <p class="text-sm text-gray-300 mb-4 h-16 overflow-hidden">
+                            {{ opponent.description|length > 100 ? opponent.description|slice(0, 100) ~ '...' : opponent.description }}
+                        </p>
+                    </div>
+
+                    <div class="p-4 pt-0 mt-auto">
+                        {% if isLocked %}
+                            <button type="button" class="w-full bg-gray-700 text-gray-500 font-bold py-2 px-4 rounded-lg cursor-not-allowed">
+                                Reach Lvl {{ opponent.lvl }}
+                            </button>
+                        {% else %}
+                            <form action="{{ base_url }}/career/match" method="POST">
+                                {{ csrf_field() | raw }}
+                                <input type="hidden" name="opponent_id" value="{{ opponent.getSimulationId() }}">
+                                <button type="submit" class="w-full bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors duration-200">
+                                    Challenge
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}

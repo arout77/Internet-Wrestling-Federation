@@ -1,0 +1,319 @@
+{% extends 'layouts/main.twig' %}
+
+{% block content %}
+<style>
+    /* Shake Animation */
+    @keyframes shake {
+        0% { transform: translate(1px, 1px) rotate(0deg); }
+        10% { transform: translate(-1px, -2px) rotate(-1deg); }
+        20% { transform: translate(-3px, 0px) rotate(1deg); }
+        30% { transform: translate(3px, 2px) rotate(0deg); }
+        40% { transform: translate(1px, -1px) rotate(1deg); }
+        50% { transform: translate(-1px, 2px) rotate(-1deg); }
+        60% { transform: translate(-3px, 1px) rotate(0deg); }
+        70% { transform: translate(3px, 1px) rotate(-1deg); }
+        80% { transform: translate(-1px, -1px) rotate(1deg); }
+        90% { transform: translate(1px, 2px) rotate(0deg); }
+        100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+    .shake {
+        animation: shake 0.5s;
+        animation-iteration-count: 1;
+    }
+    
+    /* Status Bar Styles */
+    .status-bar-bg {
+        background-color: #374151; /* gray-700 */
+        border-radius: 9999px;
+        height: 8px;
+        width: 100%;
+        margin-bottom: 4px;
+        overflow: hidden;
+    }
+    .health-bar { background-color: #10B981; height: 100%; transition: width 0.3s ease; } /* green-500 */
+    .stamina-bar { background-color: #3B82F6; height: 100%; transition: width 0.3s ease; } /* blue-500 */
+    .momentum-bar { background-color: #F59E0B; height: 100%; transition: width 0.3s ease; } /* amber-500 */
+</style>
+
+<div class="container mx-auto px-4 py-8">
+
+    <!-- Win/Loss Header (Hidden initially, revealed at end) -->
+    <div id="result-header" class="text-center mb-8 opacity-0 transition-opacity duration-1000">
+        {% if result.is_win %}
+            <h1 class="text-6xl font-bold text-green-400 tracking-tighter">YOU WON!</h1>
+        {% else %}
+            <h1 class="text-6xl font-bold text-red-500 tracking-tighter">YOU LOST</h1>
+        {% endif %}
+    </div>
+
+    <!-- Wrestler Showcase with Status Bars -->
+    <div class="grid grid-cols-3 gap-6 items-start mb-8">
+        <!-- Prospect (Wrestler 1) -->
+        <div class="flex flex-col items-center p-6 bg-gray-800 rounded-lg border border-blue-700 shadow-lg">
+            <div id="w1-image-container">
+                <img src="{{ result.prospect.image }}" alt="{{ result.prospect.name }}"
+                     class="w-32 h-32 rounded-full border-4 border-blue-500 object-cover mb-4"
+                     onerror="this.onerror=null; this.src='https://placehold.co/128x128/333/999?text=?';">
+            </div>
+            <h2 class="text-2xl font-semibold text-white">{{ result.prospect.name }}</h2>
+            
+            <!-- Status Bars -->
+            <div class="w-full mt-4 space-y-2">
+                <div class="text-xs text-gray-400 flex justify-between"><span>Health</span><span id="w1-hp-text">100%</span></div>
+                <div class="status-bar-bg"><div id="w1-health-bar" class="health-bar" style="width: 100%"></div></div>
+                
+                <div class="text-xs text-gray-400 flex justify-between"><span>Stamina</span><span id="w1-stm-text">100%</span></div>
+                <div class="status-bar-bg"><div id="w1-stamina-bar" class="stamina-bar" style="width: 100%"></div></div>
+                
+                <div class="text-xs text-gray-400 flex justify-between"><span>Momentum</span><span id="w1-mom-text">0%</span></div>
+                <div class="status-bar-bg"><div id="w1-momentum-bar" class="momentum-bar" style="width: 0%"></div></div>
+            </div>
+        </div>
+
+        <!-- VS -->
+        <div class="text-center self-center">
+            <span class="text-5xl font-bold text-yellow-600">VS</span>
+        </div>
+
+        <!-- Opponent (Wrestler 2) -->
+        <div class="flex flex-col items-center p-6 bg-gray-800 rounded-lg border border-red-700 shadow-lg">
+            <div id="w2-image-container">
+                <img src="{{ base_url }}/public/images/{{ result.opponent.image }}.webp" alt="{{ result.opponent.name }}"
+                     class="w-32 h-32 rounded-full border-4 border-red-500 object-cover mb-4"
+                     onerror="this.onerror=null; this.src='https://placehold.co/128x128/333/999?text=?';">
+            </div>
+            <h2 class="text-2xl font-semibold text-white">{{ result.opponent.name }}</h2>
+            
+            <!-- Status Bars -->
+            <div class="w-full mt-4 space-y-2">
+                <div class="text-xs text-gray-400 flex justify-between"><span>Health</span><span id="w2-hp-text">100%</span></div>
+                <div class="status-bar-bg"><div id="w2-health-bar" class="health-bar" style="width: 100%"></div></div>
+                
+                <div class="text-xs text-gray-400 flex justify-between"><span>Stamina</span><span id="w2-stm-text">100%</span></div>
+                <div class="status-bar-bg"><div id="w2-stamina-bar" class="stamina-bar" style="width: 100%"></div></div>
+                
+                <div class="text-xs text-gray-400 flex justify-between"><span>Momentum</span><span id="w2-mom-text">0%</span></div>
+                <div class="status-bar-bg"><div id="w2-momentum-bar" class="momentum-bar" style="width: 0%"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results & Rewards (Hidden initially) -->
+    <div id="rewards-section" class="bg-gray-800 border border-gray-700 rounded-lg p-8 mb-8 shadow-lg hidden transition-all duration-1000 ease-in-out opacity-0 transform translate-y-4">
+        <h3 class="text-3xl font-semibold text-yellow-400 mb-6 text-center">Match Rewards</h3>
+        
+        <div class="flex justify-around items-center mb-6">
+            <!-- Gold Earned -->
+            <div class="text-center">
+                <div class="text-lg text-gray-400">Gold Earned</div>
+                <div class="text-4xl font-bold text-green-400">+{{ result.rewards.gold_earned }}</div>
+                <div class="text-sm text-gray-500">New Total: {{ result.rewards.new_gold }} Gold</div>
+            </div>
+
+            <!-- XP Earned -->
+            <div class="text-center">
+                <div class="text-lg text-gray-400">XP Earned</div>
+                <div class="text-4xl font-bold text-blue-400">+{{ result.rewards.xp_earned }}</div>
+            </div>
+            
+            <!-- Level Up? -->
+            {% if result.rewards.leveled_up %}
+                <div class="text-center p-4 rounded-lg bg-green-500 bg-opacity-20 border border-green-500">
+                    <div class="text-3xl font-bold text-green-300 animate-pulse">LEVEL UP!</div>
+                    <div class="text-xl text-white">Reached Level {{ result.rewards.new_level }}!</div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- XP Bar -->
+        <div>
+            <div class="flex justify-between text-sm text-gray-400 mb-1">
+                <span>Level {{ result.rewards.new_level }} XP</span>
+                <span>{{ result.rewards.new_xp }} / {{ result.rewards.xp_needed }}</span>
+            </div>
+            {% set xp_percent = (result.rewards.new_xp / result.rewards.xp_needed) * 100 %}
+            <div class="w-full bg-gray-900 rounded-full h-4 border border-gray-700">
+                <div class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: {{ xp_percent }}%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Log & Continue -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Match Log -->
+        <div class="md:col-span-2 bg-gray-900 border border-gray-700 rounded-lg shadow-lg">
+            <h3 class="text-xl font-semibold text-white p-4 border-b border-gray-700">Match Log</h3>
+            <div id="match-log" class="p-4 h-96 overflow-y-auto space-y-2 font-mono text-sm">
+                <p class="text-gray-400 animate-pulse">Initializing simulation...</p>
+            </div>
+        </div>
+
+        <!-- Actions (Hidden initially) -->
+        <div id="action-buttons" class="md:col-span-1 opacity-0 pointer-events-none transition-opacity duration-1000">
+            <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-lg">
+                <h3 class="text-xl font-semibold text-white mb-4">What's Next?</h3>
+                <a href="{{ base_url }}/career/find-match" class="block w-full text-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-500 transition-colors duration-200 mb-4">
+                    Find Another Match
+                </a>
+                <a href="{{ base_url }}/career" class="block w-full text-center bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-500 transition-colors duration-200">
+                    Back to Career Hub
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const matchLogData = {{ result.log|json_encode()|raw }};
+        
+        // IDs from PHP session data (w1 is prospect, w2 is opponent)
+        // Note: SimulationService uses 'w1' and 'w2' as keys in the log data
+        const w1_id = 'w1';
+        const w2_id = 'w2';
+
+        const logContainer = document.getElementById('match-log');
+        const rewardsSection = document.getElementById('rewards-section');
+        const resultHeader = document.getElementById('result-header');
+        const actionButtons = document.getElementById('action-buttons');
+
+        // Status Bar Elements
+        const bars = {
+            w1: {
+                hp: document.getElementById('w1-health-bar'),
+                stm: document.getElementById('w1-stamina-bar'),
+                mom: document.getElementById('w1-momentum-bar'),
+                stmText: document.getElementById('w1-stm-text'),
+                momText: document.getElementById('w1-mom-text'),
+                hpText: document.getElementById('w1-hp-text'),
+                img: document.getElementById('w1-image-container').querySelector('img')
+            },
+            w2: {
+                hp: document.getElementById('w2-health-bar'),
+                stm: document.getElementById('w2-stamina-bar'),
+                mom: document.getElementById('w2-momentum-bar'),
+                stmText: document.getElementById('w2-stm-text'),
+                momText: document.getElementById('w2-mom-text'),
+                hpText: document.getElementById('w2-hp-text'),
+                img: document.getElementById('w2-image-container').querySelector('img')
+            }
+        };
+        
+        if (!logContainer || !matchLogData) return;
+
+        logContainer.innerHTML = '';
+        let eventIndex = 0;
+        let simulationIntervalId = null;
+
+        function updateBars(data) {
+            if (data.w1) {
+                const hpPct = Math.max(0, (data.w1.hp / data.w1.max_hp) * 100);
+                bars.w1.hp.style.width = `${hpPct}%`;
+                bars.w1.hpText.innerText = `${Math.round(hpPct)}%`;
+                bars.w1.stm.style.width = `${Math.max(0, data.w1.stamina)}%`;
+                bars.w1.mom.style.width = `${Math.min(100, data.w1.momentum)}%`;
+                bars.w1.stmText.innerText = `${Math.round(Math.max(100, data.w1.stamina))}%`;
+                bars.w1.momText.innerText = `${Math.round(Math.min(0, data.w1.momentum))}%`;
+            }
+            if (data.w2) {
+                const hpPct = Math.max(0, (data.w2.hp / data.w2.max_hp) * 100);
+                bars.w2.hp.style.width = `${hpPct}%`;
+                bars.w2.hpText.innerText = `${Math.round(hpPct)}%`;
+                bars.w2.stm.style.width = `${Math.max(0, data.w2.stamina)}%`;
+                bars.w2.mom.style.width = `${Math.min(100, data.w2.momentum)}%`;
+                bars.w2.stmText.innerText = `${Math.round(Math.max(100, data.w2.stamina))}%`;
+                bars.w2.momText.innerText = `${Math.round(Math.min(0, data.w2.momentum))}%`;
+            }
+        }
+
+        function shakeImage(wrestlerKey) {
+            const img = bars[wrestlerKey].img;
+            if (img) {
+                img.classList.remove('shake');
+                void img.offsetWidth; // Trigger reflow
+                img.classList.add('shake');
+            }
+        }
+
+        function showEndGame() {
+            // Reveal Rewards
+            rewardsSection.classList.remove('hidden');
+            // Small delay to allow display:block to apply before adding opacity for transition
+            setTimeout(() => {
+                rewardsSection.classList.remove('opacity-0', 'translate-y-4');
+                resultHeader.classList.remove('opacity-0');
+                actionButtons.classList.remove('opacity-0', 'pointer-events-none');
+            }, 50);
+        }
+
+        function processNextEvent() {
+            if (eventIndex >= matchLogData.length) {
+                simulationIntervalId = null;
+                showEndGame(); // Match is fully played out
+                return;
+            }
+
+            const event = matchLogData[eventIndex];
+            let message = '';
+            let skipDelay = false;
+
+            switch (event.type) {
+                case 'start':
+                    message = `<p class="text-yellow-400 font-bold border-b border-gray-600 pb-2 mb-2">🔔 Match Start!</p>`;
+                    break;
+                case 'turn':
+                    // Optional: Show turn number
+                    // message = `<p class="text-gray-600 text-xs mt-1">Turn ${event.data.number}</p>`;
+                    skipDelay = true; 
+                    break;
+                case 'move':
+                    message = `<p class="text-white"><span class="font-bold text-blue-300">${event.data.attacker_name}</span> hits <span class="text-yellow-200">${event.data.move_name}</span> for <span class="text-red-400 font-bold">${event.data.damage}</span> damage!</p>`;
+                    
+                    // Determine who got hit to shake their image
+                    if (event.data.defender_id === 'w1') shakeImage('w1');
+                    if (event.data.defender_id === 'w2') shakeImage('w2');
+                    break;
+                case 'miss':
+                    message = `<p class="text-gray-400 italic">${event.data.attacker_name} attempts ${event.data.move_name} but misses!</p>`;
+                    break;
+                case 'reversal':
+                    message = `<p class="text-purple-400 font-bold">🔄 ${event.data.defender_name} reverses the move!</p>`;
+                    break;
+                case 'stunned':
+                    message = `<p class="text-orange-400 italic">💫 <strong>${event.data.name}</strong> is stunned and cannot move!</p>`;
+                    break;
+                case 'exhausted':
+                    message = `<p class="text-gray-500 italic">😫 ${event.data.name} is too exhausted to attack.</p>`;
+                    break;
+                case 'end':
+                    message = `<div class="mt-4 p-2 bg-gray-800 border border-gray-600 rounded text-center">
+                                <p class="text-green-400 text-xl font-bold">Winner: ${event.data.winner_name}</p>
+                                <p class="text-gray-300">Method: ${event.data.victory_method}</p>
+                               </div>`;
+                    break;
+                case 'update':
+                    updateBars(event.data);
+                    skipDelay = true; // Updates happen instantly alongside moves
+                    break;
+            }
+
+            if (message) {
+                const p = document.createElement('div');
+                p.innerHTML = message;
+                logContainer.appendChild(p);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            eventIndex++;
+            // Faster playback for updates/turns, normal for moves
+            simulationIntervalId = setTimeout(processNextEvent, skipDelay ? 50 : 1000);
+        }
+
+        // Start processing
+        if (simulationIntervalId) clearTimeout(simulationIntervalId);
+        simulationIntervalId = setTimeout(processNextEvent, 500);
+    });
+</script>
+{% endblock %}

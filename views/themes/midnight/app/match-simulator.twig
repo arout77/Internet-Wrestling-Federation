@@ -1,0 +1,1268 @@
+{% extends "layouts/main.twig" %}
+
+{% block content %}
+<style>
+    /* Shake animation for when a wrestler takes damage */
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .shake {
+        animation: shake 0.5s ease-in-out;
+    }
+    /* Style for the roster card when it's "in-use" (disabled) */
+    .wrestler-card-wrapper.in-use .wrestler-card {
+        opacity: 0.4;
+        pointer-events: none;
+        cursor: not-allowed;
+    }
+    
+    /* Styles for the NEW card created in the dropzone */
+    .wrestler-card-team {
+        display: grid;
+        grid-template-columns: auto 1fr; /* Image/Stats column, Description column */
+        gap: 0.75rem;
+        align-items: start;
+        width: 100%;
+        background-color: transparent;
+        border: 0 transparent;
+        border-radius: 5px;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        position: relative; /* For the remove button */
+    }
+    .wrestler-card-team .description-column {
+        max-height: 180px;
+        overflow-y: auto;
+        font-size: 0.8rem;
+        line-height: 1.3;
+        color: #cbd5e1;
+        text-align: left;
+        padding-left: 0.75rem;
+        border-left: 1px solid #4a5568;
+        margin-left: 0.75rem;
+    }
+    .wrestler-card-team img {
+        width: 6rem;
+        height: 6rem;
+        margin-bottom: 0.25rem;
+        border-radius: 0.375rem;
+        border: 2px solid #718096;
+    }
+    .wrestler-card-team h3 {
+        font-size: 1.1rem;
+    }
+    .wrestler-card-team .stats-column {
+        text-align: center;
+    }
+    .wrestler-card-team .name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #fff;
+        display: block;
+    }
+    .wrestler-card-team .overall {
+        font-size: 0.8rem;
+        color: #cbd5e1;
+        display: block;
+    }
+     
+    /* Remove button for team card */
+    .remove-wrestler-btn {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.25rem;
+        background-color: #E53E3E;
+        color: white;
+        border-radius: 9999px;
+        width: 2rem;
+        height: 2rem;
+        padding-bottom: 8px; /* Optical centering for '×' */
+        font-weight: bold;
+        font-size: 2.2rem;
+        line-height: 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .remove-wrestler-btn:hover {
+        background-color: #C53030;
+    }
+
+    /* Style for the roster card when it's selected */
+    .wrestler-card.selected {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+        border: 2px solid #3B82F6;
+    }
+    /* Style for dropzone when dragging over it */
+    .match-card-slot.drag-over {
+        border-color: #3B82F6;
+        background-color: rgba(59, 130, 246, 0.1);
+    }
+    /* Make cards in roster have a grab cursor */
+    .wrestler-card[draggable="true"] {
+        cursor: grab;
+    }
+    .wrestler-card[draggable="true"]:active {
+        cursor: grabbing;
+    }
+    
+    /* Custom styles for wager radio buttons */
+    .wager-radio-label {
+        display: block;
+        padding: 1rem;
+        border: 2px solid #4a5568;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .wager-radio-label:hover {
+        border-color: #6366f1;
+    }
+    .wager-radio-input:checked + .wager-radio-label {
+        border-color: #3b82f6;
+        background-color: rgba(59, 130, 246, 0.1);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    }
+</style>
+<div class="container mx-auto p-4">
+
+    <div id="matchSetup" class="py-20 px-4">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-4xl font-bold">Match Simulator</h1>
+            <div class="flex space-x-2">
+                <button id="reset-match-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50" disabled>Reset</button>
+                <button id="random-matchup-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Random Match</button>
+                <button id="open-betting-modal-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50" disabled>Calculate Odds</button>
+                <button id="run-sim-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50" disabled>Simulate</button>
+            </div>
+        </div>
+
+        <!-- Matchup Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
+            <div id="matchup-slot-0" data-slot="0" class="match-card-slot bg-gray-900/70 rounded-lg border-2 border-dashed border-indigo-500 min-h-[275px] flex items-center justify-center p-4">
+                <span class="text-gray-400">Select Wrestler 1</span>
+            </div>
+            <div id="matchup-slot-1" data-slot="1" class="match-card-slot bg-gray-900/70 rounded-lg border-2 border-dashed border-yellow-600 min-h-[275px] flex items-center justify-center p-4">
+                <span class="text-gray-400">Select Wrestler 2</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Results -->
+    <div id="bulk-results-container" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div id="bulk-results-content" class="bg-gray-800 p-8 rounded-lg shadow-xl max-w-xl w-full">
+             <!-- Content will be injected by JS -->
+        </div>
+    </div>
+
+    <div class="glass p-8">
+        <!-- Roster Selection Tabs -->
+        <div class="mb-4 border-b border-gray-700">
+            <nav class="flex space-x-4" aria-label="Tabs">
+                <button id="tab-wrestlers" class="tab-btn active text-white py-4 px-1 border-b-2 font-medium text-lg border-blue-500">Singles</button>
+                <button id="tab-tag-teams" class="tab-btn text-gray-400 hover:text-white py-4 px-1 border-b-2 font-medium text-lg border-transparent hover:border-gray-300">Tag Teams</button>
+            </nav>
+        </div>
+
+        <!-- Roster Filters -->
+        <div id="roster-controls" class="flex items-center space-x-4 mb-6">
+            <input type="text" id="roster-filter" class="w-full md:w-1/3 bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Filter by name...">
+            <select id="roster-sort" class="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="name_asc">Sort by Name (A-Z)</option>
+                <option value="name_desc">Sort by Name (Z-A)</option>
+                <option value="overall_desc">Sort by Overall</option>
+                <option value="strength_desc">Sort by Strength</option>
+                <option value="technical_desc">Sort by Technical</option>
+                <option value="brawling_desc">Sort by Brawling</option>
+                <option value="aerial_desc">Sort by Aerial</option>
+                <option value="stamina_desc">Sort by Stamina</option>
+                <option value="toughness_desc">Sort by Toughness</option>
+            </select>
+        </div>
+
+        <!-- Roster Grids -->
+        <div id="roster-container-parent">
+            <div id="roster-container" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                {% for wrestler in wrestlers %}
+                    <div class="wrestler-card-wrapper">
+                        <div class="wrestler-card bg-gray-700 rounded-lg shadow-md overflow-hidden cursor-grab active:cursor-grabbing flex flex-col items-center p-4 text-center"
+                             draggable="true"
+                             data-id="{{ wrestler.wrestlerId }}"
+                             data-name="{{ wrestler.name }}"
+                             data-image-thumb="{{ base_url }}/public/images/{{ wrestler.image }}.webp"
+                             data-image-full="{{ base_url }}/public/images/{{ wrestler.image }}.webp"
+                             data-image-path="{{ base_url }}/public/images/{{ wrestler.image }}.webp"
+                             data-overall="{{ wrestler.getOverallRating() }}"
+                             data-strength="{{ wrestler.strength }}"
+                             data-technical="{{ wrestler.technicalAbility }}"
+                             data-brawling="{{ wrestler.brawlingAbility }}"
+                             data-stamina="{{ wrestler.stamina }}"
+                             data-aerial="{{ wrestler.aerialAbility }}"
+                             data-toughness="{{ wrestler.toughness }}"
+                             data-description="{{ wrestler.description | default('') | escape('js') }}"
+                             data-traits='[{% for trait in wrestler.getTraits() %}{"name": "{{ trait.name | escape('js') }}"}{% if not loop.last %},{% endif %}{% endfor %}]'
+                             data-is-prospect="{{ wrestler.isProspect ? 'true' : 'false' }}"
+                             >
+                            
+                            <img src="{{ base_url }}/public/images/{{ wrestler.image }}.webp"
+                                 alt="{{ wrestler.name }}"
+                                 class="w-36 h-36 rounded-full mb-2 border-2 border-yellow-500 object-cover"
+                                 onerror="this.onerror=null; this.src='https://placehold.co/144x144/333/999?text=?';">
+                            <h3 class="text-lg font-semibold text-white mb-1 truncate w-full px-1">{{ wrestler.name }}</h3>
+                            <p class="text-gray-400 text-sm mb-2">Overall: <span class="font-bold text-yellow-400">{{ wrestler.getOverallRating() }}</span></p>
+                            
+                            {% set traits = wrestler.getTraits() %}
+                            {% if traits is not empty and traits|length > 0 %}
+                                <div class="flex flex-wrap justify-center gap-1 mb-2">
+                                    {% for trait in traits %}
+                                        {% set bgColorClass = 'bg-indigo-700' %}
+                                        {% if trait.name == 'Resilient' %}{% set bgColorClass = 'bg-blue-600' %}
+                                        {% elseif trait.name == 'Powerhouse' %}{% set bgColorClass = 'bg-pink-600' %}
+                                        {% elseif trait.name == 'High-Flyer' %}{% set bgColorClass = 'bg-yellow-600' %}
+                                        {% elseif trait.name == 'Technician' %}{% set bgColorClass = 'bg-green-600' %}
+                                        {% elseif trait.name == 'Brawler' %}{% set bgColorClass = 'bg-orange-600' %}
+                                        {% elseif trait.name == 'Submission Specialist' %}{% set bgColorClass = 'bg-black' %}
+                                        {% elseif trait.name == 'Dirty Player' %}{% set bgColorClass = 'bg-red-600' %}
+                                        {% elseif trait.name == 'Giant' %}{% set bgColorClass = 'bg-green-800' %}
+                                        {% elseif trait.name == 'Comeback Kid' %}{% set bgColorClass = 'bg-red-800' %}
+                                        {% endif %}
+                                        <span class="text-xs text-white {{ bgColorClass }} px-2 py-0.5 rounded-full">{{ trait.name }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %} <div class="h-[20px] mb-2"></div> {# Ensure layout consistency #}
+                            {% endif %}
+                            <div class="attribute-grid grid md:grid-cols-2 md:gap-8 justify-between mt-auto text-xs w-full px-2">
+                                <div>
+                                    <p class="flex justify-between text-left text-gray-300">Strength: <span class="text-right text-white font-medium">{{ wrestler.strength }}</span></p>
+                                    <p class="flex justify-between text-left text-gray-300">Technical: <span class="text-right text-white font-medium">{{ wrestler.technicalAbility }}</span></p>
+                                    <p class="flex justify-between text-left text-gray-300">Brawling: <span class="text-right text-white font-medium">{{ wrestler.brawlingAbility }}</span></p>
+                                </div>
+                                <div>
+                                    <p class="flex justify-between text-left text-gray-300">Aerial: <span class="text-right text-white font-medium">{{ wrestler.aerialAbility }}</span></p>
+                                    <p class="flex justify-between text-left text-gray-300">Stamina: <span class="text-right text-white font-medium">{{ wrestler.stamina }}</span></p>
+                                    <p class="flex justify-between text-left text-gray-300">Toughness: <span class="text-right text-white font-medium">{{ wrestler.toughness }}</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div id="tag-team-roster-container-parent" class="hidden">
+            <div id="tag-team-roster-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <!-- Tag team cards will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simulation Modal -->
+<div id="simulation-modal" class="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-5/6 flex flex-col">
+        <div class="flex justify-between items-center p-4 border-b border-gray-700">
+            <h3 class="text-2xl font-bold">Match Simulation</h3>
+            <button id="close-sim-modal-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+        </div>
+        
+        <!-- Wrestler HUDs -->
+        <div class="grid grid-cols-2 gap-4 p-4 bg-gray-900">
+            <!-- Wrestler 1 HUD -->
+            <div id="sim-wrestler-1-hud" class="text-center">
+                <div id="sim-wrestler-1-img-container" class="relative inline-block">
+                    <img id="sim-wrestler-1-img" src="" alt="Wrestler 1" class="w-32 h-32 object-cover rounded-full mx-auto border-4 border-blue-500">
+                </div>
+                <h4 id="sim-wrestler-1-name" class="text-xl font-bold mt-2"></h4>
+                <!-- HP Bar -->
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-2">
+                    <div id="sim-wrestler-1-hp" class="bg-green-500 h-4 rounded-full text-xs text-white text-center leading-none" style="width: 100%">HP</div>
+                </div>
+                <!-- Stamina Bar -->
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-1">
+                    <div id="sim-wrestler-1-stamina" class="bg-yellow-500 h-4 rounded-full text-xs text-black text-center leading-none" style="width: 100%">Stamina</div>
+                </div>
+                <div class="progress mt-1">
+                    <div id="sim-wrestler-1-momentum" class="bg-indigo-500 h-4 rounded-full text-xs text-black text-center leading-none" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">Momentum</div>
+                </div>
+            </div>
+            <!-- Wrestler 2 HUD -->
+            <div id="sim-wrestler-2-hud" class="text-center">
+                 <div id="sim-wrestler-2-img-container" class="relative inline-block">
+                    <img id="sim-wrestler-2-img" src="" alt="Wrestler 2" class="w-32 h-32 object-cover rounded-full mx-auto border-4 border-red-500">
+                </div>
+                <h4 id="sim-wrestler-2-name" class="text-xl font-bold mt-2"></h4>
+                <!-- HP Bar -->
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-2">
+                    <div id="sim-wrestler-2-hp" class="bg-green-500 h-4 rounded-full text-xs text-white text-center leading-none" style="width: 100%">HP</div>
+                </div>
+                <!-- Stamina Bar -->
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-1">
+                    <div id="sim-wrestler-2-stamina" class="bg-yellow-500 h-4 rounded-full text-xs text-black text-center leading-none" style="width: 100%">Stamina</div>
+                </div>
+                <div class="progress mt-1">
+                    <div id="sim-wrestler-2-momentum" class="bg-indigo-500 h-4 rounded-full text-xs text-black text-center leading-none" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">Momentum</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Log Area -->
+        <div id="simulation-log" class="p-6 overflow-y-auto text-sm font-mono whitespace-pre-wrap flex-grow">
+            Simulating match...
+        </div>
+    </div>
+</div>
+
+<!-- Winner Modal -->
+<div id="winner-modal" class="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+    <div class="glass bg-gray-800 rounded-lg shadow-xl w-full max-w-md text-center p-6">
+        <h2 class="text-3xl font-bold text-yellow-400 mb-4">The Winner Is...</h2>
+        <img id="winner-img" src="" alt="Winner" class="w-48 h-48 object-cover rounded-full mx-auto border-4 border-yellow-400 mb-4">
+        <h3 id="winner-name" class="text-2xl font-bold"></h3>
+        <p class="text-gray-300">by <span id="victory-method"></span></p>
+        <button id="close-winner-modal-btn" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+    </div>
+</div>
+
+
+<!-- Betting Modal (Calculate Odds) -->
+<div id="betting-modal" class="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
+        <div class="flex justify-between items-center p-4 border-b border-gray-700">
+            <h3 class="text-2xl font-bold">Betting Odds Simulator</h3>
+            <button id="close-betting-modal-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+        </div>
+        <div class="p-6">
+            <p class="mb-4">Run multiple simulations to see the win probability for each wrestler.</p>
+            <div class="flex justify-around items-center mb-4 text-lg">
+                <span id="betting-wrestler1-name" class="font-bold"></span>
+                <span>vs</span>
+                <span id="betting-wrestler2-name" class="font-bold"></span>
+            </div>
+            <div class="mb-4">
+                <label for="num-simulations" class="block text-sm font-medium text-gray-300 mb-1">Number of Simulations:</label>
+                <select id="num-simulations" class="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600">
+                    <option value="10">10</option>
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="500">500</option>
+                    <option value="1000">1,000</option>
+                    <option value="5000">5,000</option>
+                    <option value="10000">10,000</option>
+                    <option value="50000">50,000</option>
+                </select>
+            </div>
+            <button id="run-bulk-sim-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">Calculate Odds</button>
+        </div>
+    </div>
+</div>
+
+<!-- Wager or Skip Modal -->
+<div id="wager-or-skip-modal" class="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md text-center p-6">
+        <h2 class="text-2xl font-bold text-white mb-4">Place a Wager?</h2>
+        <p class="text-gray-300 mb-6">This is a historical match. Would you like to place a wager or just watch the simulation?</p>
+        <div class="flex justify-center space-x-4">
+            <button id="skip-to-sim-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">Skip to Sim</button>
+            <button id="go-to-bet-btn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-6 rounded-lg">Place Wager</button>
+        </div>
+    </div>
+</div>
+
+<!-- NEW: Wager Amount Modal -->
+<div id="wager-amount-modal" class="glass fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
+        <div class="flex justify-between items-center p-4 border-b border-gray-700">
+            <h3 class="text-2xl font-bold text-amber-400 text-center">Place Your Wager</h3>
+            <button id="cancel-wager-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+        </div>
+        <div class="p-6">
+            <div id="wager-odds-loading" class="text-center p-4 hidden">
+                <p class="text-lg text-yellow-400">Calculating odds (1000 sims)...</p>
+            </div>
+            <div id="wager-odds-content">
+                <p class="text-center text-gray-400 mb-4">Odds based on 1000 simulations</p>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <!-- Wrestler 1 Bet Option -->
+                    <div class="glass">
+                        <input type="radio" name="wager_on" id="wager_on_w1" value="w1" class="sr-only wager-radio-input" checked>
+                        <label for="wager_on_w1" class="wager-radio-label text-center">
+                            <span id="wager-w1-name" class="font-bold text-lg text-white block truncate">Wrestler 1</span>
+                            <span id="wager-w1-odds" class="text-sm text-gray-300 block">Odds: +0</span>
+                        </label>
+                    </div>
+                    <!-- Wrestler 2 Bet Option -->
+                    <div class="glass">
+                        <input type="radio" name="wager_on" id="wager_on_w2" value="w2" class="sr-only wager-radio-input">
+                        <label for="wager_on_w2" class="wager-radio-label text-center">
+                            <span id="wager-w2-name" class="font-bold text-lg text-white block truncate">Wrestler 2</span>
+                            <span id="wager-w2-odds" class="text-sm text-gray-300 block">Odds: +0</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="wager-amount-input" class="block text-sm font-medium text-gray-300 mb-1">Bet Amount (Gold)</label>
+                    <input type="number" id="wager-amount-input" class="bg-gray-700 border border-gray-600 rounded-lg w-full py-2 px-3 text-white" placeholder="100">
+                </div>
+                <div class="mt-4 mb-4 text-center">
+                    <p class="text-lg text-yellow-400">Potential Payout</p>
+                    <p id="payout-display" class="text-2xl font-bold text-green-400">0 Gold</p>
+                    <p class="text-sm text-gray-400 mt-1">(Includes your original wager)</p>
+                </div>
+                <button id="confirm-wager-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Confirm Wager & Run Match</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set the base URL for API calls
+    window.baseUrl = '{{ base_url | default("") }}';
+</script>
+
+<script type="module">
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // --- STATE & DATA ---
+        let wrestlersData = [];
+        let matchupSlots = [null, null]; // Will hold the wrestler data for slot 0 and 1
+        
+        // --- DOM ELEMENTS ---
+        const rosterContainer = document.getElementById('roster-container');
+        const rosterParent = document.getElementById('roster-container-parent'); // The wrapper for wrestler cards
+        const rosterFilter = document.getElementById('roster-filter');
+        const rosterSort = document.getElementById('roster-sort');
+        const slots = [
+            document.getElementById('matchup-slot-0'),
+            document.getElementById('matchup-slot-1')
+        ];
+        
+        // Buttons
+        const runSimBtn = document.getElementById('run-sim-btn');
+        const resetMatchBtn = document.getElementById('reset-match-btn');
+        const randomMatchBtn = document.getElementById('random-matchup-btn');
+        const openBettingModalBtn = document.getElementById('open-betting-modal-btn');
+
+        // Simulation Modal
+        const simModal = document.getElementById('simulation-modal');
+        const closeSimModalBtn = document.getElementById('close-sim-modal-btn');
+        const simLog = document.getElementById('simulation-log');
+        const simW1 = {
+            img: document.getElementById('sim-wrestler-1-img'),
+            name: document.getElementById('sim-wrestler-1-name'),
+            hp: document.getElementById('sim-wrestler-1-hp'),
+            stamina: document.getElementById('sim-wrestler-1-stamina'),
+            momentum: document.getElementById('sim-wrestler-1-momentum')
+        };
+        const simW2 = {
+            img: document.getElementById('sim-wrestler-2-img'),
+            name: document.getElementById('sim-wrestler-2-name'),
+            hp: document.getElementById('sim-wrestler-2-hp'),
+            stamina: document.getElementById('sim-wrestler-2-stamina'),
+            momentum: document.getElementById('sim-wrestler-2-momentum')
+        };
+        
+        // Winner Modal
+        const winnerModal = document.getElementById('winner-modal');
+        const closeWinnerModalBtn = document.getElementById('close-winner-modal-btn');
+        const winnerImg = document.getElementById('winner-img');
+        const winnerName = document.getElementById('winner-name');
+        const victoryMethod = document.getElementById('victory-method');
+
+        // Betting Modal (Calculate Odds)
+        const bettingModal = document.getElementById('betting-modal');
+        const closeBettingModalBtn = document.getElementById('close-betting-modal-btn');
+        const runBulkSimBtn = document.getElementById('run-bulk-sim-btn');
+        
+        // Wager or Skip Modal
+        const wagerOrSkipModal = document.getElementById('wager-or-skip-modal');
+        const skipToSimBtn = document.getElementById('skip-to-sim-btn');
+        const goToBetBtn = document.getElementById('go-to-bet-btn');
+
+        // NEW: Wager Amount Modal
+        const wagerAmountModal = document.getElementById('wager-amount-modal');
+        const wagerOddsLoading = document.getElementById('wager-odds-loading');
+        const wagerOddsContent = document.getElementById('wager-odds-content');
+        const wagerW1Name = document.getElementById('wager-w1-name');
+        const wagerW1Odds = document.getElementById('wager-w1-odds');
+        const wagerW2Name = document.getElementById('wager-w2-name');
+        const wagerW2Odds = document.getElementById('wager-w2-odds');
+        const wagerAmountInput = document.getElementById('wager-amount-input');
+        const confirmWagerBtn = document.getElementById('confirm-wager-btn');
+        const cancelWagerBtn = document.getElementById('cancel-wager-btn');
+
+        // Bulk Results
+        const bulkResultsModal = document.getElementById('bulk-results-container');
+        const bulkResultsContent = document.getElementById('bulk-results-content');
+
+
+        // --- INITIALIZATION ---
+        function init() {
+            // 1. Collect all wrestler data from the DOM
+            const wrestlerCardElements = document.querySelectorAll('#roster-container .wrestler-card');
+            wrestlersData = Array.from(wrestlerCardElements).map(card => {
+                const data = { ...card.dataset }; // Clone dataset
+                try {
+                    data.traits = JSON.parse(data.traits);
+                } catch (e) {
+                    console.error('Failed to parse traits for ' + data.name, e);
+                    data.traits = [];
+                }
+                // Convert stats to numbers
+                data.overall = parseInt(data.overall, 10);
+                data.strength = parseInt(data.strength, 10);
+                data.technical = parseInt(data.technical, 10);
+                data.brawling = parseInt(data.brawling, 10);
+                data.aerial = parseInt(data.aerial, 10);
+                data.stamina = parseInt(data.stamina, 10);
+                data.toughness = parseInt(data.toughness, 10);
+                return data;
+            });
+
+            // 2. Wire up all event listeners
+            
+            // Buttons
+            runSimBtn.addEventListener('click', handleSimulateClick); // <-- UPDATED
+            resetMatchBtn.addEventListener('click', resetMatchup);
+            randomMatchBtn.addEventListener('click', randomMatchup);
+            openBettingModalBtn.addEventListener('click', openBettingModal);
+            
+            // Modals
+            closeSimModalBtn.addEventListener('click', closeSimulationModal);
+            closeWinnerModalBtn.addEventListener('click', closeWinnerModal);
+            closeBettingModalBtn.addEventListener('click', closeBettingModal);
+            runBulkSimBtn.addEventListener('click', handleRunBulkSimulation);
+            
+            // New Wager/Skip Modal Buttons
+            skipToSimBtn.addEventListener('click', () => {
+                closeWagerOrSkipModal();
+                runSingleMatch(); // Run with no wager
+            });
+            goToBetBtn.addEventListener('click', () => {
+                closeWagerOrSkipModal();
+                startWagerFlow(); // Start the new flow
+            });
+            
+            // New Wager Amount Modal Buttons
+            cancelWagerBtn.addEventListener('click', closeWagerAmountModal);
+            confirmWagerBtn.addEventListener('click', handleConfirmWager);
+            
+            // Drag and Drop for Roster
+            rosterParent.addEventListener('dragstart', handleDragStart);
+            rosterContainer.addEventListener('click', handleRosterCardClick);
+            
+            // Drag and Drop for Slots
+            slots.forEach(slot => {
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('dragleave', handleDragLeave);
+                slot.addEventListener('drop', handleDrop);
+            });
+
+            // Roster Filtering/Sorting
+            rosterFilter.addEventListener('input', renderRoster);
+            rosterSort.addEventListener('change', renderRoster);
+            
+            checkMatchupReady();
+        }
+
+        // --- DRAG & DROP FUNCTIONS ---
+        function handleDragStart(e) {
+            const card = e.target.closest('.wrestler-card');
+            if (card) {
+                e.dataTransfer.setData('text/plain', card.dataset.id);
+                setTimeout(() => {
+                    card.closest('.wrestler-card-wrapper').classList.add('opacity-50');
+                }, 0);
+            }
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+        
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const wrestlerId = e.dataTransfer.getData('text/plain');
+            const slotIndex = parseInt(e.currentTarget.dataset.slot, 10);
+            
+            const wrestlerData = wrestlersData.find(w => w.id === wrestlerId);
+            if (wrestlerData) {
+                setWrestlerInSlot(wrestlerData, slotIndex);
+            }
+            
+            const draggingWrapper = rosterContainer.querySelector('.wrestler-card-wrapper.opacity-50');
+            if (draggingWrapper) {
+                draggingWrapper.classList.remove('opacity-50');
+            }
+        }
+        
+        // --- CLICK-TO-ADD/REMOVE FUNCTION ---
+        function handleRosterCardClick(e) {
+            const card = e.target.closest('.wrestler-card');
+            if (!card) return; 
+
+            const wrestlerId = card.dataset.id;
+            const wrestlerData = wrestlersData.find(w => w.id === wrestlerId);
+            if (!wrestlerData) return;
+
+            const wrapper = card.closest('.wrestler-card-wrapper');
+            if (wrapper.classList.contains('in-use')) {
+                const slotIndex = matchupSlots.findIndex(s => s && s.id === wrestlerId);
+                if (slotIndex !== -1) {
+                    unassignWrestler(slotIndex);
+                }
+            } else {
+                const availableSlot = matchupSlots.indexOf(null);
+                if (availableSlot === -1) {
+                    console.log("Both slots are full!"); 
+                    return;
+                }
+                setWrestlerInSlot(wrestlerData, availableSlot);
+            }
+        }
+
+
+        // --- ROSTER & SLOT FUNCTIONS ---
+        
+        function setWrestlerInSlot(wrestlerData, slotIndex) {
+            const otherSlotIndex = slotIndex === 0 ? 1 : 0;
+            if (matchupSlots[otherSlotIndex] && matchupSlots[otherSlotIndex].id === wrestlerData.id) {
+                return;
+            }
+
+            if (matchupSlots[slotIndex]) {
+                unassignWrestler(slotIndex);
+            }
+
+            matchupSlots[slotIndex] = wrestlerData;
+            slots[slotIndex].innerHTML = createTeamCard(wrestlerData, slotIndex);
+            
+            // Attach remove button listener safely
+            const removeBtn = slots[slotIndex].querySelector('.remove-wrestler-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    unassignWrestler(slotIndex);
+                });
+            }
+
+            const rosterCardWrapper = rosterContainer.querySelector(`.wrestler-card[data-id='${wrestlerData.id}']`)?.closest('.wrestler-card-wrapper');
+            if (rosterCardWrapper) {
+                rosterCardWrapper.classList.add('in-use');
+            }
+            
+            checkMatchupReady();
+        }
+
+        function unassignWrestler(slotIndex) {
+            const wrestlerData = matchupSlots[slotIndex];
+            
+            if (wrestlerData) {
+                const rosterCardWrapper = rosterContainer.querySelector(`.wrestler-card[data-id='${wrestlerData.id}']`)?.closest('.wrestler-card-wrapper');
+                if (rosterCardWrapper) {
+                    rosterCardWrapper.classList.remove('in-use');
+                }
+            }
+            
+            matchupSlots[slotIndex] = null;
+            slots[slotIndex].innerHTML = `<span class="text-gray-400">Select Wrestler ${slotIndex + 1}</span>`;
+            
+            checkMatchupReady();
+        }
+
+        function createTeamCard(data, slotIndex) {
+            // --- FIX FOR UNICODE ---
+            let description = data.description || 'No description available.';
+            try {
+                // Wrap in quotes to make it a valid JSON string, then parse.
+                description = JSON.parse(`"${description}"`);
+            } catch (e) {
+                console.error("Could not parse description: ", data.description);
+                // Fallback to the raw (but ugly) description
+                description = data.description || 'No description available.';
+            }
+            // --- END FIX ---
+
+            return `
+                <div class="wrestler-card-team relative" data-id="${data.id}">
+                    <button class="remove-wrestler-btn absolute top-0 right-0 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold hover:bg-red-700 transition-colors">&times;</button>
+                    <div class="stats-column">
+                        <img src="${data.imageFull}" class="w-36 h-36 mb-2 border-2 border-yellow-600 object-cover rounded-full" ...>
+                        <span class="name">${data.name}</span>
+                        <span class="overall">Overall: ${data.overall}</span>
+                    </div>
+                    <div class="description-column">
+                        <p>${description}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function checkMatchupReady() {
+            const ready = matchupSlots[0] && matchupSlots[1];
+
+            runSimBtn.disabled = !ready;
+            openBettingModalBtn.disabled = !ready;
+            resetMatchBtn.disabled = !(matchupSlots[0] || matchupSlots[1]);
+
+            if (ready) {
+                runSimBtn.classList.remove('disabled:opacity-50');
+                openBettingModalBtn.classList.remove('disabled:opacity-50');
+            } else {
+                runSimBtn.classList.add('disabled:opacity-50');
+                openBettingModalBtn.classList.add('disabled:opacity-50');
+            }
+            
+            if (matchupSlots[0] || matchupSlots[1]) {
+                resetMatchBtn.classList.remove('disabled:opacity-50');
+            } else {
+                resetMatchBtn.classList.add('disabled:opacity-50');
+            }
+        }
+
+        function resetMatchup() {
+            unassignWrestler(0);
+            unassignWrestler(1);
+        }
+
+        function randomMatchup() {
+            resetMatchup();
+            
+            let w1 = wrestlersData[Math.floor(Math.random() * wrestlersData.length)];
+            let w2 = wrestlersData[Math.floor(Math.random() * wrestlersData.length)];
+            
+            while (w1.id === w2.id) {
+                w2 = wrestlersData[Math.floor(Math.random() * wrestlersData.length)];
+            }
+            
+            setWrestlerInSlot(w1, 0);
+            setWrestlerInSlot(w2, 1);
+        }
+
+        function renderRoster() {
+            const filter = rosterFilter.value.toLowerCase();
+            const sort = rosterSort.value;
+            
+            let filtered = wrestlersData.filter(w => w.name.toLowerCase().includes(filter));
+            
+            filtered.sort((a, b) => {
+                const sortKey = sort.split('_')[0];
+                const sortDir = sort.endsWith('_desc') ? -1 : 1;
+
+                if (sortKey === 'name') {
+                    return a.name.localeCompare(b.name) * sortDir;
+                }
+                
+                return (parseInt(a[sortKey], 10) - parseInt(b[sortKey], 10)) * sortDir * -1; // * -1 because high-to-low is default
+            });
+
+            rosterContainer.innerHTML = ''; // Clear existing
+            filtered.forEach(wrestler => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'wrestler-card-wrapper';
+                if (matchupSlots.some(s => s && s.id === wrestler.id)) {
+                    wrapper.classList.add('in-use');
+                }
+                wrapper.innerHTML = createRosterCard(wrestler);
+                rosterContainer.appendChild(wrapper);
+            });
+        }
+
+        function createRosterCard(wrestler) {
+            let traitsHtml = wrestler.traits.length > 0
+                ? `<div class="flex flex-wrap justify-center gap-1 mb-2">
+                    ${wrestler.traits.map(trait => {
+                        let bgColorClass = 'bg-indigo-700';
+                        if (trait.name == 'Resilient') bgColorClass = 'bg-blue-600';
+                        else if (trait.name == 'Powerhouse') bgColorClass = 'bg-pink-600';
+                        else if (trait.name == 'High-Flyer') bgColorClass = 'bg-yellow-600';
+                        else if (trait.name == 'Technician') bgColorClass = 'bg-green-600';
+                        else if (trait.name == 'Brawler') bgColorClass = 'bg-orange-600';
+                        else if (trait.name == 'Submission Specialist') bgColorClass = 'bg-black';
+                        else if (trait.name == 'Dirty Player') bgColorClass = 'bg-red-600';
+                        else if (trait.name == 'Giant') bgColorClass = 'bg-green-800';
+                        else if (trait.name == 'Comeback Kid') bgColorClass = 'bg-red-800';
+                        return `<span class="text-xs text-white ${bgColorClass} px-2 py-0.5 rounded-full">${trait.name}</span>`;
+                    }).join('')}
+                </div>`
+                : `<div class="h-[20px] mb-2"></div>`;
+            return `
+                <div class="wrestler-card bg-gray-700 rounded-lg shadow-md overflow-hidden cursor-grab active:cursor-grabbing flex flex-col items-center p-4 text-center"
+                     draggable="true"
+                     data-id="${wrestler.id}"
+                     data-name="${wrestler.name}"
+                     data-image="${baseUrl}/public/images/${wrestler.image}.webp"
+                     data-image-full="${baseUrl}/public/images/${wrestler.image}.webp" 
+                     data-image-path="${baseUrl}/public/images/${wrestler.image}.webp"
+                     data-image-file-name="${wrestler.image}"
+                     data-overall="${wrestler.overall}"
+                     data-strength="${wrestler.strength}"
+                     data-technical="${wrestler.technical}"
+                     data-brawling="${wrestler.brawling}"
+                     data-stamina="${wrestler.stamina}"
+                     data-aerial="${wrestler.aerial}"
+                     data-toughness="${wrestler.toughness}"
+                     data-description="${wrestler.description}"
+                     data-traits='${JSON.stringify(wrestler.traits)}'
+                     data-is-prospect="${wrestler.isProspect}"
+                     >
+                    
+                    <img src="${wrestler.imageFull}"
+                         alt="${wrestler.name}"
+                         class="w-36 h-36 mb-2 border-2 border-yellow-600 object-cover rounded-full"
+                         onerror="this.onerror=null; this.src='https://placehold.co/144x144/333/999?text=?';">
+                    <h3 class="text-lg font-semibold text-white mb-1 truncate w-full px-1">${wrestler.name}</h3>
+                    <p class="text-gray-400 text-sm mb-2">Overall: <span class="font-bold text-yellow-400">${wrestler.overall}</span></p>
+                    
+                    ${traitsHtml}
+                    
+                    <div class="attribute-grid grid md:grid-cols-2 md:gap-8 justify-between mt-auto text-xs w-full px-2">
+                        <div>
+                            <p class="flex justify-between text-left text-gray-300">Strength: <span class="text-right text-white font-medium">${wrestler.strength}</span></p>
+                            <p class="flex justify-between text-left text-gray-300">Technical: <span class="text-right text-white font-medium">${wrestler.technical}</span></p>
+                            <p class="flex justify-between text-left text-gray-300">Brawling: <span class="text-right text-white font-medium">${wrestler.brawling}</span></p>
+                        </div>
+                        <div>
+                            <p class="flex justify-between text-left text-gray-300">Aerial: <span class="text-right text-white font-medium">${wrestler.aerial}</span></p>
+                            <p class="flex justify-between text-left text-gray-300">Stamina: <span class="text-right text-white font-medium">${wrestler.stamina}</span></p>
+                            <p class="flex justify-between text-left text-gray-300">Toughness: <span class="text-right text-white font-medium">${wrestler.toughness}</span></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- SIMULATION & MODAL LOGIC ---
+        
+        function handleSimulateClick() {
+            if (!matchupSlots[0] || !matchupSlots[1]) return;
+            
+            const isProspectMatch = (matchupSlots[0] && matchupSlots[0].isProspect === 'true') || 
+                                    (matchupSlots[1] && matchupSlots[1].isProspect === 'true');
+
+            if (isProspectMatch) {
+                // Rule 2: Prospect is in the match. Run sim directly.
+                runSingleMatch();
+            } else {
+                // Rule 1: Historical match. Show wager modal.
+                openWagerOrSkipModal();
+            }
+        }
+
+        async function runSingleMatch(wagerInfo = null) {
+            if (!matchupSlots[0] || !matchupSlots[1]) return;
+            
+            simLog.innerHTML = `<p class="text-yellow-400">Simulating match...</p>`;
+            simModal.classList.remove('hidden');
+
+            try {
+                const response = await fetch(`${window.baseUrl}/api/simulator/run-single`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wrestler1_id: matchupSlots[0].id,
+                        wrestler2_id: matchupSlots[1].id,
+                        bet_amount: wagerInfo ? wagerInfo.amount : 0,
+                        bet_on_team: wagerInfo ? (wagerInfo.on === 'w1' ? 'team1' : 'team2') : null
+                    })
+                });
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error);
+
+                // --- FIX 1: Make runMatchReplay asynchronous ---
+                await runMatchReplay(data.log);
+
+                // --- FIX 2: Pass wagerInfo to the toast function ---
+                if (wagerInfo && wagerInfo.amount > 0) {
+                    showBetResultToast(data, wagerInfo);
+                }
+
+            } catch (error) {
+                simLog.innerHTML = `<p class="text-red-500 font-bold">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // --- FIX 1: This function now returns a Promise ---
+        function runMatchReplay(log) {
+            return new Promise((resolve) => {
+                const startEvent = log.find(e => e.type === 'start');
+                if (!startEvent) {
+                    console.error("No 'start' event found in log");
+                    resolve(); // Resolve promise even if error
+                    return;
+                }
+                
+                const w1 = startEvent.data.w1;
+                const w2 = startEvent.data.w2;
+                const maxHp = { w1: w1.max_hp, w2: w2.max_hp };
+
+                // Populate modal with initial data
+                simW1.img.src = `${w1.image.startsWith('http') ? '' : window.baseUrl}/public/images/${w1.image}.webp`;
+                simW1.name.textContent = w1.name;
+                simW2.img.src = `${w2.image.startsWith('http') ? '' : window.baseUrl}/public/images/${w2.image}.webp`;
+                simW2.name.textContent = w2.name;
+                
+                updateBar(simW1.hp, 100, '%', 'HP');
+                updateBar(simW1.stamina, 100, '%', 'Stamina');
+                updateBar(simW1.momentum, 0, '%', 'Momentum');
+                updateBar(simW2.hp, 100, '%', 'HP');
+                updateBar(simW2.stamina, 100, '%', 'Stamina');
+                updateBar(simW2.momentum, 0, '%', 'Momentum');
+                
+                simLog.innerHTML = ''; // Clear "Simulating..."
+                
+                let turnIndex = 0;
+                const REPLAY_SPEED = 100; // Speed up replay for testing/production
+                
+                function processTurn() {
+                    if (turnIndex >= log.length) {
+                        resolve(); // Match is over, resolve the promise
+                        return;
+                    }
+                    
+                    const event = log[turnIndex];
+                    
+                    switch (event.type) {
+                        case 'turn':
+                            addLogEntry(`--- Turn ${event.data.number} ---`, 'text-yellow-400 font-bold');
+                            break;
+                        case 'move':
+                            addLogEntry(`${event.data.attacker_name} hits ${event.data.move_name} for ${event.data.damage} damage!`, 'text-white');
+                            applyShake(event.data.defender_id === 'w1' ? simW1.img : simW2.img);
+                            break;
+                        case 'reversal':
+                            addLogEntry(`${event.data.defender_name} reverses ${event.data.move_name}!`, 'text-blue-400');
+                            break;
+                        case 'stunned':
+                            addLogEntry(`${event.data.name} is stunned and skips a turn!`, 'text-purple-400');
+                            break;
+                        case 'exhausted':
+                            addLogEntry(`${event.data.name} is too exhausted to use ${event.data.move_name}!`, 'text-gray-500');
+                            break;
+                        case 'update':
+                            const w1_hp_percent = (event.data.w1.hp / maxHp.w1) * 100;
+                            const w2_hp_percent = (event.data.w2.hp / maxHp.w2) * 100;
+                            
+                            updateBar(simW1.hp, w1_hp_percent, '%', 'HP');
+                            updateBar(simW1.stamina, event.data.w1.stamina, '%', 'Stamina');
+                            updateBar(simW1.momentum, event.data.w1.momentum, '%', 'Momentum');
+                            
+                            updateBar(simW2.hp, w2_hp_percent, '%', 'HP');
+                            updateBar(simW2.stamina, event.data.w2.stamina, '%', 'Stamina');
+                            updateBar(simW2.momentum, event.data.w2.momentum, '%', 'Momentum');
+                            break;
+                        case 'end':
+                            if (event.data.winner_name) {
+                                addLogEntry(`Match Over! The winner is ${event.data.winner_name}!`, 'text-green-400 text-lg font-bold');
+                                openWinnerModal(event.data.winner_id === 'w1' ? w1 : w2, event.data.victory_method);
+                            } else {
+                                addLogEntry(`Match Over! It's a Time Limit Draw!`, 'text-gray-400 text-lg font-bold');
+                            }
+                            resolve(); // Match is over, resolve the promise
+                            return; // Stop the replay loop
+                    }
+                    
+                    turnIndex++;
+                    setTimeout(processTurn, REPLAY_SPEED);
+                }
+                
+                processTurn(); // Start the replay
+            });
+        }
+        
+        // --- FIX 2: This function now accepts wagerInfo ---
+        function showBetResultToast(data, wagerInfo) {
+            // This alert is now correct.
+            // data.gold_change is the *net* winnings.
+            // wagerInfo.amount is the *original bet amount*.
+            if (data.bet_won) {
+                alert(`You WON! You won ${data.gold_change} Gold. Your new balance is ${data.new_balance} Gold.`);
+            } else {
+                alert(`You lost ${wagerInfo.amount} Gold. Your new balance is ${data.new_balance} Gold.`);
+            }
+            // You would also update the user's gold display on the page here
+            // e.g., document.getElementById('user-gold-display').textContent = data.new_balance;
+        }
+
+        function addLogEntry(text, cssClass = 'text-gray-300') {
+            const entry = document.createElement('p');
+            entry.className = `sim-log-entry ${cssClass}`;
+            entry.textContent = text;
+            simLog.appendChild(entry);
+            simLog.scrollTop = simLog.scrollHeight;
+        }
+        
+        function updateBar(barEl, value, unit, label = '') {
+            const p_val = Math.max(0, value);
+            if (barEl) {
+                barEl.style.width = `${p_val}%`;
+                barEl.textContent = `${label} ${Math.ceil(p_val)}${unit}`;
+            }
+        }
+        
+        function applyShake(imgEl) {
+            if (!imgEl) return;
+            imgEl.classList.add('shake');
+            setTimeout(() => imgEl.classList.remove('shake'), 500);
+        }
+        
+        function closeSimulationModal() {
+            simModal.classList.add('hidden');
+        }
+
+        function openWinnerModal(winnerData, method) {
+            winnerImg.src = `${winnerData.image.startsWith('http') ? '' : window.baseUrl}/public/images/${winnerData.image}.webp`;
+            winnerName.textContent = winnerData.name;
+            victoryMethod.textContent = method;
+            winnerModal.classList.remove('hidden');
+        }
+
+        function closeWinnerModal() {
+            winnerModal.classList.add('hidden');
+        }
+        
+        function openWagerOrSkipModal() {
+            wagerOrSkipModal.classList.remove('hidden');
+        }
+        
+        function closeWagerOrSkipModal() {
+            wagerOrSkipModal.classList.add('hidden');
+        }
+        
+        // This is for the "Calculate Odds" button
+        function openBettingModal() {
+            if (!matchupSlots[0] || !matchupSlots[1]) return;
+            document.getElementById('betting-wrestler1-name').textContent = matchupSlots[0].name;
+            document.getElementById('betting-wrestler2-name').textContent = matchupSlots[1].name;
+            bettingModal.classList.remove('hidden');
+        }
+        
+        function closeBettingModal() {
+            bettingModal.classList.add('hidden');
+        }
+
+        function closeWagerAmountModal() {
+            wagerAmountModal.classList.add('hidden');
+        }
+
+        // This is called by the "Calculate Odds" modal
+        async function handleRunBulkSimulation() {
+            const numSims = document.getElementById('num-simulations').value;
+            runBulkSimBtn.disabled = true;
+            runBulkSimBtn.textContent = 'Calculating...';
+            
+            try {
+                const oddsData = await getOdds(numSims);
+                closeBettingModal();
+                showBulkResults(oddsData);
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                runBulkSimBtn.disabled = false;
+                runBulkSimBtn.textContent = 'Calculate Odds';
+            }
+        }
+        
+        // This is the NEW flow for the "Simulate" button
+        async function startWagerFlow() {
+            // 1. Open the modal and show the loading state
+            wagerAmountModal.classList.remove('hidden');
+            wagerOddsLoading.classList.remove('hidden');
+            wagerOddsContent.classList.add('hidden');
+
+            try {
+                // 2. Run the 1000 sims in the background
+                const oddsData = await getOdds(1000); 
+                
+                // 3. Populate the modal with the results
+                populateWagerAmountModal(oddsData);
+
+            } catch (error) {
+                alert(`Error calculating odds: ${error.message}`);
+                closeWagerAmountModal();
+            }
+        }
+        
+        function populateWagerAmountModal(oddsData) {
+            wagerW1Name.textContent = oddsData.w1_name;
+            wagerW1Odds.textContent = `Odds: ${oddsData.w1_odds > 0 ? '+' : ''}${oddsData.w1_odds}`;
+            wagerW2Name.textContent = oddsData.w2_name;
+            wagerW2Odds.textContent = `Odds: ${oddsData.w2_odds > 0 ? '+' : ''}${oddsData.w2_odds}`;
+            
+            wagerOddsLoading.classList.add('hidden');
+            wagerOddsContent.classList.remove('hidden');
+
+            // --- NEW: payout update logic ---
+            function updatePayout() {
+                const amount = parseInt(document.getElementById('wager-amount-input').value, 10);
+                const selectedRadio = document.querySelector('input[name="wager_on"]:checked');
+                if (!selectedRadio || isNaN(amount) || amount <= 0) {
+                    document.getElementById('payout-display').innerHTML = '0 Gold';
+                    return;
+                }
+                const oddsSpan = selectedRadio.value === 'w1' ? wagerW1Odds : wagerW2Odds;
+                let oddsText = oddsSpan.innerText.replace('Odds: ', '');
+                let oddsValue = parseInt(oddsText, 10);
+                
+                // Handle edge cases
+                if (isNaN(oddsValue)) oddsValue = -100; // fallback to even money
+                if (oddsValue === 0) oddsValue = -100;   // prevent division by zero
+                
+                let winAmount = 0;
+                if (oddsValue > 0) {
+                    winAmount = amount * (oddsValue / 100);
+                } else if (oddsValue < 0) {
+                    winAmount = amount * (100 / Math.abs(oddsValue));
+                }
+                
+                // Minimum win: 1 gold or 1% of bet, whichever is larger
+                const minWin = Math.max(1, Math.floor(amount * 0.01));
+                if (winAmount < minWin) {
+                    winAmount = minWin;
+                }
+                
+                const total = amount + winAmount;
+                document.getElementById('payout-display').innerHTML = `${Math.round(total)} Gold <span class="text-sm text-gray-400">(You win ${Math.round(winAmount)} Gold)</span>`;
+            }
+
+            const amountInput = document.getElementById('wager-amount-input');
+            const radioButtons = document.querySelectorAll('input[name="wager_on"]');
+            amountInput.removeEventListener('input', updatePayout);
+            radioButtons.forEach(radio => radio.removeEventListener('change', updatePayout));
+            amountInput.addEventListener('input', updatePayout);
+            radioButtons.forEach(radio => radio.addEventListener('change', updatePayout));
+            updatePayout(); // initial
+        }
+        
+        function handleConfirmWager() {
+            const amount = parseInt(wagerAmountInput.value, 10);
+            const betOn = document.querySelector('input[name="wager_on"]:checked').value; // 'w1' or 'w2'
+
+            // Basic validation
+            if (isNaN(amount) || amount <= 0) {
+                alert("Please enter a valid wager amount.");
+                return;
+            }
+            // TODO: You'll want to add a check against the user's actual gold here
+            // if (amount > userGold) { ... }
+
+            closeWagerAmountModal();
+            // Run the single match, passing the bet info
+            runSingleMatch({ amount: amount, on: betOn });
+        }
+
+        // Reusable function to fetch odds
+        async function getOdds(numSims) {
+            if (!matchupSlots[0] || !matchupSlots[1]) throw new Error("Wrestlers not selected.");
+
+            const response = await fetch(`${window.baseUrl}/api/simulator/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    wrestler1_id: matchupSlots[0].id, 
+                    wrestler2_id: matchupSlots[1].id,
+                    num_sims: numSims
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            // --- API FIX: Check for 'error' property from your API ---
+            if (data.error) {
+                 throw new Error(data.error);
+            }
+            // Check for success property (if your API sends it)
+            if (data.success === false) {
+                throw new Error(data.message || 'API returned an error');
+            }
+            
+            return data;
+        }
+        
+        function showBulkResults(data) {
+            bulkResultsContent.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold">Simulation Results</h3>
+                    <button id="close-bulk-results-btn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
+                <p class="text-center text-gray-400 mb-6">Based on <span class="font-bold text-white">${data.total_sims}</span> matches</p>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="text-center p-4 bg-gray-900 rounded-lg border border-gray-700">
+                        <h4 class="text-lg font-semibold text-white mb-3">${data.w1_name}</h4>
+                        <p class="text-3xl font-bold text-green-500 mb-1">${data.w1_wins} Wins</p>
+                        <p class="text-lg text-gray-300 mb-4">${data.w1_win_percent}%</p>
+                        <div class="bg-gray-800 p-3 rounded-md">
+                            <p class="text-sm text-gray-400">Moneyline</p>
+                            <p class="text-2xl font-bold text-white">${data.w1_odds > 0 ? '+' : ''}${data.w1_odds}</p>
+                        </div>
+                    </div>
+                    <div class="text-center p-4 bg-gray-900 rounded-lg border border-gray-700">
+                        <h4 class="text-lg font-semibold text-white mb-3">${data.w2_name}</h4>
+                        <p class="text-3xl font-bold text-red-500 mb-1">${data.w2_wins} Wins</p>
+                        <p class="text-lg text-gray-300 mb-4">${data.w2_win_percent}%</p>
+                        <div class="bg-gray-800 p-3 rounded-md">
+                            <p class="text-sm text-gray-400">Moneyline</p>
+                            <p class="text-2xl font-bold text-white">${data.w2_odds > 0 ? '+' : ''}${data.w2_odds}</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center text-gray-500 text-sm mt-4">Draws: ${data.draws} (${data.draw_percent}%)</p>
+            `;
+            bulkResultsModal.classList.remove('hidden');
+            document.getElementById('close-bulk-results-btn').addEventListener('click', () => {
+                bulkResultsModal.classList.add('hidden');
+            });
+        }
+
+        // --- TAB LOGIC ---
+        const tabWrestlers = document.getElementById('tab-wrestlers');
+        const tabTagTeams = document.getElementById('tab-tag-teams');
+        const tagTeamParent = document.getElementById('tag-team-roster-container-parent');
+        const rosterControls = document.getElementById('roster-controls');
+
+        if (tabWrestlers) {
+            tabWrestlers.addEventListener('click', () => {
+                tabWrestlers.classList.add('active', 'border-blue-500', 'text-white');
+                tabWrestlers.classList.remove('text-gray-400', 'border-transparent');
+                tabTagTeams.classList.remove('active', 'border-blue-500', 'text-white');
+                tabTagTeams.classList.add('text-gray-400', 'border-transparent');
+                
+                rosterParent.classList.remove('hidden');
+                rosterControls.classList.remove('hidden');
+                tagTeamParent.classList.add('hidden');
+            });
+        }
+        
+        if (tabTagTeams) {
+            tabTagTeams.addEventListener('click', () => {
+                tabTagTeams.classList.add('active', 'border-blue-500', 'text-white');
+                tabTagTeams.classList.remove('text-gray-400', 'border-transparent');
+                tabWrestlers.classList.remove('active', 'border-blue-500', 'text-white');
+                tabWrestlers.classList.add('text-gray-400', 'border-transparent');
+
+                tagTeamParent.classList.remove('hidden');
+                rosterParent.classList.add('hidden');
+                rosterControls.classList.add('hidden');
+            });
+        }
+
+        // --- KICK IT OFF ---
+        init();
+    });
+</script>
+{% endblock %}
