@@ -1,0 +1,63 @@
+{% extends "layouts/main.twig" %}
+
+{% block title %}Booker Mode - Retired{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Hall of Fame Booker</h1>
+        <p class="text-xl text-gray-300 mt-4">Your booking career has ended.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <!-- Your Final Stats -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-yellow-400 mb-4">Your Final Statistics</h2>
+            <p class="text-gray-300 mb-2">Promoter: <span class="font-bold text-yellow-400">{{ promoter_name }}</span></p>
+            <p class="text-gray-300 mb-2">Final Balance: <span class="font-bold text-green-400 text-2xl">{{ balance|number_format }} Gold</span></p>
+            <p class="text-gray-300">Total Lifetime Profit: <span class="font-bold text-blue-400">{{ total_profit|number_format }} Gold</span></p>
+            {% if user_rank %}
+                <p class="text-gray-300 mt-4">Your Ranking: <span class="font-bold text-purple-400">#{{ user_rank }}</span> all time</p>
+            {% endif %}
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-yellow-400 mb-4">All-Time Top 20 Bookers</h2>
+            {% if leaderboard|length > 0 %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-gray-300">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-2 text-left">Rank</th>
+                                <th class="px-4 py-2 text-left">Promoter</th>
+                                <th class="px-4 py-2 text-right">Final Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in leaderboard %}
+                                <tr class="border-b border-gray-700">
+                                    <td class="px-4 py-2">{{ loop.index }}</td>
+                                    <td class="px-4 py-2">{{ entry.promoter_name }}</td>
+                                    <td class="px-4 py-2 text-right">{{ entry.retired_balance|number_format }} Gold</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if user_rank and user_rank > 20 %}
+                    <div class="mt-6 pt-4 border-t border-gray-700">
+                        <p class="text-gray-400">Your rank: <span class="font-bold text-yellow-400">#{{ user_rank }}</span> (not in top 20)</p>
+                    </div>
+                {% endif %}
+            {% else %}
+                <p class="text-gray-400">No retired bookers yet. Be the first to make history!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="text-center mt-8">
+        <a href="{{ base_url }}/booker" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

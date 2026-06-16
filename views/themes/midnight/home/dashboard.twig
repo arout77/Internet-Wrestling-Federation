@@ -1,7 +1,203 @@
 {% extends "layouts/main.twig" %}
 
+{% block title %}Dashboard | IWF{% endblock %}
+
 {% block content %}
-    <h2 class="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6">Dashboard</h2>
-    <p class="text-gray-600 dark:text-gray-400">Welcome, {{ auth.user.name }}!</p>
-    <p class="text-gray-600 dark:text-gray-400 mt-2">You have successfully logged in. This page is only visible to authenticated users.</p>
+<div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <!-- Welcome Header -->
+    <div class="bg-gray-800 overflow-hidden shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <h2 class="text-2xl font-bold text-yellow-400">Welcome back, {{ user.name }}!</h2>
+            <p class="text-gray-300 mt-1">Manage your wrestling empire from here.</p>
+        </div>
+    </div>
+
+    <!-- User Stats Overview -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div class="bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <dt class="text-sm font-medium text-gray-400 truncate">Gold</dt>
+                <dd class="mt-1 text-3xl font-semibold text-yellow-400">{{ user.gold|number_format }}</dd>
+            </div>
+        </div>
+        <div class="bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <dt class="text-sm font-medium text-gray-400 truncate">Tokens</dt>
+                <dd class="mt-1 text-3xl font-semibold text-yellow-400">{{ user.tokens|number_format }}</dd>
+            </div>
+        </div>
+        <div class="bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <dt class="text-sm font-medium text-gray-400 truncate">Member Since</dt>
+                <dd class="mt-1 text-xl font-semibold text-gray-200">{{ user.createdAt|date('M d, Y') }}</dd>
+            </div>
+        </div>
+        <div class="bg-gray-800 overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <dt class="text-sm font-medium text-gray-400 truncate">Email</dt>
+                <dd class="mt-1 text-sm font-medium text-gray-300 truncate">{{ user.email }}</dd>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prospect Section -->
+    <div class="bg-gray-800 overflow-hidden shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-700">
+            <h3 class="text-lg leading-6 font-medium text-gray-200">
+                Your Prospect
+            </h3>
+            <p class="mt-1 text-sm text-gray-400">
+                The wrestler you are building towards glory.
+            </p>
+        </div>
+        <div class="px-4 py-5 sm:p-6">
+            {% if prospect %}
+                <div class="flex flex-col md:flex-row gap-6">
+                    <!-- Avatar -->
+                    <div class="flex-shrink-0">
+                        <img class="h-32 w-32 rounded-full object-cover border-2 border-yellow-400" 
+                             src="{{ base_url }}/public/images/avatars/{{ prospect.image }}" 
+                             alt="{{ prospect.name }}">
+                    </div>
+                    <!-- Prospect Details -->
+                    <div class="flex-1">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-400">Name</p>
+                                <p class="text-lg font-medium text-white">{{ prospect.name }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Level</p>
+                                <p class="text-lg font-medium text-white">{{ prospect.lvl }} / 100</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Archetype</p>
+                                <p class="text-lg font-medium text-white">{{ prospect.archetype ? prospect.archetype|title : 'Not chosen yet' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Attribute Points</p>
+                                <p class="text-lg font-medium text-white">{{ prospect.attributePoints }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Current XP</p>
+                                <p class="text-lg font-medium text-white">{{ prospect.currentXp }} / {{ prospect.xpRequiredForNextLevel }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">Overall Rating</p>
+                                <p class="text-lg font-medium text-white">{{ prospect.overallRating }}</p>
+                            </div>
+                        </div>
+                        <!-- XP Progress Bar -->
+                        <div class="mt-4">
+                            <div class="relative pt-1">
+                                <div class="flex mb-2 items-center justify-between">
+                                    <div>
+                                        <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-yellow-400 bg-gray-700">
+                                            Progress to next level
+                                        </span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-xs font-semibold inline-block text-yellow-400">
+                                            {{ ((prospect.currentXp / prospect.xpRequiredForNextLevel) * 100)|round }}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-700">
+                                    <div style="width: {{ ((prospect.currentXp / prospect.xpRequiredForNextLevel) * 100)|round }}%" 
+                                         class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-yellow-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="text-center py-6">
+                    <p class="text-gray-400">You don't have a prospect yet.</p>
+                    <a href="{{ base_url }}/career/create" 
+                       class="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                        Create Your Prospect
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Actions (Cards with descriptions) -->
+    <div class="bg-gray-800 overflow-hidden shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-700">
+            <h3 class="text-lg leading-6 font-medium text-gray-200">
+                Quick Actions
+            </h3>
+        </div>
+        <div class="px-4 py-5 sm:p-6">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <!-- Career Mode -->
+                <div class="bg-gray-700 rounded-lg p-4 shadow">
+                    <a href="{{ base_url }}/career" 
+                       class="block w-full text-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Career Mode
+                    </a>
+                    <p class="text-gray-300 text-sm mt-2 text-center">Build your prospect from rookie to Hall of Famer.</p>
+                </div>
+                <!-- Match Simulator -->
+                <div class="bg-gray-700 rounded-lg p-4 shadow">
+                    <a href="{{ base_url }}/simulator" 
+                       class="block w-full text-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Match Simulator
+                    </a>
+                    <p class="text-gray-300 text-sm mt-2 text-center">Create and simulate dream matches, and optionally place wagers.</p>
+                </div>
+                <!-- Tournament Mode -->
+                <div class="bg-gray-700 rounded-lg p-4 shadow">
+                    <a href="{{ base_url }}/tournament" 
+                       class="block w-full text-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Tournament Mode
+                    </a>
+                    <p class="text-gray-300 text-sm mt-2 text-center">Predict winners in 16/32-wrestler brackets for gold prizes.</p>
+                </div>
+                <!-- Training Center -->
+                <div class="bg-gray-700 rounded-lg p-4 shadow">
+                    <a href="{{ base_url }}/career/train" 
+                       class="block w-full text-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Training Center
+                    </a>
+                    <p class="text-gray-300 text-sm mt-2 text-center">Learn new moves and upgrade your prospect's skills.</p>
+                </div>
+                <!-- Manage Challenges -->
+                <div class="bg-gray-700 rounded-lg p-4 shadow">
+                    <a href="{{ base_url }}/challenge/manage" 
+                       class="block w-full text-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                        Manage Challenges
+                    </a>
+                    <p class="text-gray-300 text-sm mt-2 text-center">Challenge other players' prospects and wager gold.</p>
+                </div>
+                <!-- Notifications -->
+                <div class="bg-gray-700 rounded-lg p-4 shadow">
+                    <a href="{{ base_url }}/notifications" 
+                       class="block w-full text-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                        Notifications
+                    </a>
+                    <p class="text-gray-300 text-sm mt-2 text-center">View your latest game notifications and updates.</p>
+                </div>
+                <!-- Game Guide -->
+                <div class="bg-gray-700 rounded-lg p-4 shadow">
+                    <a href="{{ base_url }}/docs" 
+                       class="block w-full text-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Game Guide
+                    </a>
+                    <p class="text-gray-300 text-sm mt-2 text-center">Read the official IWF documentation and strategies.</p>
+                </div>
+                <!-- Logout -->
+                <div class="bg-gray-700 rounded-lg p-4 shadow">
+                    <a href="{{ base_url }}/logout" 
+                       class="block w-full text-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Logout
+                    </a>
+                    <p class="text-gray-300 text-sm mt-2 text-center">Securely log out of your account.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

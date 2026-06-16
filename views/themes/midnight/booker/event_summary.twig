@@ -1,0 +1,68 @@
+{% extends "layouts/main.twig" %}
+
+{% block title %}Booker - Event Results{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Event Results</h1>
+        <p class="text-xl text-gray-300 mt-4">Your event is complete!</p>
+        <a href="{{ base_url }}/booker" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Dashboard</a>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <!-- Financial Summary -->
+        <div class="lg:col-span-1 bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-yellow-400 mb-4">Financial Report</h2>
+            <p class="text-gray-300">Venue: <span class="font-bold">{{ venue }}</span></p>
+            <p class="text-gray-300">Attendance: <span class="font-bold">{{ attendance|number_format }}</span></p>
+            <p class="text-gray-300">Revenue: <span class="font-bold text-green-400">{{ revenue|number_format }} Gold</span></p>
+            <p class="text-gray-300">Total Cost: <span class="font-bold text-red-400">{{ total_cost|number_format }} Gold</span></p>
+            <p class="text-xl mt-4">Profit: <span class="font-bold {% if profit >= 0 %}text-green-400{% else %}text-red-400{% endif %}">{{ profit|number_format }} Gold</span></p>
+            <p class="text-gray-300 mt-2">New Balance: <span class="font-bold text-yellow-400">{{ new_balance|number_format }} Gold</span></p>
+            <p class="text-gray-300">Average Star Rating: <span class="font-bold text-purple-400">{{ average_star_rating }}/5.0</span></p>
+        </div>
+
+        <!-- Match Card -->
+        <div class="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-yellow-400 mb-4">Match Results</h2>
+            <div class="space-y-4">
+                {% for match in matches %}
+                    <div class="border-b border-gray-700 pb-4">
+                        <p class="text-lg font-semibold text-white">Match {{ match.order }}</p>
+                        <p class="text-gray-300">{{ match.wrestler1 }} vs {{ match.wrestler2 }}</p>
+                        <p class="text-gray-300">Winner:
+                            {% if match.winner_image %}
+                                <img src="{{ base_url }}/public/images/{{ match.winner_image }}.webp"
+                                     alt="{{ match.winner }}"
+                                     class="inline-block w-8 h-8 rounded-full object-cover border border-yellow-500 ml-2 mr-2"
+                                     onerror="this.src='{{ base_url }}/public/images/default.png'">
+                            {% endif %}
+                            <span class="font-bold text-green-400">{{ match.winner }}</span>
+                        </p>
+
+                        {% if match.title_changed %}
+                            <div class="mt-2 p-2 bg-yellow-900 bg-opacity-30 border-l-4 border-yellow-500 rounded-r">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-6 h-6 text-yellow-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2L15 8.5L22 9.5L17 14L18.5 21L12 17.5L5.5 21L7 14L2 9.5L9 8.5L12 2Z" />
+                                    </svg>
+                                    <span class="font-bold text-yellow-400 text-lg">NEW {{ match.title_name|upper }}!!</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% if match.stipulation %}
+                            <p class="text-gray-300">Stipulation: <span class="font-bold text-purple-400">{{ match.stipulation|replace({'_': ' ', 'last_man_standing': 'Last Man Standing'})|title }}</span></p>
+                        {% endif %}
+                        <p class="text-gray-300">Star Rating: <span class="font-bold text-purple-400">{{ match.star_rating }}/5.0</span></p>
+                        <details class="mt-2">
+                            <summary class="text-blue-400 cursor-pointer">View Match Log</summary>
+                            <pre class="mt-2 text-xs text-gray-400 overflow-auto max-h-64">{{ match.log|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                        </details>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

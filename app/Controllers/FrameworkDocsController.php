@@ -1,9 +1,8 @@
 <?php
-
 namespace App\Controllers;
 
-use Core\BaseController;
-use Core\Response;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Response;
 use Twig\Environment;
 
 /**
@@ -14,9 +13,9 @@ class FrameworkDocsController extends BaseController
     /**
      * @param Environment $twig
      */
-    public function __construct( Environment $twig )
+    public function __construct(Environment $twig)
     {
-        parent::__construct( $twig );
+        parent::__construct($twig);
     }
 
     /**
@@ -24,7 +23,7 @@ class FrameworkDocsController extends BaseController
      */
     public function index(): Response
     {
-        return $this->view( 'docs-framework/index.twig' );
+        return $this->view('docs-framework/index.twig');
     }
 
     /**
@@ -32,7 +31,7 @@ class FrameworkDocsController extends BaseController
      */
     public function installation(): Response
     {
-        return $this->view( 'docs-framework/installation.twig' );
+        return $this->view('docs-framework/installation.twig');
     }
 
     /**
@@ -40,7 +39,7 @@ class FrameworkDocsController extends BaseController
      */
     public function routing(): Response
     {
-        return $this->view( 'docs-framework/routing.twig' );
+        return $this->view('docs-framework/routing.twig');
     }
 
     /**
@@ -48,7 +47,7 @@ class FrameworkDocsController extends BaseController
      */
     public function request(): Response
     {
-        return $this->view( 'docs-framework/request.twig' );
+        return $this->view('docs-framework/request.twig');
     }
 
     /**
@@ -56,7 +55,7 @@ class FrameworkDocsController extends BaseController
      */
     public function response(): Response
     {
-        return $this->view( 'docs-framework/response.twig' );
+        return $this->view('docs-framework/response.twig');
     }
 
     /**
@@ -64,7 +63,7 @@ class FrameworkDocsController extends BaseController
      */
     public function controllers(): Response
     {
-        return $this->view( 'docs-framework/controllers.twig' );
+        return $this->view('docs-framework/controllers.twig');
     }
 
     /**
@@ -72,7 +71,7 @@ class FrameworkDocsController extends BaseController
      */
     public function models(): Response
     {
-        return $this->view( 'docs-framework/models.twig' );
+        return $this->view('docs-framework/models.twig');
     }
 
     /**
@@ -80,7 +79,7 @@ class FrameworkDocsController extends BaseController
      */
     public function doctrine(): Response
     {
-        return $this->view( 'docs-framework/doctrine.twig' );
+        return $this->view('docs-framework/doctrine.twig');
     }
 
     /**
@@ -88,7 +87,7 @@ class FrameworkDocsController extends BaseController
      */
     public function views(): Response
     {
-        return $this->view( 'docs-framework/views.twig' );
+        return $this->view('docs-framework/views.twig');
     }
 
     /**
@@ -96,7 +95,7 @@ class FrameworkDocsController extends BaseController
      */
     public function validation(): Response
     {
-        return $this->view( 'docs-framework/validation.twig' );
+        return $this->view('docs-framework/validation.twig');
     }
 
     /**
@@ -104,7 +103,7 @@ class FrameworkDocsController extends BaseController
      */
     public function middleware(): Response
     {
-        return $this->view( 'docs-framework/middleware.twig' );
+        return $this->view('docs-framework/middleware.twig');
     }
 
     /**
@@ -112,7 +111,7 @@ class FrameworkDocsController extends BaseController
      */
     public function cli(): Response
     {
-        return $this->view( 'docs-framework/cli.twig' );
+        return $this->view('docs-framework/cli.twig');
     }
 
     /**
@@ -120,7 +119,7 @@ class FrameworkDocsController extends BaseController
      */
     public function mailer(): Response
     {
-        return $this->view( 'docs-framework/mailer.twig' );
+        return $this->view('docs-framework/mailer.twig');
     }
 
     /**
@@ -128,7 +127,7 @@ class FrameworkDocsController extends BaseController
      */
     public function seo(): Response
     {
-        return $this->view( 'docs-framework/seo.twig' );
+        return $this->view('docs-framework/seo.twig');
     }
 
     /**
@@ -136,7 +135,7 @@ class FrameworkDocsController extends BaseController
      */
     public function pagination(): Response
     {
-        return $this->view( 'docs-framework/pagination.twig' );
+        return $this->view('docs-framework/pagination.twig');
     }
 
     /**
@@ -144,7 +143,7 @@ class FrameworkDocsController extends BaseController
      */
     public function fileUploader(): Response
     {
-        return $this->view( 'docs-framework/file-uploader.twig' );
+        return $this->view('docs-framework/file-uploader.twig');
     }
 
     /**
@@ -152,7 +151,7 @@ class FrameworkDocsController extends BaseController
      */
     public function caching(): Response
     {
-        return $this->view( 'docs-framework/caching.twig' );
+        return $this->view('docs-framework/caching.twig');
     }
 
     /**
@@ -160,7 +159,7 @@ class FrameworkDocsController extends BaseController
      */
     public function updating(): Response
     {
-        return $this->view( 'docs-framework/updating.twig' );
+        return $this->view('docs-framework/updating.twig');
     }
 
     /**
@@ -168,7 +167,7 @@ class FrameworkDocsController extends BaseController
      */
     public function security(): Response
     {
-        return $this->view( 'docs-framework/security.twig' );
+        return $this->view('docs-framework/security.twig');
     }
 
     /**
@@ -176,7 +175,7 @@ class FrameworkDocsController extends BaseController
      */
     public function performance(): Response
     {
-        return $this->view( 'docs-framework/performance.twig' );
+        return $this->view('docs-framework/performance.twig');
     }
 
     /**
@@ -184,7 +183,7 @@ class FrameworkDocsController extends BaseController
      */
     public function logging(): Response
     {
-        return $this->view( 'docs-framework/logging.twig' );
+        return $this->view('docs-framework/logging.twig');
     }
 
     /**
@@ -192,6 +191,6 @@ class FrameworkDocsController extends BaseController
      */
     public function imageProcessing()
     {
-        return $this->view( 'docs-framework/image-processing.twig' );
+        return $this->view('docs-framework/image-processing.twig');
     }
 }

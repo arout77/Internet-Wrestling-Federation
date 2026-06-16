@@ -1,0 +1,257 @@
+{% extends "layouts/main.twig" %}
+
+{% block title %}Booker - Hire Wrestlers{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <!-- Budget Tracker -->
+    <div class="bg-gray-800 rounded-lg p-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+                <span class="text-gray-400 text-sm">Original Balance</span>
+                <p class="text-xl font-bold text-white">{{ original_balance|number_format }} Gold</p>
+            </div>
+            <div>
+                <span class="text-gray-400 text-sm">Venue Cost</span>
+                <p class="text-xl font-bold text-red-400">{{ venue_cost|number_format }} Gold</p>
+            </div>
+            <div>
+                <span class="text-gray-400 text-sm">Advertising</span>
+                <p class="text-xl font-bold text-red-400">{{ ad_spend|number_format }} Gold</p>
+            </div>
+            <div>
+                <span class="text-gray-400 text-sm">Remaining for Hiring</span>
+                <p id="remaining-budget" class="text-xl font-bold text-yellow-400">{{ remaining_budget|number_format }} Gold</p>
+            </div>
+        </div>
+    </div>
+    <!-- Selected Summary -->
+    <div id="selected-summary" class="bg-gray-800 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <span class="text-gray-300">Selected wrestlers: <span id="selected-count" class="text-yellow-400 font-bold">0</span></span>
+            <span class="text-gray-300">Total hiring fee: <span id="selected-fee" class="text-yellow-400 font-bold">0</span> Gold</span>
+            <button type="button" id="clear-selected" class="text-red-400 hover:text-red-600 text-sm">Clear All</button>
+        </div>
+    </div>
+
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Step 3: Hire Wrestlers</h1>
+        <p class="text-xl text-gray-300 mt-4">Select wrestlers to appear on the show. Each appearance costs a fee.</p>
+        <a href="{{ base_url }}/booker/advertising" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Advertising</a>
+    </header>
+
+    <!-- Champions Section -->
+    {% if world_champion or us_champion %}
+    <div class="champions-section mb-6 p-4 bg-gray-800 rounded-lg border border-yellow-600">
+        <h5 class="text-lg font-bold text-yellow-400 mb-3">🏆 Current Champions</h5>
+        <div class="flex flex-col md:flex-row gap-4">
+            {% if world_champion %}
+            <div class="bg-gray-700 rounded px-4 py-2 flex items-center gap-2">
+                <span class="badge bg-yellow-500 text-black px-2 py-1 rounded-full text-sm font-bold">🌍 World Champion</span>
+                <span class="text-white">{{ world_champion }}</span>
+            </div>
+            {% endif %}
+            {% if us_champion %}
+            <div class="bg-gray-700 rounded px-4 py-2 flex items-center gap-2">
+                <span class="badge bg-blue-600 text-white px-2 py-1 rounded-full text-sm font-bold">🇺🇸 US Champion</span>
+                <span class="text-white">{{ us_champion }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <form action="{{ base_url }}/booker/hire" method="post" class="max-w-6xl mx-auto">
+        {{ csrf_field() }}
+
+        <!-- Filters -->
+        <div class="mb-6 bg-gray-800 p-4 rounded-lg">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-gray-300 mb-1">Search Name</label>
+                    <input type="text" id="filter-name" class="w-full bg-gray-700 text-white p-2 rounded" placeholder="Wrestler name...">
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-1">Min Level</label>
+                    <input type="number" id="filter-min-level" class="w-full bg-gray-700 text-white p-2 rounded" min="1" max="10" placeholder="1">
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-1">Max Level</label>
+                    <input type="number" id="filter-max-level" class="w-full bg-gray-700 text-white p-2 rounded" min="1" max="10" placeholder="10">
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-1">Max Fee (Gold)</label>
+                    <input type="number" id="filter-max-fee" class="w-full bg-gray-700 text-white p-2 rounded" placeholder="Any">
+                </div>
+            </div>
+            <div class="mt-4 flex justify-between">
+                <button type="button" id="clear-filters" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">Clear Filters</button>
+                <span id="filter-count" class="text-yellow-400"></span>
+            </div>
+        </div>
+
+        <!-- Wrestler Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="wrestler-grid">
+            {% for wrestler in wrestlers %}
+            <div class="wrestler-card bg-gray-800 rounded-lg overflow-hidden shadow-lg transition-all duration-200"
+                 data-name="{{ wrestler.name|lower }}"
+                 data-level="{{ wrestler.level }}"
+                 data-fee="{{ wrestler.fee }}"
+                 data-id="{{ wrestler.id }}">
+                {% if wrestler.is_champion %}
+                <div class="bg-yellow-500 text-black text-center py-1 font-bold text-sm">
+                    {{ wrestler.champion_title }}
+                </div>
+                {% endif %}
+                <img src="{{ base_url }}/public/images/{{ wrestler.image }}.webp" class="w-full h-48 object-cover" alt="{{ wrestler.name }}" onerror="this.src='{{ base_url }}/public/images/default.png'">
+                <div class="p-4">
+                    <h5 class="text-xl font-bold text-white">{{ wrestler.name }}</h5>
+                    <p class="text-gray-300 mt-1">
+                        Level: {{ wrestler.level }}<br>
+                        Overall: {{ wrestler.overall }}<br>
+                        <span class="text-yellow-400">Fee: {{ wrestler.fee|number_format }} Gold</span>
+                    </p>
+                    <label class="inline-flex items-center mt-3 cursor-pointer">
+                        <input type="checkbox" name="wrestler_ids[]" value="{{ wrestler.id }}" class="wrestler-checkbox form-checkbox h-5 w-5 text-yellow-500 rounded focus:ring-yellow-400" data-fee="{{ wrestler.fee }}">
+                        <span class="ml-2 text-gray-300">Hire</span>
+                    </label>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-8 text-center">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">Next: Book Matches</button>
+        </div>
+    </form>
+</div>
+
+<!-- Scroll to Bottom Button -->
+<button id="scroll-to-bottom-btn" 
+        class="fixed bottom-8 right-8 bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold p-3 rounded-full shadow-lg transition-all duration-300 z-[100000]"
+        style="display: none;">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+    </svg>
+</button>
+
+<script>
+    // Budget update logic
+    const remainingBudgetSpan = document.getElementById('remaining-budget');
+    const remainingBudget = parseInt('{{ remaining_budget }}');
+    const checkboxes = document.querySelectorAll('.wrestler-checkbox');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const selectedFeeSpan = document.getElementById('selected-fee');
+    const clearSelectedBtn = document.getElementById('clear-selected');
+
+    function updateSelectedSummary() {
+        let total = 0;
+        let count = 0;
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                total += parseInt(cb.dataset.fee);
+                count++;
+            }
+            // Highlight selected card
+            const card = cb.closest('.wrestler-card');
+            if (cb.checked) {
+                card.classList.add('ring-2', 'ring-yellow-400', 'bg-gray-700');
+            } else {
+                card.classList.remove('ring-2', 'ring-yellow-400', 'bg-gray-700');
+            }
+        });
+        selectedCountSpan.textContent = count;
+        selectedFeeSpan.textContent = total.toLocaleString();
+        const remaining = remainingBudget - total;
+        remainingBudgetSpan.textContent = remaining.toLocaleString() + ' Gold';
+        if (remaining < 0) {
+            remainingBudgetSpan.classList.add('text-red-400');
+            remainingBudgetSpan.classList.remove('text-yellow-400');
+        } else {
+            remainingBudgetSpan.classList.add('text-yellow-400');
+            remainingBudgetSpan.classList.remove('text-red-400');
+        }
+    }
+
+    // Clear all selections
+    if (clearSelectedBtn) {
+        clearSelectedBtn.addEventListener('click', () => {
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            updateSelectedSummary();
+        });
+    }
+
+    // Scroll to bottom button functionality
+    (function() {
+        const scrollBtn = document.getElementById('scroll-to-bottom-btn');
+        if (!scrollBtn) return;
+
+        function toggleScrollButton() {
+            if (window.scrollY > 300) {
+                scrollBtn.style.display = 'flex';
+            } else {
+                scrollBtn.style.display = 'none';
+            }
+        }
+
+        // Listen for scroll events
+        window.addEventListener('scroll', toggleScrollButton);
+        // Also check on page load in case the user is already scrolled down
+        document.addEventListener('DOMContentLoaded', toggleScrollButton);
+
+        // Scroll to bottom when clicked
+        scrollBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
+        });
+    })();
+
+    // Filter logic
+    function filterWrestlers() {
+        const nameFilter = document.getElementById('filter-name').value.toLowerCase();
+        const minLevel = parseInt(document.getElementById('filter-min-level').value) || 1;
+        const maxLevel = parseInt(document.getElementById('filter-max-level').value) || 99;
+        const maxFee = parseFloat(document.getElementById('filter-max-fee').value) || Infinity;
+
+        let visibleCount = 0;
+        document.querySelectorAll('.wrestler-card').forEach(card => {
+            const name = card.getAttribute('data-name');
+            const level = parseInt(card.getAttribute('data-level'));
+            const fee = parseFloat(card.getAttribute('data-fee'));
+            let visible = true;
+            if (nameFilter && !name.includes(nameFilter)) visible = false;
+            if (level < minLevel || level > maxLevel) visible = false;
+            if (fee > maxFee) visible = false;
+            card.style.display = visible ? 'block' : 'none';
+            if (visible) visibleCount++;
+        });
+        document.getElementById('filter-count').innerText = `Showing ${visibleCount} wrestlers`;
+    }
+
+    // Event listeners for filters
+    document.getElementById('filter-name').addEventListener('input', filterWrestlers);
+    document.getElementById('filter-min-level').addEventListener('input', filterWrestlers);
+    document.getElementById('filter-max-level').addEventListener('input', filterWrestlers);
+    document.getElementById('filter-max-fee').addEventListener('input', filterWrestlers);
+    document.getElementById('clear-filters').addEventListener('click', () => {
+        document.getElementById('filter-name').value = '';
+        document.getElementById('filter-min-level').value = '';
+        document.getElementById('filter-max-level').value = '';
+        document.getElementById('filter-max-fee').value = '';
+        filterWrestlers();
+    });
+
+    // Attach budget update to checkboxes
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectedSummary);
+    });
+
+    // Initial run
+    filterWrestlers();
+    updateSelectedSummary();
+</script>
+{% endblock %}

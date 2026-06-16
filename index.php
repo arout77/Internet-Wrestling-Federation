@@ -14,7 +14,7 @@
 require_once __DIR__ . '/vendor/autoload.php';
 
 // --- START DEBUG COLLECTOR ---
-\Core\Debug::getInstance()->start();
+Rhapsody\Core\Debug::getInstance()->start();
 
 // --- ADD MAINTENANCE MODE CHECK ---
 $maintenanceFile = __DIR__ . '/storage/framework/down';
@@ -39,10 +39,10 @@ try {
 // 4. Register Error Handling (Whoops)
 // This provides beautiful, detailed error pages during development but
 // should be disabled in a production environment for security.
-$config = require_once $rootPath . '/config.php';
+$config = require_once $rootPath . '/config/config.php';
 
 // Register global error handler (logs errors, custom error pages)
-\Core\ErrorHandler::register($config);
+Rhapsody\Core\ErrorHandler::register($config);
 
 // Then, if development, Whoops will still work but ErrorHandler takes precedence.
 // if ($config['app_env'] === 'development') {
@@ -56,7 +56,7 @@ $config = require_once $rootPath . '/config.php';
 
 // 5. Start the session
 // This makes the $_SESSION superglobal available for our authentication system.
-\Core\Session::start();
+Rhapsody\Core\Session::start();
 
 // 6. Bootstrap the application and get the service container
 // This is the core of the dependency injection system. The container
@@ -65,8 +65,8 @@ $container            = require_once $rootPath . '/bootstrap.php';
 $GLOBALS['container'] = $container;
 
 // 7. Use necessary core classes
-use App\Controllers\RouterController;
-use Core\Request;
+use Rhapsody\Core\Controllers\RouterController;
+use Rhapsody\Core\Request;
 
 // 8. Create the Request object
 // This object encapsulates all information about the incoming HTTP request.
@@ -90,10 +90,10 @@ $response = RouterController::dispatch($request, $container);
 
 // NEW: Convert 404 responses to exceptions so the error handler can render custom page
 if ($response->getStatusCode() === 404) {
-    throw new \Core\Exceptions\HttpException(404, 'Page not found');
+    throw new Rhapsody\Core\Exceptions\HttpException(404, 'Page not found');
 }
 if ($response->getStatusCode() === 500) {
-    throw new \Core\Exceptions\HttpException(500, 'Server error');
+    throw new Rhapsody\Core\Exceptions\HttpException(500, 'Server error');
 }
 $matchedRoute = RouterController::getMatchedRoute();
 
@@ -107,9 +107,9 @@ if ($config['app_env'] === 'development') {
     // ONLY inject the toolbar if this is an HTML response.
     // This prevents breaking our JSON API responses.
     if (str_contains($contentType, 'text/html')) {
-        $debug = \Core\Debug::getInstance();
+        $debug = Rhapsody\Core\Debug::getInstance();
         $debug->end($response, $config, $container, $matchedRoute); // Pass final data to the collector
-        $toolbar     = new \Core\Toolbar($debug->getData());
+        $toolbar     = new Rhapsody\Core\Toolbar($debug->getData());
         $toolbarHtml = $toolbar->render();
 
         $content = $response->getContent();

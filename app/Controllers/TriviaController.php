@@ -1,10 +1,10 @@
 <?php
 namespace App\Controllers;
 
-use Core\BaseController;
-use Core\Database;
-use Core\Request;
-use Core\Response;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Database;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Response;
 
 class TriviaController extends BaseController
 {

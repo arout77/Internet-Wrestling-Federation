@@ -1,0 +1,98 @@
+{% extends "layouts/main.twig" %}
+{% block content %}
+<style>
+    label { display: block; font-weight: bold; color: #cbd5e0; margin-bottom: 0.25rem; }
+    input[type="text"], input[type="number"], select { 
+        width: 100%; 
+        padding: 0.5rem; 
+        background-color: #2d3748; 
+        color: white; 
+        border: 1px solid #4a5568; 
+        border-radius: 4px;
+    }
+</style>
+
+<form action="{{ base_url }}/admin/wrestler/update/{{ wrestler.wrestlerId }}" method="POST">
+    <div class="grid grid-cols-3 gap-6 bg-gray-900 p-6 rounded-lg">
+            <div><label>Name</label><input name="name" type="text" value="{{ wrestler.name }}"></div>
+            <div><label>Height</label><input name="height" type="text" value="{{ wrestler.height }}"></div>
+            <div><label>Weight</label><input name="weight" type="text" value="{{ wrestler.weight }}"></div>
+            <div><label>Level (lvl)</label><input name="lvl" type="number" value="{{ wrestler.lvl }}"></div>
+            <div><label>Base HP</label><input name="baseHp" type="number" value="{{ wrestler.baseHp }}"></div>
+            <div>
+                <label>Archetype</label>
+                <select name="archetype">
+                    <option value="brawler" {{ wrestler.archetype == 'brawler' ? 'selected' : '' }}>Brawler</option>
+                    <option value="high-flyer" {{ wrestler.archetype == 'high-flyer' ? 'selected' : '' }}>High-Flyer</option>
+                    <option value="powerhouse" {{ wrestler.archetype == 'powerhouse' ? 'selected' : '' }}>Powerhouse</option>
+                    <option value="technician" {{ wrestler.archetype == 'technician' ? 'selected' : '' }}>Technician</option>
+                </select>
+            </div>
+            
+            <div><label>Strength</label><input name="strength" type="number" value="{{ wrestler.strength }}"></div>
+            <div><label>Technical</label><input name="technicalAbility" type="number" value="{{ wrestler.technicalAbility }}"></div>
+            <div><label>Brawling</label><input name="brawlingAbility" type="number" value="{{ wrestler.brawlingAbility }}"></div>
+            <div><label>Aerial</label><input name="aerialAbility" type="number" value="{{ wrestler.aerialAbility }}"></div>
+            
+            <div><label>Stamina</label><input name="stamina" type="number" value="{{ wrestler.stamina }}"></div>
+            <div><label>Toughness</label><input name="toughness" type="number" value="{{ wrestler.toughness }}"></div>
+            <div><label>Reversal</label><input name="reversalAbility" type="number" value="{{ wrestler.reversalAbility }}"></div>
+            <div><label>Sub Defense</label><input name="submissionDefense" type="number" value="{{ wrestler.submissionDefense }}"></div>
+
+            <div><label>Stamina Recovery Rate</label><input name="staminaRecoveryRate" type="number" value="{{ wrestler.staminaRecoveryRate }}"></div>
+            <div>
+                <label>Tag Team</label>
+                <select name="tag_team">
+                    <option value="">-- None --</option>
+                    {% for tagTeam in all_tag_teams %}
+                        <option value="{{ tagTeam.team_name }}" {{ wrestler.tagTeam == tagTeam.team_name ? 'selected' : '' }}>
+                            {{ tagTeam.team_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div><label>Avatar</label><input name="image" type="text" value="{{ wrestler.image }}"></div>
+
+            <div>
+                <label class="inline-flex items-center">
+                    <input type="checkbox" name="is_world_champ" value="1" {{ wrestler.isWorldChamp ? 'checked' : '' }}>
+                    <span class="ml-2">World Champion</span>
+                </label>
+            </div>
+            
+            <!-- Tendency sliders or number inputs -->
+            <div><label>Tendency Strike (0-100)</label><input name="tendency_strike" type="number" min="0" max="100" value="{{ wrestler.tendencyStrike }}"></div>
+            <div><label>Tendency Grapple</label><input name="tendency_grapple" type="number" min="0" max="100" value="{{ wrestler.tendencyGrapple }}"></div>
+            <div><label>Tendency Submission</label><input name="tendency_submission" type="number" min="0" max="100" value="{{ wrestler.tendencySubmission }}"></div>
+            <div><label>Tendency Highfly</label><input name="tendency_highfly" type="number" min="0" max="100" value="{{ wrestler.tendencyHighfly }}"></div>
+
+            <div><label>Description</label><textarea name="description" class="w-full">{{ wrestler.description }}</textarea></div>
+    </div>
+    
+    <div><h3 class="text-white text-xl">Traits</h3></div>
+    <div class="mt-4 grid grid-cols-4 gap-2">
+        {% for trait in all_traits %}
+            <label class="flex items-center text-white">
+                <input type="checkbox" name="traits[]" value="{{ trait.traitId }}" 
+                class="mr-2" {{ trait.traitId in wrestler_trait_ids ? 'checked' : '' }}>
+                {{ trait.name }}
+            </label>
+        {% endfor %}
+    </div>
+
+    <div><h3 class="text-white text-xl mt-6">Moves</h3></div>
+    <div class="mt-4 grid grid-cols-4 gap-2">
+        {% for move in all_moves %}
+            <label class="flex items-center text-white">
+                <input type="checkbox" name="moves[]" value="{{ move.moveId }}" 
+                       class="mr-2" {{ move.moveId in wrestler_move_ids ? 'checked' : '' }}>
+                {{ move.moveName }} ({{ move.type }})
+            </label>
+        {% endfor %}
+    </div>
+    
+    <button type="submit" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded">
+        Save All Changes
+    </button>
+</form>
+{% endblock %}

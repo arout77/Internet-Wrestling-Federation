@@ -1,7 +1,5 @@
 {% extends "layouts/main.twig" %}
 
-{% block title %}Wrestling Simulator, Career Mode and more{% endblock %}
-
 {% block full_width_content %}
     <style>
     .bg-grid { background-image: linear-gradient(to right, rgba(255, 255, 255, 0.20) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 1px, transparent 1px); background-size: 3rem 3rem; }
@@ -87,7 +85,7 @@
         <img src="{{ base_url }}/public/images/wwf.png" alt="WWF" class="h-64 m-auto mb-4"> 
         <h3 class="text-2xl font-semibold text-white mb-4">Golden Era (1980s-early 1990s)</h3>
             <p class="text-gray-300">This era, also known as the Hulkamania era, is characterized by the rise of Hulk Hogan and the expansion of the WWF (now WWE) from a regional promotion to a national phenomenon. It featured larger-than-life characters, storylines, and a focus on family-friendly entertainment. Key events include the first WrestleMania and the Rock 'n' Wrestling Connection with MTV. </p>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 px-4 mt-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 px-4 mt-8">
                 <!-- Wrestler 1: Hulk Hogan -->
                 <div class="bg-gray-900 rounded-xl overflow-hidden shadow-lg border border-blue-700 p-4 text-center transform hover:scale-105 transition duration-300 animate-fade-in-up animation-delay-1200">
                     <img src="{{ base_url }}/public/images/hogan.webp" alt="Hulk Hogan - The Immortal" class="w-full h-48 object-cover object-top rounded-lg mb-4 wrestler-gallery-img">

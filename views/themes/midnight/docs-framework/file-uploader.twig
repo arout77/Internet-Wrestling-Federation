@@ -16,7 +16,7 @@
         The <code>Core\FileUploader</code> class is the server-side engine. You can instantiate it in your controller, set rules like allowed MIME types and max file size, and then call the <code>handle()</code> method.
     </p>
     <pre><code>// In a controller action that will serve as the API endpoint
-use Core\FileUploader;
+use Rhapsody\Core\FileUploader;
 
 public function handleUpload(Request $request): Response
 {

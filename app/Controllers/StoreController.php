@@ -1,8 +1,8 @@
 <?php
-
 namespace App\Controllers;
 
-use Core\BaseController;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Response;
 use Twig\Environment;
 
 class StoreController extends BaseController
@@ -15,8 +15,8 @@ class StoreController extends BaseController
     /**
      * Example method.
      */
-    public function index()
+    public function index(): Response
     {
-        // Your logic here...
+        return $this->view('store/index.html.twig');
     }
 }

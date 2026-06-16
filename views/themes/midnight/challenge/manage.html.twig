@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // We use the opponent's PID, which is the challenger's PID in this context
-            const response = await fetch(`{{ base_url }}challenge/ajax_get_challenge_details/${challengerPid}`);
+            const response = await fetch(`{{ base_url }}/challenge/ajax_get_challenge_details/${challengerPid}`);
             const data = await response.json();
 
             if (!data.success) throw new Error(data.error);
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Challenger Details -->
                 <div class="text-center">
-                    <img src="${challenger.image}" alt="${challenger.name}" class="w-40 h-40 rounded-full mx-auto mb-4 border-4 border-red-500 object-cover object-top">
+                    <img src="{{ base_url }}/public/images/avatars/${challenger.image}" alt="${challenger.name}" class="w-40 h-40 rounded-full mx-auto mb-4 border-4 border-red-500 object-cover object-top">
                     <h3 class="text-3xl font-bold text-red-400">${challenger.name}</h3>
                     <p class="text-xl text-gray-300">Level: ${challenger.lvl}</p>
                     <p class="text-lg text-gray-400">${challenger.height} / ${challenger.weight} lbs</p>
@@ -157,7 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4 class="text-xl font-bold text-center mb-4">The Wager</h4>
                         <p class="text-center text-3xl font-bold text-yellow-400">${wager} Gold</p>
                         <div class="text-center text-lg mt-4">
-                            <p>Your Win Chance: <span class="font-bold text-green-400">${(myOdds * 100).toFixed(0)}% (${myMoneyline})</span></p>
+                            <p>Your Win Chance: <span class="font-bold text-green-400"><br>
+                            ${(myOdds * 100).toFixed(0)}% (Money line: ${myMoneyline > 0 ? '+' + myMoneyline : myMoneyline})</span></p>
                             <p class="text-sm text-gray-400">Winning this match would pay out ~${potentialPayout.toFixed(0)} Gold</p>
                         </div>
                     </div>
@@ -171,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('acceptChallengeBtn').addEventListener('click', async () => {
             try {
-                const response = await fetch(`{{ base_url }}challenge/accept`, {
+                const response = await fetch(`{{ base_url }}/challenge/accept`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ challenge_id: challengeId })
@@ -191,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.getElementById('declineChallengeBtn').addEventListener('click', async () => {
              try {
-                const response = await fetch(`{{ base_url }}challenge/decline`, {
+                const response = await fetch(`{{ base_url }}/challenge/decline`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ challenge_id: challengeId })

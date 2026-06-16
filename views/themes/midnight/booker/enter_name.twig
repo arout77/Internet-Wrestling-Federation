@@ -1,0 +1,20 @@
+{% extends "layouts/main.twig" %}
+
+{% block title %}Booker Mode - Enter Your Name{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Become a Promoter</h1>
+        <p class="text-xl text-gray-300 mt-4">What name will you be known by?</p>
+    </header>
+    <form action="{{ base_url }}/booker/post-enter-name" method="post" class="max-w-md mx-auto bg-gray-800 p-8 rounded-lg shadow-lg">
+        {{ csrf_field() }}
+        <div class="mb-6">
+            <label for="promoter_name" class="block text-gray-300 mb-2">Your Name (Real or Alias)</label>
+            <input type="text" name="promoter_name" id="promoter_name" required class="w-full bg-gray-700 text-white p-3 rounded" placeholder="e.g., Vince McMahon, Paul Heyman, or your own name">
+        </div>
+        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition">Start Your Promotion</button>
+    </form>
+</div>
+{% endblock %}

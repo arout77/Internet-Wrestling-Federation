@@ -1,10 +1,10 @@
 <?php
 namespace App\Controllers;
 
-use Core\BaseController;
-use Core\Request;
-use Core\Response;
 use PDO;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Response;
 
 class TopicsController extends BaseController
 {

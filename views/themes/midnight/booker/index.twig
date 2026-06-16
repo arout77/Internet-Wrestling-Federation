@@ -1,0 +1,40 @@
+{% extends "layouts/main.twig" %}
+
+{% block title %}Booker Mode{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Booker Mode</h1>
+        <p class="text-xl text-gray-300 mt-4">Run your own wrestling promotion. Book events, hire wrestlers, and turn a profit.</p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <!-- Financial Snapshot -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-yellow-400 mb-4">Your Promotion</h2>
+            <p class="text-gray-300 mb-2">Promoter: <span class="font-bold text-yellow-400">{{ promoter_name }}</span></p>
+            <p class="text-gray-300 mb-2">Current Balance: <span class="font-bold text-green-400 text-xl">{{ balance|number_format }}</span> Gold</p>
+            <p class="text-gray-300 mb-4">Total Profit (Lifetime): <span class="font-bold text-blue-400">{{ total_profit|number_format }}</span> Gold</p>
+            <p class="text-gray-300 mb-2">Events until next PPV: <span class="font-bold text-yellow-400">{{ 10 - events_since_last_ppv }}</span></p>
+            <div class="flex space-x-4">
+                <a href="{{ base_url }}/booker/new-event" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition">New Event</a>
+                <a href="{{ base_url }}/booker/retire" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition" onclick="return confirm('Are you sure you want to retire? You can no longer book events.')">Retire</a>
+            </div>
+        </div>
+
+        <!-- Last Event Summary -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-yellow-400 mb-4">Last Event</h2>
+            {% if last_event %}
+                <p class="text-gray-300">{{ last_event.event_date|date('M d, Y') }}</p>
+                <p class="text-gray-300">Venue: <span class="font-bold">{{ last_event.venue_name ?? 'Unknown' }}</span></p>
+                <p class="text-gray-300">Attendance: <span class="font-bold">{{ last_event.attendance|number_format }}</span></p>
+                <p class="text-gray-300">Profit: <span class="font-bold {% if last_event.profit >= 0 %}text-green-400{% else %}text-red-400{% endif %}">{{ last_event.profit|number_format }}</span> Gold</p>
+            {% else %}
+                <p class="text-gray-400">No events booked yet. Click "New Event" to start.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

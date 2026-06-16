@@ -2,9 +2,9 @@
 namespace App\Controllers;
 
 use App\Models\Bible;
-use Core\BaseController;
-use Core\Request;
-use Core\Response;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Response;
 
 class SearchController extends BaseController
 {

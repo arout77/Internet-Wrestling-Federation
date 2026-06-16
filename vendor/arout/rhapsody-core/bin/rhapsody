@@ -1,0 +1,125 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Rhapsody Framework CLI Runner Engine
+ * Path: vendor/arout/rhapsody-core/bin/rhapsody
+ */
+
+$basePath = getcwd();
+$autoloader = $basePath . '/vendor/autoload.php';
+
+if (!file_exists($autoloader)) {
+    echo "[\033[31mError\033[0m] Composer autoloader not found. Run 'composer install' from the application root.\n";
+    exit(1);
+}
+
+require_once $autoloader;
+
+if (!defined('ROOT_DIR')) {
+    define('ROOT_DIR', $basePath);
+}
+
+// 1. Load the Application's Bootstrap Environment safely
+$bootstrapPath = $basePath . '/bootstrap.php';
+$container = null;
+
+if (file_exists($bootstrapPath)) {
+    $container = require_once $bootstrapPath;
+}
+
+if (!$container instanceof \Rhapsody\Core\Container) {
+    echo "[\033[31mError\033[0m] Container instance could not be resolved from bootstrap.php.\n";
+    exit(1);
+}
+
+// 2. Read commands directly out of the application container configuration
+$config = $container->has('config') ? $container->resolve('config') : [];
+$possibleCommands = $config['commands'] ?? [];
+
+// Parse incoming CLI arguments
+$args = $argv;
+array_shift($args); // Remove the script name itself (rhapsody)
+$commandName = $args[0] ?? 'help';
+
+$commandRegistry = [];
+
+foreach ($possibleCommands as $commandClass) {
+    try {
+        $commandInstance = $container->resolve($commandClass);
+        
+        // Pattern A: Custom Rhapsody commands using standard property descriptors
+        if (property_exists($commandInstance, 'signature')) {
+            $signature = $commandInstance->signature;
+            $description = property_exists($commandInstance, 'description') ? $commandInstance->description : 'No description available';
+            
+            $commandRegistry[$signature] = [
+                'instance'    => $commandInstance,
+                'description' => $description,
+                'type'        => 'rhapsody'
+            ];
+        } 
+        // Pattern B: Symfony Console Command wrappers
+        elseif ($commandInstance instanceof \Symfony\Component\Console\Command\Command) {
+            $signature = $commandInstance->getName();
+            $description = $commandInstance->getDescription() ?: 'No description available';
+            
+            if ($signature) {
+                $commandRegistry[$signature] = [
+                    'instance'    => $commandInstance,
+                    'description' => $description,
+                    'type'        => 'symfony'
+                ];
+            }
+        }
+    } catch (\Throwable $e) {
+        // Log individual resolution failures to help map container dependencies
+        if ($commandName === 'help' || $commandName === '--help') {
+            echo "[\033[33mContainer Warning\033[0m] Failed to resolve '{$commandClass}': " . $e->getMessage() . "\n";
+        }
+        continue;
+    }
+}
+
+// 3. Execution & Help Display Router
+if ($commandName === 'help' || $commandName === '--help' || !isset($commandRegistry[$commandName])) {
+    echo "\n\033[34mRhapsody Framework\033[0m CLI Engine\n";
+    echo "----------------------------------------\n";
+    echo "Available Commands:\n";
+    
+    if (empty($commandRegistry)) {
+        echo "  \033[31mNo dynamic commands could be successfully resolved out of the container.\033[0m\n";
+    }
+
+    foreach ($commandRegistry as $signature => $meta) {
+        echo sprintf("  \033[32m%-25s\033[0m %s\n", $signature, $meta['description']);
+    }
+    echo "\n";
+    exit(0);
+}
+
+// 4. Dynamic Router Pipeline Handshake
+try {
+    $matched = $commandRegistry[$commandName];
+    
+    if ($matched['type'] === 'rhapsody') {
+        // Custom internal command processing requires the shifted arguments array
+        $matched['instance']->execute($args);
+    } else {
+        // Symfony expects element 0 to be the script name, and element 1 to be the FIRST actual argument
+        // We strip out the command name ('make:controller', 'cache:clear') so Symfony doesn't parse it as data
+        $symfonyArgs = $argv; 
+        
+        // Remove the command name element (index 1) safely while preserving index 0
+        array_splice($symfonyArgs, 1, 1); 
+        
+        $input = new \Symfony\Component\Console\Input\ArgvInput($symfonyArgs);
+        $output = new \Symfony\Component\Console\Output\ConsoleOutput();
+        
+        // Execute the Symfony command lifecycle safely
+        $matched['instance']->run($input, $output);
+    }
+} catch (\Throwable $e) {
+    echo "[\033[31mRuntime Error\033[0m] " . $e->getMessage() . "\n";
+    exit(1);
+}

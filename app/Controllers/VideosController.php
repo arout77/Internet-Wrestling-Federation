@@ -3,9 +3,9 @@ namespace App\Controllers;
 
 use App\Helpers\UrlHelper;
 use App\Models\Videos;
-use Core\BaseController;
-use Core\Request;
-use Core\Response;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Response;
 use Twig\Environment;
 
 class VideosController extends BaseController

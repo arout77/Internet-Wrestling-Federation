@@ -1,8 +1,7 @@
 <?php
-
 namespace App\Controllers;
 
-use Core\BaseController;
+use Rhapsody\Core\BaseController;
 use Twig\Environment;
 
 class GamemodesController extends BaseController

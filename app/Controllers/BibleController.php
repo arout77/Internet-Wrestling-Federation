@@ -2,11 +2,11 @@
 namespace App\Controllers;
 
 use App\Models\Bible;
-use Core\BaseController;
-use Core\Database;
-use Core\Pagination;
-use Core\Request;
-use Core\Response;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Database;
+use Rhapsody\Core\Pagination;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Response;
 use Twig\Environment;
 
 class BibleController extends BaseController

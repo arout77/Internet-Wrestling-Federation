@@ -1,6 +1,7 @@
 <?php
 namespace App\Controllers;
 
+use App\Entities\Manager;
 use App\Entities\Move;
 use App\Entities\Prospect;
 use App\Entities\ProspectNickname;
@@ -8,13 +9,13 @@ use App\Entities\Roster;
 use App\Entities\User;
 use App\Services\CareerService;
 use App\Services\SimulationService;
-use Core\BaseController;
-use Core\Request;
-use Core\Response;
-use Core\Session;
-use Core\Validator;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManager;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Response;
+use Rhapsody\Core\Session;
+use Rhapsody\Core\Validator;
 use Twig\Environment;
 
 class CareerController extends BaseController
@@ -35,28 +36,39 @@ class CareerController extends BaseController
     }
 
     /**
-     * Main career dashboard.
+     * Prospect creation / information.
      * If user has a prospect, show it.
      * If not, redirect to the creation form.
      */
     public function index(): Response
     {
         $user = $this->em->find(User::class, Session::get('user_id'));
-
         if (! $user->getProspect()) {
-            // User has no prospect, force them to create one.
             return redirect('/career/create');
         }
 
-        // User has a prospect, show the main career dashboard.
         $prospect = $user->getProspect();
+        $xpNeeded = $prospect->getXpRequiredForNextLevel();
 
-        // Example of fetching data for the dashboard:
-        $traits = $prospect->getTraits();
+        // Get manager if any
+        $manager = null;
+        if ($prospect->getManagerId()) {
+            $manager = $this->em->getRepository(Manager::class)->find($prospect->getManagerId());
+        }
+
+        // Get win/loss record (you have a wrestler_records table)
+        $record = $this->em->getConnection()->fetchAssociative(
+            'SELECT wins, losses FROM wrestler_records WHERE wrestler_id = :pid',
+            ['pid' => $prospect->getPid()]
+        ) ?: ['wins' => 0, 'losses' => 0];
 
         return $this->view('career/career.html.twig', [
+            'user'     => $user, // <-- add user for gold, email, etc.
             'prospect' => $prospect,
-            'traits'   => $traits,
+            'manager'  => $manager,
+            'record'   => $record,
+            'traits'   => $prospect->getTraits(),
+            'xpNeeded' => $xpNeeded,
         ]);
     }
 

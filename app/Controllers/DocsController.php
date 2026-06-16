@@ -2,9 +2,9 @@
 namespace App\Controllers;
 
 use App\Entities\WrestlerTrait;
-use Core\BaseController;
-use Core\Response;
 use Doctrine\ORM\EntityManager;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Response;
 use Twig\Environment;
 
 /**

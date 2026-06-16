@@ -1,0 +1,88 @@
+{% extends "layouts/main.twig" %}
+
+{% block title %}Initial Championships Tournaments{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">🏆 Initial Championship Tournaments</h1>
+        <p class="text-xl text-gray-300 mt-4">Two single-elimination tournaments will crown our first-ever World and US Champions!</p>
+    </header>
+
+    <!-- World Tournament -->
+    <div class="mb-12">
+        <h2 class="text-3xl font-bold text-center mb-6 text-white bg-yellow-600 inline-block px-6 py-2 rounded-lg">🌍 World Championship Tournament</h2>
+        <div class="bg-gray-800 rounded-lg p-6 mt-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for i in 0..(world_tournament|length - 1) %}
+                    {% if i % 2 == 0 %}
+                        {% set w1 = world_tournament[i] %}
+                        {% set w2 = world_tournament[i+1] ?? null %}
+                        <div class="matchup bg-gray-700 rounded p-3 flex justify-between items-center">
+                            <div class="w-5/12 text-right flex items-center justify-end gap-2">
+                                <span class="font-bold">{{ w1.name }}</span>
+                                <img src="{{ base_url }}/public/images/{{ w1.image }}" class="w-8 h-8 rounded-full object-cover border border-yellow-500" onerror="this.src='{{ base_url }}/public/images/default.png'">
+                                <span class="text-xs text-gray-400">(Lv{{ w1.lvl }}/{{ w1.overallRating }})</span>
+                            </div>
+                            <div class="text-yellow-400 font-bold">VS</div>
+                            <div class="w-5/12 text-left flex items-center gap-2">
+                                {% if w2 %}
+                                    <img src="{{ base_url }}/public/images/{{ w2.image }}" class="w-8 h-8 rounded-full object-cover border border-yellow-500" onerror="this.src='{{ base_url }}/public/images/default.png'">
+                                    <span class="font-bold">{{ w2.name }}</span>
+                                    <span class="text-xs text-gray-400">(Lv{{ w2.lvl }}/{{ w2.overallRating }})</span>
+                                {% else %}
+                                    <span class="italic text-gray-400">Bye</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="text-center text-gray-400 text-sm mt-4">⬆️ First Round Matchups (winners advance)</div>
+        </div>
+    </div>
+
+    <!-- US Tournament -->
+    <div class="mb-12">
+        <h2 class="text-3xl font-bold text-center mb-6 text-white bg-blue-600 inline-block px-6 py-2 rounded-lg">🇺🇸 US Championship Tournament</h2>
+        <div class="bg-gray-800 rounded-lg p-6 mt-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for i in 0..(us_tournament|length - 1) %}
+                    {% if i % 2 == 0 %}
+                        {% set w1 = us_tournament[i] %}
+                        {% set w2 = us_tournament[i+1] ?? null %}
+                        <div class="matchup bg-gray-700 rounded p-3 flex justify-between items-center">
+                            <div class="w-5/12 text-right flex items-center justify-end gap-2">
+                                <span class="font-bold">{{ w1.name }}</span>
+                                <img src="{{ base_url }}/public/images/{{ w1.image }}" class="w-8 h-8 rounded-full object-cover border border-yellow-500" onerror="this.src='{{ base_url }}/public/images/default.png'">
+                                <span class="text-xs text-gray-400">(Lv{{ w1.lvl }}/{{ w1.overallRating }})</span>
+                            </div>
+                            <div class="text-yellow-400 font-bold">VS</div>
+                            <div class="w-5/12 text-left flex items-center gap-2">
+                                {% if w2 %}
+                                    <img src="{{ base_url }}/public/images/{{ w2.image }}" class="w-8 h-8 rounded-full object-cover border border-yellow-500" onerror="this.src='{{ base_url }}/public/images/default.png'">
+                                    <span class="font-bold">{{ w2.name }}</span>
+                                    <span class="text-xs text-gray-400">(Lv{{ w2.lvl }}/{{ w2.overallRating }})</span>
+                                {% else %}
+                                    <span class="italic text-gray-400">Bye</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="text-center text-gray-400 text-sm mt-4">⬆️ First Round Matchups</div>
+        </div>
+    </div>
+
+    <div class="text-center mt-8">
+        <form action="{{ base_url }}/booker/run-initial-tournaments" method="post">
+            {{ csrf_field() }}
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-12 rounded-lg text-xl transition transform hover:scale-105">
+                🎲 Run Tournaments
+            </button>
+        </form>
+        <p class="text-gray-400 mt-4">The tournaments will be simulated live – champions will be crowned and you'll be taken to the event booking page.</p>
+    </div>
+</div>
+{% endblock %}

@@ -132,7 +132,7 @@
     <div id="matchSetup" class="py-20 px-4">
         <!-- Header -->
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-4xl font-bold">Match Simulator</h1>
+            <h1 class="text-4xl font-bold bg-indigo-200 text-shadow-lg outline p-1 text-indigo-800">Match Simulator</h1>
             <div class="flex space-x-2">
                 <button id="reset-match-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50" disabled>Reset</button>
                 <button id="random-matchup-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Random Match</button>
@@ -909,9 +909,9 @@
                 const maxHp = { w1: w1.max_hp, w2: w2.max_hp };
 
                 // Populate modal with initial data
-                simW1.img.src = `${w1.image.startsWith('http') ? '' : window.baseUrl}/public/images/${w1.image}.webp`;
+                simW1.img.src = `${baseUrl}/public/images/${w1.image}.webp`;
                 simW1.name.textContent = w1.name;
-                simW2.img.src = `${w2.image.startsWith('http') ? '' : window.baseUrl}/public/images/${w2.image}.webp`;
+                simW2.img.src = `${baseUrl}/public/images/${w2.image}.webp`;
                 simW2.name.textContent = w2.name;
                 
                 updateBar(simW1.hp, 100, '%', 'HP');

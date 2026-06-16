@@ -28,7 +28,7 @@
                 <a href="{{ base_url }}/challenge" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Challenge Zone</a>
                 <hr class="container block px-4 py-2 mt-2 text-sm text-gray-700" style="border-top: 1px solid rgba(55, 65, 81, var(--tw-text-opacity));">
                 <a href="#" class="text-md"><h4>More Game Modes</h4></a>
-                <a href="{{ base_url }}/app/booking" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Booker Mode</a>
+                <a href="{{ base_url }}/booker" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Booker Mode</a>
                 <a href="{{ base_url }}/simulator" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Simulator</a>
                 <a href="{{ base_url }}/tournament" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Tournament</a>
                 <a href="{{ base_url }}/app/wrestlers" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">Roster</a>
@@ -84,7 +84,7 @@
 
         {% if auth.check %}
             <div class="flex items-center gap-4">
-                <a href="{{ base_url }}/challenge/manage" class="relative text-gray-300 hover:text-white" title="Notifications">
+                <a href="{{ base_url }}/notifications" class="relative text-gray-300 hover:text-white" title="Notifications">
                     <svg class="h-7 w-7" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2.98 2.98 0 0 0 2.818-2H9.182A2.98 2.98 0 0 0 12 22zm7-7.414V10c0-3.217-2.185-5.927-5.145-6.742C13.562 2.52 12.846 2 12 2s-1.562.52-1.855 1.258C7.185 4.073 5 6.783 5 10v4.586l-1.707 1.707A.996.996 0 0 0 3 17v1h18v-1a.996.996 0 0 0-.293-.707L19 14.586z"></path></svg>
                     <span id="notification-badge" class="absolute top-0 right-0 h-5 w-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center border-2 border-gray-800 hidden">0</span>
                 </a>
@@ -102,16 +102,16 @@
                     <span class="text-green-100 font-mono font-bold text-sm">{{ auth.user.tokens|default(0)|number_format }}</span>
                 </div>
 
-                {% if auth.user.prospect and auth.user.prospect.gold is defined %}
+                {% if auth.user and auth.user.gold is defined %}
                     <div class="flex items-center gap-2 bg-yellow-700 bg-opacity-25 border border-yellow-500 rounded-full px-4 py-1 text-yellow-200 font-bold text-sm animate-fade-in-up animation-delay-700" title="Gold">
                         <svg class="h-6 w-6 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2ZM12,20a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"/><path d="M12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/></svg>
-                        <span id="navbar-gold-display">{{ auth.user.prospect.gold|number_format }}</span>
+                        <span id="navbar-gold-display">{{ auth.user.gold|number_format }}</span>
                     </div>
                 {% endif %}
-                {% if auth.user.prospect.attributePoints and auth.user.prospect.attributePoints is defined %}
-                    <div id="navbar-ap-container" class="ap-display inline-flex items-center px-2 py-1 rounded-full text-lg font-bold bg-green-700 bg-opacity-20 border border-green-500 text-white {% if auth.user.prospect.attributePoints == 0 %}hidden{% endif %}" title="Attribute Points">
+                {% if auth.user and auth.user.prospect_ap is defined and auth.user.prospect_ap > 0 %}
+                    <div id="navbar-ap-container" class="ap-display inline-flex items-center px-2 py-1 rounded-full text-lg font-bold bg-green-700 bg-opacity-20 border border-green-500 text-white" title="Attribute Points">
                         <svg class="w-5 h-5 inline-block mr-2 fill-current" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
-                        <span id="navbar-ap-display">{{ auth.user.prospect.attributePoints }} </span> AP
+                        <span id="navbar-ap-display">{{ auth.user.prospect_ap }} </span> AP
                     </div>
                 {% endif %}
             </div>
@@ -170,7 +170,7 @@
 
          <div class="border-t border-gray-700 mt-2 pt-2">
             {% if session.user_id %}
-                <a href="{{ base_url }}/challenge/manage" class="flex items-center text-white py-2">
+                <a href="{{ base_url }}/notifications" class="flex items-center text-white py-2">
                     Notifications
                     <span id="mobile-notification-badge" class="ml-2 h-6 w-6 bg-red-600 text-white text-xs rounded-full flex items-center justify-center hidden">0</span>
                 </a>

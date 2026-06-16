@@ -6,10 +6,10 @@ use App\Entities\Roster;
 use App\Entities\User;
 use App\Entities\WrestlerInterface; // <-- 2. IMPORT INTERFACE
 use App\Services\SimulationService;
-use Core\BaseController;
-use Core\Request;
-use Core\Session;
 use Doctrine\ORM\EntityManager;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Session;
 use Twig\Environment;
 
 class SimulatorController extends BaseController
@@ -61,7 +61,8 @@ class SimulatorController extends BaseController
     public function index()
     {
         $rosterRepo = $this->em->getRepository(Roster::class);
-        $wrestlers  = $rosterRepo->findAll();
+        // Was findAll(). This works better because it sorts the results by wrestler name
+        $wrestlers = $rosterRepo->findBy([], ['name' => 'ASC']);
 
         return $this->view('app/match-simulator.twig', [
             'wrestlers' => $wrestlers,
@@ -150,22 +151,13 @@ class SimulatorController extends BaseController
             $prospect    = null;
             $new_balance = 0;
 
-            if (Session::has('user_id')) {
-                $user = $this->em->find(User::class, Session::get('user_id'));
-                if ($user) {
-                    $prospect = $user->getProspect();
-                    if ($prospect) {
-                        $new_balance = $prospect->getGold();
-                    }
-                }
-            }
-
+            // Process bet if placed
             // Process bet if placed
             if ($bet_amount > 0 && $bet_on_team) {
-                if (! $prospect) {
+                if (! $user) { // $user already fetched earlier in the method
                     return $this->json(['success' => false, 'error' => 'You must be logged in to place a bet.']);
                 }
-                if ($prospect->getGold() < $bet_amount) {
+                if ($user->getGold() < $bet_amount) {
                     return $this->json(['success' => false, 'error' => 'Not enough gold to place this bet.']);
                 }
 
@@ -188,27 +180,20 @@ class SimulatorController extends BaseController
                     }
 
                     $gold_change = (int) round($winnings);
-
-                    // --- NEW: Minimum payout logic ---
-                    // --- 1 gold or 1% of wager, whichever is higher
-                    // --- Only applies to scenarios where one wrestler is
-                    // --- extreme favorite and would otherwise have won 0 gold
-                    $minimumWin = max(1, (int) round($bet_amount * 0.01));
+                    $minimumWin  = max(1, (int) round($bet_amount * 0.01));
                     if ($gold_change > 0 && $gold_change < $minimumWin) {
                         $gold_change = $minimumWin;
                     }
-                    // --- END NEW ---
-
-                    $new_balance = $prospect->getGold() + $gold_change;
+                    $new_balance = $user->getGold() + $gold_change;
                 } else {
                     $bet_won     = false;
                     $gold_change = -$bet_amount;
-                    $new_balance = $prospect->getGold() + $gold_change;
+                    $new_balance = $user->getGold() + $gold_change;
                 }
 
-                // Persist the new balance
-                $prospect->setGold($new_balance);
-                $this->em->persist($prospect);
+                // Persist the new balance on the User entity
+                $user->setGold($new_balance);
+                $this->em->persist($user);
                 $this->em->flush();
             }
 

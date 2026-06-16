@@ -1,0 +1,12 @@
+{% extends "layouts/main.twig" %}
+{% block content %}
+<table>
+    {% for w in wrestlers %}
+    <tr>
+        <td>{{ w.name }}</td>
+        <td><a href="{{ base_url }}/admin/wrestler/edit/{{ w.wrestlerId }}">Edit Wrestler</a></td>
+    </tr>
+    {% endfor %}
+</table>
+</form>
+{% endblock %}

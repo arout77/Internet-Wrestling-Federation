@@ -1,8 +1,8 @@
 <?php
 namespace App\Models;
 
-use Core\BaseModel;
 use PDO;
+use Rhapsody\Core\BaseModel;
 
 class Api extends BaseModel
 {
@@ -225,5 +225,61 @@ class Api extends BaseModel
             $team['members'] = explode(',', $team['members']);
         }
         return $teams;
+    }
+
+    /**
+     * AJAX endpoint to get prospect details and odds.
+     */
+    public function ajaxGetChallengeDetails(Request $request, string $pid): Response
+    {
+        if (! Session::has('user_id')) {
+            return $this->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $opponent = $this->em->getRepository(Prospect::class)->findOneBy(['pid' => $pid]);
+        if (! $opponent) {
+            return $this->json(['error' => 'Prospect not found'], 404);
+        }
+
+        $user       = $this->em->find(User::class, Session::get('user_id'));
+        $myProspect = $user->getProspect();
+        if (! $myProspect) {
+            return $this->json(['error' => 'You need a prospect to view challenge details'], 400);
+        }
+
+        // Generate odds (1000 simulations)
+        $oddsData = $this->simulationService->generateOdds($myProspect, $opponent, 1000);
+
+        $opponentData = [
+            'pid'              => $opponent->getPid(),
+            'name'             => $opponent->getName(),
+            'lvl'              => $opponent->getLvl(),
+            'height'           => $opponent->getHeight(),
+            'weight'           => $opponent->getWeight(),
+            'strength'         => $opponent->getStrength(),
+            'technicalAbility' => $opponent->getTechnicalAbility(),
+            'brawlingAbility'  => $opponent->getBrawlingAbility(),
+            'stamina'          => $opponent->getStamina(),
+            'aerialAbility'    => $opponent->getAerialAbility(),
+            'toughness'        => $opponent->getToughness(),
+            'image'            => $opponent->getImage(),
+            'traits'           => $opponent->getTraits()->map(fn($t) => ['name' => $t->getName()])->toArray(),
+            'manager_name'     => $opponent->getManagerId() ? $this->em->find(Manager::class, $opponent->getManagerId())?->getName() : null,
+        ];
+
+        return $this->json([
+            'success'           => true,
+            'opponent_prospect' => $opponentData,
+            'odds'              => [
+                'probabilities' => [
+                    $myProspect->getName() => $oddsData['w1_win_percent'] / 100,
+                    $opponent->getName()   => $oddsData['w2_win_percent'] / 100,
+                ],
+                'moneyline'     => [
+                    $myProspect->getName() => $oddsData['w1_odds'],
+                    $opponent->getName()   => $oddsData['w2_odds'],
+                ],
+            ],
+        ]);
     }
 }

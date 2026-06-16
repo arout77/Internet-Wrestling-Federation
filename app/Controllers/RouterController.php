@@ -1,9 +1,9 @@
 <?php
 namespace App\Controllers;
 
-use Core\Container;
-use Core\Exceptions\HttpException;
-use Core\Request;
+use Rhapsody\Core\Container;
+use Rhapsody\Core\Exceptions\HttpException;
+use Rhapsody\Core\Request;
 
 class RouterController extends \Core\Router
 {

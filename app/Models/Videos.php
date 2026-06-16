@@ -1,8 +1,8 @@
 <?php
 namespace App\Models;
 
-use Core\BaseModel;
 use PDO;
+use Rhapsody\Core\BaseModel;
 
 class Videos extends BaseModel
 {

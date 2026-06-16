@@ -4,24 +4,49 @@ namespace App\Controllers;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\GuestMiddleware;
 use App\Models\User;
-use Core\BaseController;
-use Core\FileUploader;
-use Core\Mailer;
-use Core\Pagination;
-use Core\Request;
-use Core\Response;
-use Core\Session;
-use Core\Validator;
+use Doctrine\ORM\EntityManager;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\FileUploader;
+use Rhapsody\Core\Mailer;
+use Rhapsody\Core\Pagination;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Response;
+use Rhapsody\Core\Session;
+use Rhapsody\Core\Validator;
 use Twig\Environment;
 
 class PageController extends BaseController
 {
-    /**
-     * @param Environment $twig
-     */
-    public function __construct(Environment $twig)
+    protected EntityManager $em;
+
+    public function __construct(Environment $twig, EntityManager $em)
     {
         parent::__construct($twig);
+        $this->em = $em;
+    }
+
+    /**
+     * Dashboard for authenticated users.
+     */
+    public function dashboard(): Response
+    {
+        $userId = Session::get('user_id');
+        if (! $userId) {
+            return redirect('/login');
+        }
+
+        $user = $this->em->find(\App\Entities\User::class, $userId);
+        if (! $user) {
+            Session::destroy();
+            return redirect('/login');
+        }
+
+        $prospect = $user->getProspect();
+
+        return $this->view('home/dashboard.twig', [
+            'user'     => $user,
+            'prospect' => $prospect,
+        ]);
     }
 
     /**
@@ -31,17 +56,11 @@ class PageController extends BaseController
      */
     public function index(): Response
     {
-        return $this->view('home/index.html.twig');
-    }
-
-    /**
-     * @return mixed
-     */
-    public function dashboard(): Response
-    {
-        // The AuthMiddleware now handles protection for this route.
-        // The controller's only job is to render the view.
-        return $this->view('home/dashboard.twig');
+        $meta = [
+            'title'       => 'Wrestling Simulator featuring several different game modes and wagering',
+            'description' => 'Step Into The Ring! Create your dream wrestling matches and simulate epic battles with legendary superstars from wrestling\'s golden age to the present.',
+        ];
+        return $this->view('home/index.html.twig', [], $meta);
     }
 
     /**

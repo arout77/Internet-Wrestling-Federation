@@ -17,8 +17,8 @@ MAIL_FROM_NAME="Rhapsody Framework"</code></pre>
 
     <h2>Sending an Email</h2>
     <p>The easiest way to send mail is to inject the <code>Core\Mailer</code> service into your controller's constructor via dependency injection. Then, you can call the <code>send()</code> method.</p>
-    <pre><code>use Core\Mailer;
-use Core\Request;
+    <pre><code>use Rhapsody\Core\Mailer;
+use Rhapsody\Core\Request;
 
 class ContactController extends BaseController
 {

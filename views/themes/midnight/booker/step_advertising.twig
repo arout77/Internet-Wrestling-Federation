@@ -1,0 +1,47 @@
+{% extends "layouts/main.twig" %}
+
+{% block title %}Booker - Advertising{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <!-- Balance Banner -->
+    <div class="bg-gray-800 rounded-lg p-4 mb-6 flex justify-between items-center">
+        <span class="text-gray-300">Your Current Balance:</span>
+        <span class="text-2xl font-bold text-green-400">{{ balance|number_format }} Gold</span>
+    </div>
+
+    <header class="text-center my-8">
+        <h1 class="text-5xl font-bold text-yellow-400">Step 2: Advertising</h1>
+        <p class="text-xl text-gray-300 mt-4">How much gold will you spend to promote the event?</p>
+        <a href="{{ base_url }}/booker/new-event" class="text-blue-400 hover:text-blue-600 mt-4 inline-block">&larr; Back to Venues</a>
+    </header>
+
+    <form action="{{ base_url }}/booker/advertising" method="post" class="max-w-xl mx-auto bg-gray-800 p-6 rounded-lg shadow-lg">
+        {{ csrf_field() }}
+        <div class="mb-6">
+            <label for="advertising_spend" class="block text-gray-300 mb-2">Advertising Spend (Gold)</label>
+            <input type="range" id="advertising_spend" name="advertising_spend" min="0" max="{{ min(1000, balance) }}" step="10" value="100" class="w-full">
+            <div class="flex justify-between text-sm text-gray-400 mt-1">
+                <span>0</span><span>250</span><span>500</span><span>750</span><span>1000</span>
+            </div>
+            <p class="mt-2 text-center text-yellow-400">Selected: <span id="spendDisplay">100</span> Gold</p>
+            <p class="text-center text-gray-400 text-sm mt-2">Advertising cannot exceed your balance ({{ balance|number_format }}).</p>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition">Next: Hire Wrestlers</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const slider = document.getElementById('advertising_spend');
+    const display = document.getElementById('spendDisplay');
+    const max = parseInt(slider.max);
+    slider.addEventListener('input', () => {
+        let val = parseInt(slider.value);
+        if (val > max) val = max;
+        slider.value = val;
+        display.textContent = val;
+    });
+</script>
+{% endblock %}

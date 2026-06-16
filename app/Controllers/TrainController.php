@@ -1,12 +1,14 @@
 <?php
-
 namespace App\Controllers;
 
 use App\Models\Career;
 use App\Models\Train;
 use App\Services\CareerService;
-use Core\BaseController;
-use Core\Request;
+use Doctrine\ORM\EntityManager;
+use Rhapsody\Core\BaseController;
+use Rhapsody\Core\Request;
+use Rhapsody\Core\Response;
+use Rhapsody\Core\Session;
 use Twig\Environment;
 
 class TrainController extends BaseController
@@ -14,81 +16,95 @@ class TrainController extends BaseController
     private Career $careerModel;
     private Train $trainModel;
     private CareerService $careerService;
+    private EntityManager $em;
 
-    /**
-     * @param Environment $twig
-     * @param Career $careerModel
-     * @param Train $trainModel
-     * @param CareerService $careerService
-     */
-    public function __construct( Environment $twig, Career $careerModel, Train $trainModel, CareerService $careerService )
-    {
-        parent::__construct( $twig );
+    public function __construct(
+        Environment $twig,
+        Career $careerModel,
+        Train $trainModel,
+        CareerService $careerService,
+        EntityManager $em
+    ) {
+        parent::__construct($twig);
         $this->careerModel   = $careerModel;
         $this->trainModel    = $trainModel;
         $this->careerService = $careerService;
+        $this->em            = $em;
     }
 
-    /**
-     * @return mixed
-     */
     public function index(): Response
     {
-        $prospect = $this->careerService->getCurrentProspect();
-        if ( !$prospect ) {
-            return redirect( '/career' );
+        $userId = Session::get('user_id');
+        if (! $userId) {
+            return redirect('/login');
         }
+
+        $user = $this->em->find(\App\Entities\User::class, $userId);
+        if (! $user || ! $user->getProspect()) {
+            return redirect('/career')->with('error', 'You need a prospect to access training.');
+        }
+
+        $prospect = $user->getProspect();
+        // Use PID (string) for database lookups
+        $prospectData = [
+            'pid' => $prospect->getPid(),
+            'lvl' => $prospect->getLvl(),
+        ];
 
         $filterType = $_GET['type'] ?? 'all';
         $sortBy     = $_GET['sort_by'] ?? 'level_requirement';
         $sortOrder  = $_GET['sort_order'] ?? 'ASC';
 
-        // 1. Fetch moves based on level and type using the correct prospect PID
-        $allMoves = $this->trainModel->getAvailableMoves( $prospect['pid'], $prospect['lvl'], $filterType, $sortBy, $sortOrder );
+        // Fetch all available moves (filtered, sorted)
+        $allMoves = $this->trainModel->getAvailableMoves($prospectData['lvl'], $filterType, $sortBy, $sortOrder);
 
-        // 2. Get IDs of moves the prospect already knows
-        $knownMoveIds = $this->trainModel->getKnownMoveIds();
+        // Get known move IDs using PID
+        $knownMoveIds = $this->trainModel->getKnownMoveIds($prospectData['pid']);
 
-        // 3. Get the full details for the moves the prospect already knows
-        $knownMoves = array_filter( $allMoves, function ( $move ) use ( $knownMoveIds ) {
-            return in_array( $move['move_id'], $knownMoveIds );
-        } );
+        $knownMoves = array_filter($allMoves, function ($move) use ($knownMoveIds) {
+            return in_array($move['move_id'], $knownMoveIds);
+        });
 
-        // 4. Filter out the known moves from the available moves to get purchasable moves
-        $purchasableMoves = array_filter( $allMoves, function ( $move ) use ( $knownMoveIds ) {
-            return !in_array( $move['move_id'], $knownMoveIds );
-        } );
+        $purchasableMoves = array_filter($allMoves, function ($move) use ($knownMoveIds) {
+            return ! in_array($move['move_id'], $knownMoveIds);
+        });
 
-        return $this->view( 'career/train.html.twig', [
-            'prospect'         => $prospect,
+        return $this->view('career/train.html.twig', [
+            'prospect'         => $prospectData,
             'purchasableMoves' => $purchasableMoves,
-            'knownMoves'       => $knownMoves, // Pass the full known moves data
-            'opportunities' => $this->trainModel->getTrainingOpportunities(),
+            'knownMoves'       => $knownMoves,
+            'opportunities'    => $this->trainModel->getTrainingOpportunities($prospectData['pid']),
             'traits'           => $this->careerModel->getProspectTraits(),
             'currentFilter'    => $filterType,
             'currentSortBy'    => $sortBy,
             'currentSortOrder' => $sortOrder,
-        ] );
+        ]);
     }
 
-    /**
-     * Handles the API request to learn a new move.
-     */
-    public function learnMove( Request $request, $vars )
+    public function learnMove(Request $request, $vars)
     {
-        $moveId   = $vars['moveId'] ?? null;
-        $prospect = $this->careerService->getCurrentProspect();
+        $moveId = $vars['moveId'] ?? null;
+        $userId = Session::get('user_id');
+        if (! $userId) {
+            return $this->json(['success' => false, 'error' => 'Not logged in.'], 401);
+        }
+        $user = $this->em->find(\App\Entities\User::class, $userId);
+        if (! $user || ! $user->getProspect()) {
+            return $this->json(['success' => false, 'error' => 'No prospect found.'], 400);
+        }
+        $prospect    = $user->getProspect();
+        $prospectPid = $prospect->getPid();
 
-        if ( !$moveId || !$prospect ) {
-            return $this->json( ['success' => false, 'error' => 'Invalid request.'], 400 );
+        if (! $moveId || ! $prospectPid) {
+            return $this->json(['success' => false, 'error' => 'Invalid request.'], 400);
         }
 
-        $result = $this->trainModel->learnMove( $prospect['pid'], $moveId );
+        $result = $this->trainModel->learnMove($prospectPid, $moveId);
 
-        if ( $result === true ) {
-            return $this->json( ['success' => true, 'message' => 'Move learned successfully!'] );
+        if ($result === true) {
+            return $this->json(['success' => true, 'message' => 'Move learned successfully!']);
         }
 
-        return $this->json( ['success' => false, 'error' => $result], 400 );
+        return $this->json(['success' => false, 'error' => $result], 400);
     }
 }

@@ -1,9 +1,8 @@
 <?php
-
 namespace App\Models;
 
-use Core\BaseModel;
 use PDO;
+use Rhapsody\Core\BaseModel;
 
 class Traits extends BaseModel
 {
@@ -15,14 +14,14 @@ class Traits extends BaseModel
      * @param int $id
      * @return array|false
      */
-    public function find(int $id): array|false
+    public function find(int $id): array | false
     {
         // Remember to use prepared statements for security.
         // Example:
         // $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id");
         // $stmt->execute([':id' => $id]);
         // return $stmt->fetch();
-        
+
         return []; // Placeholder
     }
 }
